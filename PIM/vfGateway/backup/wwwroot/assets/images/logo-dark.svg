@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="208.48659"
+   height="58.988941"
+   viewBox="0 0 55.162075 15.607491"
+   version="1.1"
+   id="svg4636"
+   inkscape:version="0.92.1 r15371"
+   sodipodi:docname="logo-dark.svg">
+  <defs
+     id="defs4630" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="101.37889"
+     inkscape:cy="-40.969667"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     units="px" />
+  <metadata
+     id="metadata4633">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-45.746346,-57.87483)">
+    <g
+       id="pimlogo"
+       transform="matrix(0.26458333,0,0,0.26458333,39.092425,54.822478)">
+      <g
+         id="pimlogo_shape"
+         transform="translate(-215,-315)">
+        <path
+           id="path3931"
+           style="fill:#9faecb;fill-opacity:1;stroke:#9faecb;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1"
+           d="m 305.94539,357.04405 c -4.70725,8.62968 -12.10703,13.4129 -21.47838,15.37958 h -4.41941 l 0.17677,-6.45235 c -0.95297,-1.61505 -1.73279,-2.94544 -4.77297,-3.88909 l -20.32932,0.0884 c -2.03918,-1.02991 -2.69951,-2.93725 -2.91681,-5.12653 z m 1.84934,-24.37972 c 0,3.35672 -2.83611,6.07788 -6.33461,6.07788 -3.49851,0 -6.33462,-2.72116 -6.33462,-6.07788 0,-3.35672 2.83611,-6.07788 6.33462,-6.07788 3.4985,0 6.33461,2.72116 6.33461,6.07788 z"
+           inkscape:connector-curvature="0" />
+        <path
+           id="path3899"
+           style="fill:#9ac200;fill-opacity:1;stroke:#9faecb;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1"
+           d="m 247.4523,339.87551 h 62.40402 c 0.5263,5.42794 -0.21375,11.14918 -3.18382,15.64474 l -26.69329,0.0429 -0.0366,-7.15057 c -0.44697,-2.2237 -1.34127,-3.17602 -4.28813,-3.3998 l -28.20217,-0.18751 z"
+           inkscape:connector-curvature="0" />
+      </g>
+      <path
+         id="logoname"
+         transform="translate(-14,-3)"
+         style="fill:#9faecb;fill-opacity:1;stroke:#9faecb;stroke-width:0.1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m 182.5,61.49253 c 2.91285,-12.655963 5.5584,-25.495681 11.21875,-35.24253 3.16667,-1.583334 6.17708,-1.583333 8.84375,0 3.80976,4.096256 7.67303,8.75434 11.8125,16.312502 3.93421,-5.956357 6.84271,-11.960261 11.25,-16.312502 2.98123,-1.707846 5.87292,-1.625064 8.6875,0 6.06889,9.00396 9.39618,22.394471 13.0625,35.24253 h -15.25 l -4.0625,-15.37958 c -2.81989,5.813318 -5.88379,11.6761 -11.625,15.37958 H 212.125 C 205.9589,56.751326 204.00358,51.308324 200.5625,46.11295 L 196.625,61.49253 Z M 167.4375,24.98814 h 13.4375 v 36.50439 h -13.4375 z m -49.96939,11.31371 8.57367,-11.31371 h 26.16295 c 7.91884,1.101344 11.98421,5.046914 12.9047,11.31371 v 6.363959 c -1.65619,5.886285 -6.25212,8.832827 -12.9047,9.722718 l -20.94803,-0.08839 v 9.19239 H 117.46811 V 41.251592 h 33.14563 c 1.80492,-1.356412 2.26133,-2.928589 -0.0884,-4.949745 z"
+         inkscape:connector-curvature="0" />
+      <text
+         y="67.007111"
+         x="24.60906"
+         font-size="12"
+         id="text5343"
+         transform="scale(0.98539869,1.0148177)"
+         style="font-size:11.82478428px;line-height:0%;font-family:Arial;fill:#82a3bb">Performance Improvement Management</text>
+    </g>
+  </g>
+</svg>

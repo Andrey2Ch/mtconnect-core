@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:v="http://schemas.microsoft.com/visio/2003/SVGExtensions/"
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="208.77547"
+   height="164.18219"
+   viewBox="0 0 55.23851 43.439871"
+   version="1.1"
+   id="svg7599"
+   inkscape:version="0.92.1 r15371"
+   sodipodi:docname="device.svg">
+  <defs
+     id="defs7593" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.4"
+     inkscape:cx="251.5838"
+     inkscape:cy="105.25901"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     units="px"
+     showguides="true"
+     inkscape:guide-bbox="true">
+    <sodipodi:guide
+       position="25.143886,-2.1733588"
+       orientation="0,1"
+       id="guide8718"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7596">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-62.235664,-133.16103)">
+    <g
+       id="g4603"
+       transform="matrix(0.79850971,0,0,0.79850971,18.104893,31.207009)">
+      <g
+         style="fill:white;fill-opacity:1;stroke:#000000;stroke-width:2.96498179;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="shape103-35"
+         v:mID="103"
+         v:groupContext="shape"
+         transform="matrix(0.21183657,0.0011867,-0.00110719,0.23916024,119.55879,-40.57852)">
+        <title
+           id="title83">Sheet.103</title>
+        <path
+           d="m 0,752.69 h 25.51 v 89.2 H 0"
+           class="st5"
+           id="path85"
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#000000;stroke-width:2.96498179;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      </g>
+      <g
+         style="fill:white;fill-opacity:1;stroke:#000000;stroke-width:2.96343517;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="shape95-29"
+         v:mID="95"
+         v:groupContext="shape"
+         transform="matrix(0.22004629,0.00161772,-0.0011501,0.32602529,112.42141,-95.637978)">
+        <title
+           id="title73">Sheet.95</title>
+        <path
+           d="M -44.237603,841.89 H 31.18 c 1.565808,0.003 2.8374,-1.26419 2.84,-2.83 V 697.83 c -0.0026,-1.56581 -1.274192,-2.833 -2.84,-2.83 l -75.417603,-10e-6 c 17.47949,12.83016 38.7525714,32.04288 40.6079636,73.5982 -1.7851343,34.66115 -17.1905686,59.54372 -40.6079636,73.29181 z"
+           class="st5"
+           id="path75"
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#000000;stroke-width:2.96343517;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           sodipodi:nodetypes="ccccccccc" />
+      </g>
+      <g
+         style="fill:white;fill-opacity:1;stroke:#000000;stroke-width:2.40933847;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="shape103-35-2"
+         v:mID="103"
+         v:groupContext="shape"
+         transform="matrix(-0.25433849,-0.0011867,0.00190965,-0.34356268,60.62362,428.78885)">
+        <title
+           id="title83-4">Sheet.103</title>
+        <path
+           d="m 0,752.69 h 25.51 v 89.2 H 0"
+           class="st5"
+           id="path85-2"
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#000000;stroke-width:2.40933847;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      </g>
+      <g
+         style="fill:white;fill-opacity:1;stroke:#000000;stroke-width:3.04683447;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="shape95-29-3"
+         v:mID="95"
+         v:groupContext="shape"
+         transform="matrix(-0.20943362,-0.00160792,0.00109463,-0.32405006,68.045272,403.75396)">
+        <title
+           id="title73-0">Sheet.95</title>
+        <path
+           d="M -44.237603,841.89 H 31.18 c 1.565808,0.003 2.8374,-1.26419 2.84,-2.83 V 697.83 c -0.0026,-1.56581 -1.274192,-2.833 -2.84,-2.83 l -75.417603,-10e-6 c 17.47949,12.83016 38.7525714,32.04288 40.6079636,73.5982 -1.7851343,34.66115 -17.1905686,59.54372 -40.6079636,73.29181 z"
+           class="st5"
+           id="path75-1"
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#000000;stroke-width:3.04683447;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           sodipodi:nodetypes="ccccccccc" />
+      </g>
+      <ellipse
+         transform="rotate(90.291782)"
+         ry="27.003229"
+         rx="27.055166"
+         cy="-90.928795"
+         cx="154.41991"
+         id="path6468"
+         style="fill:#000000;fill-opacity:1;stroke:#bab8b2;stroke-width:0.29083666;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke" />
+      <path
+         sodipodi:nodetypes="csccscc"
+         inkscape:connector-curvature="0"
+         id="path7378"
+         d="m 99.563582,177.97194 c 8.966278,-3.77962 15.284248,-12.65728 15.337098,-23.03799 0.053,-10.37998 -6.17347,-19.32101 -15.099798,-23.1922 l -19.587075,-0.0966 c -8.962841,3.78144 -15.276933,12.65685 -15.329783,23.03438 -0.05284,10.37855 6.17173,19.31851 15.096061,23.19055 z"
+         style="fill:white;fill-opacity:1;stroke:#000000;stroke-width:0.01454182;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <g
+         style="fill:white;fill-opacity:1;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none"
+         transform="matrix(-0.00279893,0.54960535,-0.54960535,-0.00279893,185.34075,-171.13371)"
+         id="g8985">
+        <path
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#00001e;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+           d="m 639.62987,170.29767 a 6.5811,6.5811 0 0 1 -6.5811,6.5811 6.5811,6.5811 0 0 1 -6.5811,-6.5811 6.5811,6.5811 0 0 1 6.5811,-6.5811 6.5811,6.5811 0 0 1 6.5811,6.5811 z"
+           id="path8939" />
+        <path
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#00001e;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+           d="m 639.02301,170.31245 a 5.9616694,5.9850554 0 0 1 -5.96167,5.98506 5.9616694,5.9850554 0 0 1 -5.96167,-5.98506 5.9616694,5.9850554 0 0 1 5.96167,-5.98505 5.9616694,5.9850554 0 0 1 5.96167,5.98505 z"
+           id="path8941" />
+        <path
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#00001e;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+           d="m 635.43061,170.31181 a 2.3643904,2.3736651 0 0 1 -2.36439,2.37367 2.3643904,2.3736651 0 0 1 -2.36439,-2.37367 2.3643904,2.3736651 0 0 1 2.36439,-2.37366 2.3643904,2.3736651 0 0 1 2.36439,2.37366 z"
+           id="path8941-1" />
+        <path
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#00001e;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+           d="m 634.97585,170.30594 a 1.9106052,1.9180999 0 0 1 -1.9106,1.9181 1.9106052,1.9180999 0 0 1 -1.91061,-1.9181 1.9106052,1.9180999 0 0 1 1.91061,-1.9181 1.9106052,1.9180999 0 0 1 1.9106,1.9181 z"
+           id="path8941-1-8" />
+      </g>
+      <g
+         style="fill:white;fill-opacity:1;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none"
+         transform="matrix(-0.00279893,0.54960535,-0.54960535,-0.00279893,185.55364,-213.8317)"
+         id="g8985-9">
+        <path
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#00001e;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+           d="m 639.62987,170.29767 a 6.5811,6.5811 0 0 1 -6.5811,6.5811 6.5811,6.5811 0 0 1 -6.5811,-6.5811 6.5811,6.5811 0 0 1 6.5811,-6.5811 6.5811,6.5811 0 0 1 6.5811,6.5811 z"
+           id="path8939-3" />
+        <path
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#00001e;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+           d="m 639.02301,170.31245 a 5.9616694,5.9850554 0 0 1 -5.96167,5.98506 5.9616694,5.9850554 0 0 1 -5.96167,-5.98506 5.9616694,5.9850554 0 0 1 5.96167,-5.98505 5.9616694,5.9850554 0 0 1 5.96167,5.98505 z"
+           id="path8941-0" />
+        <path
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#00001e;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+           d="m 635.43061,170.31181 a 2.3643904,2.3736651 0 0 1 -2.36439,2.37367 2.3643904,2.3736651 0 0 1 -2.36439,-2.37367 2.3643904,2.3736651 0 0 1 2.36439,-2.37366 2.3643904,2.3736651 0 0 1 2.36439,2.37366 z"
+           id="path8941-1-7" />
+        <path
+           inkscape:connector-curvature="0"
+           style="fill:white;fill-opacity:1;stroke:#00001e;stroke-width:0.73647898;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+           d="m 634.97585,170.30594 a 1.9106052,1.9180999 0 0 1 -1.9106,1.9181 1.9106052,1.9180999 0 0 1 -1.91061,-1.9181 1.9106052,1.9180999 0 0 1 1.91061,-1.9181 1.9106052,1.9180999 0 0 1 1.9106,1.9181 z"
+           id="path8941-1-8-0" />
+      </g>
+      <g
+         id="shape210-167-2-1-8"
+         v:mID="210"
+         v:groupContext="shape"
+         transform="matrix(-0.23302594,-0.0011867,0.00121794,-0.23916024,66.182667,361.76799)"
+         style="stroke-width:0.93237501;stroke-miterlimit:4;stroke-dasharray:none">
+        <title
+           id="title372-9-7-3">Sheet.210</title>
+        <desc
+           id="desc374-6-1-1">Iso. GND</desc>
+        <v:textBlock
+           v:margins="rect(1,1,1,1)"
+           v:tabSpace="42.5197" />
+        <v:textRect
+           cx="14.1732"
+           cy="837.89"
+           width="28.35"
+           height="8" />
+        <rect
+           x="0"
+           y="833.89001"
+           width="28.3465"
+           height="8"
+           class="st9"
+           id="rect376-6-7-0"
+           style="fill:none;stroke:none;stroke-width:0.93237501;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      </g>
+      <g
+         id="shape210-167-2-1-8-0"
+         v:mID="210"
+         v:groupContext="shape"
+         transform="matrix(-0.23302594,-0.0011867,0.00121794,-0.23916024,66.193879,359.56646)"
+         style="stroke-width:0.93237501;stroke-miterlimit:4;stroke-dasharray:none">
+        <title
+           id="title372-9-7-3-5">Sheet.210</title>
+        <desc
+           id="desc374-6-1-1-0">Iso. GND</desc>
+        <v:textBlock
+           v:margins="rect(1,1,1,1)"
+           v:tabSpace="42.5197" />
+        <v:textRect
+           cx="14.1732"
+           cy="837.89"
+           width="28.35"
+           height="8" />
+        <rect
+           x="0"
+           y="833.89001"
+           width="28.3465"
+           height="8"
+           class="st9"
+           id="rect376-6-7-0-8"
+           style="fill:none;stroke:none;stroke-width:0.93237501;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      </g>
+      <g
+         id="shape210-167-2-1-8-5"
+         v:mID="210"
+         v:groupContext="shape"
+         transform="matrix(-0.23302594,-0.0011867,0.00121794,-0.23916024,66.20509,357.36495)"
+         style="stroke-width:0.93237501;stroke-miterlimit:4;stroke-dasharray:none">
+        <title
+           id="title372-9-7-3-52">Sheet.210</title>
+        <desc
+           id="desc374-6-1-1-7">Iso. GND</desc>
+        <v:textBlock
+           v:margins="rect(1,1,1,1)"
+           v:tabSpace="42.5197" />
+        <v:textRect
+           cx="14.1732"
+           cy="837.89"
+           width="28.35"
+           height="8" />
+        <rect
+           x="0"
+           y="833.89001"
+           width="28.3465"
+           height="8"
+           class="st9"
+           id="rect376-6-7-0-6"
+           style="fill:none;stroke:none;stroke-width:0.93237501;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      </g>
+      <g
+         id="shape210-167-2-1-8-7"
+         v:mID="210"
+         v:groupContext="shape"
+         transform="matrix(-0.23302594,-0.0011867,0.00121794,-0.23916024,66.216252,355.17317)"
+         style="stroke-width:0.93237501;stroke-miterlimit:4;stroke-dasharray:none">
+        <title
+           id="title372-9-7-3-7">Sheet.210</title>
+        <desc
+           id="desc374-6-1-1-4">Iso. GND</desc>
+        <v:textBlock
+           v:margins="rect(1,1,1,1)"
+           v:tabSpace="42.5197" />
+        <v:textRect
+           cx="14.1732"
+           cy="837.89"
+           width="28.35"
+           height="8" />
+        <rect
+           x="0"
+           y="833.89001"
+           width="28.3465"
+           height="8"
+           class="st9"
+           id="rect376-6-7-0-2"
+           style="fill:none;stroke:none;stroke-width:0.93237501;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      </g>
+      <g
+         id="shape210-167-2-1-8-4"
+         v:mID="210"
+         v:groupContext="shape"
+         transform="matrix(-0.23302594,-0.0011867,0.00121794,-0.23916024,66.227539,352.95662)"
+         style="stroke-width:0.93237501;stroke-miterlimit:4;stroke-dasharray:none">
+        <title
+           id="title372-9-7-3-58">Sheet.210</title>
+        <desc
+           id="desc374-6-1-1-9">Iso. GND</desc>
+        <v:textBlock
+           v:margins="rect(1,1,1,1)"
+           v:tabSpace="42.5197" />
+        <v:textRect
+           cx="14.1732"
+           cy="837.89"
+           width="28.35"
+           height="8" />
+        <rect
+           x="0"
+           y="833.89001"
+           width="28.3465"
+           height="8"
+           class="st9"
+           id="rect376-6-7-0-1"
+           style="fill:none;stroke:none;stroke-width:0.93237501;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      </g>
+      <g
+         id="shape210-167-2-1-8-4-8"
+         v:mID="210"
+         v:groupContext="shape"
+         transform="matrix(-0.23302594,-0.0011867,0.00121794,-0.23916024,66.238545,350.79571)"
+         style="stroke-width:0.93237501;stroke-miterlimit:4;stroke-dasharray:none">
+        <title
+           id="title372-9-7-3-58-8">Sheet.210</title>
+        <desc
+           id="desc374-6-1-1-9-4">Iso. GND</desc>
+        <v:textBlock
+           v:margins="rect(1,1,1,1)"
+           v:tabSpace="42.5197" />
+        <v:textRect
+           cx="14.1732"
+           cy="837.89"
+           width="28.35"
+           height="8" />
+        <rect
+           x="0"
+           y="833.89001"
+           width="28.3465"
+           height="8"
+           class="st9"
+           id="rect376-6-7-0-1-1"
+           style="fill:none;stroke:none;stroke-width:0.93237501;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      </g>
+      <g
+         id="shape210-167-2-1-8-5-7"
+         v:mID="210"
+         v:groupContext="shape"
+         transform="matrix(-0.23302594,-0.0011867,0.00121794,-0.23916024,66.24997,348.55219)"
+         style="stroke-width:0.93237501;stroke-miterlimit:4;stroke-dasharray:none">
+        <title
+           id="title372-9-7-3-52-2">Sheet.210</title>
+        <desc
+           id="desc374-6-1-1-7-7">Iso. GND</desc>
+        <v:textBlock
+           v:margins="rect(1,1,1,1)"
+           v:tabSpace="42.5197" />
+        <v:textRect
+           cx="14.1732"
+           cy="837.89"
+           width="28.35"
+           height="8" />
+        <rect
+           x="0"
+           y="833.89001"
+           width="28.3465"
+           height="8"
+           class="st9"
+           id="rect376-6-7-0-6-8"
+           style="fill:none;stroke:none;stroke-width:0.93237501;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      </g>
+      <g
+         id="shape210-167-2-1-8-7-8"
+         v:mID="210"
+         v:groupContext="shape"
+         transform="matrix(-0.23302594,-0.0011867,0.00121794,-0.23916024,66.261185,346.35013)"
+         style="stroke-width:0.93237501;stroke-miterlimit:4;stroke-dasharray:none">
+        <title
+           id="title372-9-7-3-7-1">Sheet.210</title>
+        <desc
+           id="desc374-6-1-1-4-0">Iso. GND</desc>
+        <v:textBlock
+           v:margins="rect(1,1,1,1)"
+           v:tabSpace="42.5197" />
+        <v:textRect
+           cx="14.1732"
+           cy="837.89"
+           width="28.35"
+           height="8" />
+        <rect
+           x="0"
+           y="833.89001"
+           width="28.3465"
+           height="8"
+           class="st9"
+           id="rect376-6-7-0-2-0"
+           style="fill:none;stroke:none;stroke-width:0.93237501;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      </g>
+      <g
+         id="shape210-167-2-1-8-4-6"
+         v:mID="210"
+         v:groupContext="shape"
+         transform="matrix(-0.23302594,-0.0011867,0.00121794,-0.23916024,66.272469,344.13413)"
+         style="stroke-width:0.93237501;stroke-miterlimit:4;stroke-dasharray:none">
+        <title
+           id="title372-9-7-3-58-86">Sheet.210</title>
+        <desc
+           id="desc374-6-1-1-9-8">Iso. GND</desc>
+        <v:textBlock
+           v:margins="rect(1,1,1,1)"
+           v:tabSpace="42.5197" />
+        <v:textRect
+           cx="14.1732"
+           cy="837.89"
+           width="28.35"
+           height="8" />
+        <rect
+           x="0"
+           y="833.89001"
+           width="28.3465"
+           height="8"
+           class="st9"
+           id="rect376-6-7-0-1-8"
+           style="fill:none;stroke:none;stroke-width:0.93237501;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" />
+      </g>
+    </g>
+  </g>
+</svg>

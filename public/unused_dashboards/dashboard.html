@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏭 MTConnect Dashboard - FANUC Monitoring</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .btn.active {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+        }
+        
+        .status-bar {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-info {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .status-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .machines-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .machine-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .machine-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        
+        .machine-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .machine-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .machine-status {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-available {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-unavailable {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .machine-data {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .data-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .data-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .data-label {
+            font-size: 0.85em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .data-unit {
+            font-size: 0.9em;
+            color: #888;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+        
+        .timestamp {
+            font-size: 0.8em;
+            color: #999;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .connection-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 10px;
+            display: inline-block;
+        }
+        
+        .connected { background: #4CAF50; }
+        .disconnected { background: #f44336; }
+        
+        .auto-refresh {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏭 FANUC CNC Monitoring System</h1>
+        <p>Real-time monitoring of 8 FANUC machines • MTConnect Local Agent</p>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="refreshData()">🔄 Refresh Data</button>
+        <button class="btn" id="autoRefreshBtn" onclick="toggleAutoRefresh()">▶️ Auto Refresh</button>
+        <button class="btn" onclick="showProbe()">📋 Device Info</button>
+        <button class="btn" onclick="showHealth()">❤️ System Health</button>
+        <div style="margin-left: auto;">
+            <span>Connection:</span>
+            <span class="connection-indicator" id="connectionIndicator"></span>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-info">
+            <div class="status-item">
+                <div class="status-value" id="totalMachines">8</div>
+                <div class="status-label">Total Machines</div>
+            </div>
+            <div class="status-item">
+                <div class="status-value" id="activeMachines">0</div>
+                <div class="status-label">Active</div>
+            </div>
+            <div class="status-item">
+                <div class="status-value" id="avgUtilization">0%</div>
+                <div class="status-label">Avg Utilization</div>
+            </div>
+            <div class="status-item">
+                <div class="status-value" id="totalParts">0</div>
+                <div class="status-label">Parts Today</div>
+            </div>
+        </div>
+        <div class="timestamp" id="lastUpdate">Last Update: Never</div>
+    </div>
+
+    <div id="machinesContainer">
+        <div class="loading" id="loadingIndicator" style="display: none;">🔄 Loading data...</div>
+    </div>
+
+    <div class="loading" id="loadingIndicator" style="display: none;">🔄 Loading data...</div>
+    <div class="timestamp" id="lastUpdated"></div>
+
+    <!-- МОДАЛЬНОЕ ОКНО -->
+    <div id="infoModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Modal Title</h2>
+            <pre id="modalBody">Modal content goes here.</pre>
+        </div>
+    </div>
+
+    <script>
+        // ВЕСЬ JAVASCRIPT БЛОК С СИМУЛЯЦИЕЙ УДАЛЯЕТСЯ
+        // Оставляем этот комментарий как маркер, что здесь был скрипт.
+        // Если есть какие-то другие скрипты, не связанные с симуляцией (например, для модального окна, если оно нужно),
+        // их можно было бы оставить, но для чистоты сейчас удаляем все, что выглядит как основная логика дашборда.
+
+        // Пример того, что могло бы остаться (если бы было нужно для дизайна):
+        // function openModal(title, content) {
+        //     document.getElementById('modalTitle').textContent = title;
+        //     document.getElementById('modalBody').textContent = content;
+        //     document.getElementById('infoModal').style.display = 'block';
+        // }
+
+        // function closeModal() {
+        //     document.getElementById('infoModal').style.display = 'none';
+        // }
+        // (но так как showProbe и showHealth были связаны с симуляцией, их обработчики тоже ушли)
+    </script>
+</body>
+</html> 

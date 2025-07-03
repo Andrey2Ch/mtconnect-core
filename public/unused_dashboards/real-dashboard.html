@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏭 MTConnect Real-Time Dashboard - FANUC Production</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .btn.active {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        }
+        
+        .status-bar {
+            background: rgba(255,255,255,0.15);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-info {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-value {
+            font-size: 2em;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .status-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        /* 🔄 НОВЫЕ СТИЛИ ДЛЯ ЦИКЛОВ */
+        .production-summary {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            border: 2px solid rgba(46, 204, 113, 0.3);
+        }
+        
+        .cycle-indicator {
+            background: rgba(46, 204, 113, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(46, 204, 113, 0.4);
+        }
+        
+        .cycle-indicator.running {
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+        }
+        
+        .machines-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+        
+        .machine-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .machine-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        }
+        
+        .machine-card.running {
+            border-left: 5px solid #2ecc71;
+            box-shadow: 0 0 20px rgba(46, 204, 113, 0.3);
+        }
+        
+        .machine-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .machine-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .machine-type {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .machine-status {
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: 600;
+            text-transform: uppercase;
+            text-shadow: none;
+        }
+        
+        .status-running {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            box-shadow: 0 0 20px rgba(39,174,96,0.4);
+        }
+        
+        .status-stopped {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            box-shadow: 0 0 20px rgba(231,76,60,0.4);
+        }
+        
+        .status-available {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            box-shadow: 0 0 20px rgba(243,156,18,0.4);
+        }
+        
+        .status-unavailable {
+            background: linear-gradient(45deg, #95a5a6, #7f8c8d);
+            box-shadow: 0 0 20px rgba(149,165,166,0.4);
+        }
+        
+        .machine-data {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+        
+        /* 🔄 НОВЫЕ СТИЛИ ДЛЯ ДАННЫХ ЦИКЛОВ */
+        .cycle-section {
+            grid-column: 1 / -1;
+            background: rgba(46, 204, 113, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+        
+        .cycle-header {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2ecc71;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .cycle-data {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            text-align: center;
+        }
+        
+        .cycle-stat {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .cycle-stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #2ecc71;
+        }
+        
+        .cycle-stat-label {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .data-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .data-value {
+            font-size: 1.6em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .data-label {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+        
+        .data-unit {
+            font-size: 0.9em;
+            opacity: 0.7;
+            margin-top: 3px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 1.5em;
+            opacity: 0.8;
+        }
+        
+        .connection-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-left: 15px;
+            display: inline-block;
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        .connected { 
+            background: #2ecc71; 
+            box-shadow: 0 0 15px #2ecc71;
+        }
+        .disconnected { 
+            background: #e74c3c; 
+            box-shadow: 0 0 15px #e74c3c;
+        }
+        
+        .error-message {
+            background: rgba(231,76,60,0.2);
+            border: 1px solid #e74c3c;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .auto-refresh {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏭 MTConnect REAL-TIME Production Monitor</h1>
+        <p>Live data from 8 FANUC machines • Connected via MTConnect Protocol • 🔄 Cycle Tracking</p>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="requestDataRefresh()">🔄 Refresh Now</button>
+        <button class="btn" id="autoRefreshBtn" onclick="toggleAutoRefresh()">▶️ Auto Refresh</button>
+        <button class="btn" onclick="showCycles()">📊 Cycles Data</button>
+        <button class="btn" onclick="showRawXML()">📄 Raw XML</button>
+        <button class="btn" onclick="showProbe()">📋 Device Info</button>
+        <button class="btn" onclick="showHealth()">❤️ System Health</button>
+        <span id="mtconnectStatus" style="margin-left: auto; display: flex; align-items: center;">
+            MTConnect Status: <span class="status-dot"></span>
+            <span id="dataAge" style="margin-left: 10px; font-size: 0.9em;"></span>
+        </span>
+        <span id="refreshCounter" style="font-size: 0.9em; margin-left: 10px;">Refreshes: 0</span>
+    </div>
+
+    <!-- Таблица для отображения данных о станках -->
+    <div class="table-container">
+        <table id="machinesTable">
+            <thead>
+                <tr>
+                    <th>Protocol</th>
+                    <th>Machine</th>
+                    <th>Manufacturer</th>
+                    <th>Model</th>
+                    <th>Address</th>
+                    <th>Processing</th>
+                    <th>Program</th>
+                    <th>Line</th>
+                </tr>
+            </thead>
+            <tbody id="machinesTableBody">
+                <!-- Данные будут вставляться сюда JavaScript-ом -->
+            </tbody>
+        </table>
+    </div>
+    <div id="loadingIndicator" class="loading" style="display: none;">🔄 Loading real machine data from MTConnect...</div>
+    <div id="errorIndicator" class="error-message" style="display: none;"></div>
+
+    <script>
+        let autoRefreshInterval = null;
+        let isAutoRefreshing = false;
+        let refreshCounter = 0;
+        let lastDataTimestamp = null;
+        let currentRawXML = '';
+        let machineProbeData = {}; // Для хранения данных Manufacturer/Model из /probe
+
+        // Используем конфигурацию с сервера src/main.ts - ОБНОВЛЕНО
+        const FANUC_MACHINES = [
+            { id: 'SR-10', name: 'SR-10', ip: '192.168.1.91', type: 'CNC', mtconnectAgentUrl: 'http://localhost:5002' },
+            { id: 'SR-21', name: 'SR-21', ip: '192.168.1.101', type: 'CNC', mtconnectAgentUrl: 'http://localhost:5003' },
+            { id: 'SR-23', name: 'SR-23', ip: '192.168.1.103', type: 'CNC', mtconnectAgentUrl: 'http://localhost:5004' },
+            { id: 'SR-25', name: 'SR-25', ip: '192.168.1.104', type: 'CNC', mtconnectAgentUrl: 'http://localhost:5005' },
+            { id: 'SR-26', name: 'SR-26', ip: '192.168.1.54', type: 'CNC', mtconnectAgentUrl: 'http://localhost:5006' },
+            { id: '002', name: 'XD-20 via Agent', ip: '192.168.1.105', type: 'CNC', mtconnectAgentUrl: 'http://localhost:5001' },
+            { id: 'XD-38', name: 'XD-38', ip: '192.168.1.199', type: 'CNC', mtconnectAgentUrl: 'http://localhost:5007' }
+        ];
+        
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('mtconnectStatus')?.querySelector('.status-dot');
+            if (!statusElement) return;
+            if (connected) {
+                statusElement.style.backgroundColor = '#2ecc71'; // Green
+            } else {
+                statusElement.style.backgroundColor = '#e74c3c'; // Red
+            }
+        }
+
+        function updateDataAge() {
+            const dataAgeElement = document.getElementById('dataAge');
+            if (!dataAgeElement) return;
+            if (lastDataTimestamp) {
+                const age = Math.round((Date.now() - lastDataTimestamp) / 1000);
+                dataAgeElement.textContent = `(${age}s ago)`;
+            } else {
+                dataAgeElement.textContent = '(no data yet)';
+            }
+        }
+
+        function getElementValue(xmlDoc, machineUuid, dataItemId) {
+            const deviceStream = xmlDoc.querySelector(`DeviceStream[uuid="${machineUuid}"]`);
+            if (!deviceStream) {
+                // console.warn(`DeviceStream not found for uuid="${machineUuid}" in getElementValue`);
+                return null;
+            }
+
+            let foundDataItem = null;
+
+            // 1. Поиск во всех дочерних ComponentStream
+            const componentStreams = deviceStream.querySelectorAll(':scope > ComponentStream'); 
+            for (const cs of componentStreams) {
+                const eventsElement = cs.querySelector(':scope > Events');
+                if (eventsElement) {
+                    foundDataItem = eventsElement.querySelector(`*[dataItemId="${dataItemId}"]`);
+                    if (foundDataItem) break; 
+                }
+                if (!foundDataItem) { 
+                    const samplesElement = cs.querySelector(':scope > Samples');
+                    if (samplesElement) {
+                        foundDataItem = samplesElement.querySelector(`*[dataItemId="${dataItemId}"]`);
+                        if (foundDataItem) break;
+                    }
+                }
+            }
+
+            // 2. Fallback: Если не найдено в ComponentStream, ищем напрямую в Events/Samples самого DeviceStream
+            if (!foundDataItem) {
+                const deviceEvents = deviceStream.querySelector(':scope > Events');
+                if (deviceEvents) {
+                    foundDataItem = deviceEvents.querySelector(`*[dataItemId="${dataItemId}"]`);
+                }
+            }
+            if (!foundDataItem) {
+                const deviceSamples = deviceStream.querySelector(':scope > Samples');
+                if (deviceSamples) {
+                    foundDataItem = deviceSamples.querySelector(`*[dataItemId="${dataItemId}"]`);
+                }
+            }
+            
+            // if (!foundDataItem) {
+            //     console.warn(`DataItemId "${dataItemId}" not found for machine "${machineUuid}"`);
+            // }
+
+            return foundDataItem ? foundDataItem.textContent.trim() : null;
+        }
+
+        function renderMachineData(xmlDocCurrent) {
+            const tableBody = document.getElementById('machinesTableBody');
+            if (!tableBody) {
+                console.error('Table body #machinesTableBody not found!');
+                return;
+            }
+            let tableHtml = '';
+
+            FANUC_MACHINES.forEach(machine => {
+                // Используем machine.id как uuid для поиска в XML
+                const availability = getElementValue(xmlDocCurrent, machine.id, 'avail');
+                const execution = getElementValue(xmlDocCurrent, machine.id, 'execution');
+                const program = getElementValue(xmlDocCurrent, machine.id, 'program');
+                // Дополнительные параметры для XD-20_AGENT (или любого другого станка)
+                const spindleSpeed = getElementValue(xmlDocCurrent, machine.id, 'Sspeed'); // ID из /probe для SpindleSpeed
+                const feedrate = getElementValue(xmlDocCurrent, machine.id, 'feedrate'); // ID из /probe для PathFeedrate
+
+                let processingStatus = 'Unknown';
+                let processingStatusClass = 'status-unknown';
+
+                if (availability === 'UNAVAILABLE') {
+                    processingStatus = 'Offline';
+                    processingStatusClass = 'status-offline';
+                } else if (availability === 'AVAILABLE') {
+                    if (execution === 'ACTIVE' || execution === 'EXECUTING') {
+                        processingStatus = 'Executing';
+                        processingStatusClass = 'status-executing';
+                    } else if (execution === 'STOPPED' || execution === 'READY' || execution === null || execution === '') {
+                        if (program && program !== '0' && program.trim() !== '' && program.trim() !== '0.0'){
+                            processingStatus = `Idle (${program})`;
+                            processingStatusClass = 'status-idle';
+                        } else {
+                            processingStatus = 'No Program';
+                            processingStatusClass = 'status-no-program';
+                        }
+                    } else {
+                        processingStatus = execution; 
+                        processingStatusClass = `status-${(execution || 'unknown').toLowerCase()}`;
+                    }
+                } else { 
+                    processingStatus = 'No Data';
+                    processingStatusClass = 'status-no-data';
+                }
+                
+                const programDisplay = (program && program.trim() !== '' && program.trim() !== '0' && program.trim() !== '0.0') ? program : '-';
+                const manufacturer = machineProbeData[machine.id]?.manufacturer || 'Unknown';
+                const model = machineProbeData[machine.id]?.model || 'Unknown';
+
+                tableHtml += `
+                    <tr>
+                        <td>MTConnect</td>
+                        <td>${machine.name}</td>
+                        <td>${manufacturer}</td>
+                        <td>${model}</td>
+                        <td>${machine.ip}</td>
+                        <td class="${processingStatusClass}">${processingStatus}</td>
+                        <td>${programDisplay}</td>
+                        <td>${machine.type || 'Fanuc'}</td>
+                    </tr>
+                `;
+            });
+            tableBody.innerHTML = tableHtml;
+        }
+
+        async function fetchData() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorIndicator = document.getElementById('errorIndicator');
+            if (loadingIndicator) loadingIndicator.style.display = 'block';
+            if (errorIndicator) errorIndicator.style.display = 'none';
+
+            try {
+                // Сначала загрузим данные /probe, если их еще нет
+                if (Object.keys(machineProbeData).length === 0) {
+                    const probeResponse = await fetch('/probe');
+                    if (!probeResponse.ok) {
+                        throw new Error(`HTTP error! status: ${probeResponse.status} while fetching /probe`);
+                    }
+                    const probeXmlText = await probeResponse.text();
+                    const probeParser = new DOMParser();
+                    const probeXmlDoc = probeParser.parseFromString(probeXmlText, "application/xml");
+                    
+                    const devices = probeXmlDoc.querySelectorAll('Device');
+                    devices.forEach(device => {
+                        const deviceId = device.getAttribute('uuid'); // Используем UUID, так как он должен совпадать с machine.id
+                        if (deviceId) {
+                            const description = device.querySelector('Description');
+                            machineProbeData[deviceId] = {
+                                manufacturer: description?.getAttribute('manufacturer') || 'Unknown',
+                                model: description?.getAttribute('model') || 'Unknown'
+                            };
+                        }
+                    });
+                }
+
+                const response = await fetch('/current');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status} ${response.statusText}`);
+                }
+                currentRawXML = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(currentRawXML, "application/xml");
+
+                const errorNode = xmlDoc.querySelector('MTConnectError Error'); // Проверка на ошибки MTConnect
+                if (errorNode) {
+                    throw new Error(`MTConnect Agent Error: ${errorNode.getAttribute('errorCode')} - ${errorNode.textContent}`);
+                }
+                
+                lastDataTimestamp = Date.now();
+                updateConnectionStatus(true);
+                refreshCounter++;
+                const refreshCounterElement = document.getElementById('refreshCounter');
+                if(refreshCounterElement) refreshCounterElement.textContent = `Refreshes: ${refreshCounter}`;
+                
+                renderMachineData(xmlDoc);
+                // updateCycleSummary(); // Закомментировано, так как логика не определена
+
+            } catch (error) {
+                console.error('Error fetching or rendering MTConnect data:', error);
+                updateConnectionStatus(false);
+                if (errorIndicator) {
+                    errorIndicator.textContent = `❌ Error: ${error.message}.`;
+                    errorIndicator.style.display = 'block';
+                }
+                const tableBody = document.getElementById('machinesTableBody');
+                if (tableBody) tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: #e74c3c;">Error loading data. Check agent connection.</td></tr>`;
+            } finally {
+                if (loadingIndicator) loadingIndicator.style.display = 'none';
+                updateDataAge();
+            }
+        }
+
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefreshBtn');
+            if (!btn) return;
+            isAutoRefreshing = !isAutoRefreshing;
+            if (isAutoRefreshing) {
+                fetchData(); 
+                autoRefreshInterval = setInterval(fetchData, 5000); 
+                btn.textContent = '⏹️ Stop Auto';
+                btn.classList.add('active');
+            } else {
+                clearInterval(autoRefreshInterval);
+                btn.textContent = '▶️ Auto Refresh';
+                btn.classList.remove('active');
+            }
+        }
+
+        function requestDataRefresh() {
+            fetchData();
+        }
+        
+        function showRawXML() {
+            openModal("Raw MTConnect XML (/current)", formatXml(currentRawXML || "No XML data loaded yet."));
+        }
+
+        async function showProbe() {
+            try {
+                const response = await fetch('/probe');
+                const xmlText = await response.text();
+                openModal("MTConnect Probe Data (/probe)", formatXml(xmlText));
+            } catch (error) {
+                openModal("Error Fetching Probe", `Could not fetch /probe: ${error.message}`);
+            }
+        }
+        
+        async function showHealth() {
+             try {
+                const response = await fetch('/health');
+                const healthData = await response.json();
+                openModal("System Health (/health)", JSON.stringify(healthData, null, 2));
+            } catch (error) {
+                openModal("Error Fetching Health", `Could not fetch /health: ${error.message}`);
+            }
+        }
+        
+        // Оставляем showCycles и updateCycleSummary как заглушки, если они вызываются кнопками
+        function showCycles() {
+            openModal("Cycle Data", "Cycle data functionality is not implemented in this minimal dashboard version.");
+        }
+        function updateCycleSummary() { /* Placeholder */ }
+
+        function openModal(title, content) {
+            let modal = document.getElementById('infoModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'infoModal';
+                modal.style.cssText = 'position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; padding: 20px;';
+                modal.innerHTML = `
+                    <div style="background-color: #2c3e50; color: white; margin: auto; padding: 25px; border: 1px solid #3498db; border-radius: 10px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 25px rgba(0,0,0,0.5);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #3498db; padding-bottom: 10px;">
+                            <h2 id="modalTitleElement" style="font-size: 1.5em;"></h2>
+                            <span id="closeModalButton" style="color: #ecf0f1; font-size: 30px; font-weight: bold; cursor: pointer; line-height: 1;">&times;</span>
+                        </div>
+                        <pre id="modalBodyElement" style="white-space: pre-wrap; word-wrap: break-word; font-family: Consolas, Monaco, monospace; background-color: #222f3e; padding: 15px; border-radius: 5px; font-size: 0.9em; max-height: 65vh; overflow-y: auto;"></pre>
+                    </div>`;
+                document.body.appendChild(modal);
+                document.getElementById('closeModalButton').onclick = closeModal;
+                modal.onclick = function(event) {
+                    if (event.target === modal) { // Close only if backdrop is clicked
+                        closeModal();
+                    }
+                }
+            }
+            document.getElementById('modalTitleElement').textContent = title;
+            document.getElementById('modalBodyElement').textContent = content;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('infoModal');
+            if (modal) modal.style.display = 'none';
+        }
+        
+        function formatXml(xmlInput) {
+            if (!xmlInput || typeof xmlInput !== 'string') return 'Invalid XML input';
+            try {
+                let xml = xmlInput.replace(/>\s*</g, '><'); // remove whitespace between tags
+                let formatted = '';
+                let indent = '';
+                const tab = '  '; // 2 spaces for indentation
+
+                xml.split(/>\s*</).forEach(function(node) {
+                    if (node.match( /^\w[^<>/]*$/ )) { // Text node
+                        formatted += indent + node + '\n';
+                    } else if (node.match( /^\// )) { // Closing tag
+                        indent = indent.substring(tab.length);
+                        formatted += indent + '<' + node + '>\n';
+                    } else if (node.match( /\/$/ )) { // Self-closing tag
+                        formatted += indent + '<' + node + '\n';
+                    } else { // Opening tag
+                        formatted += indent + '<' + node + '>\n';
+                        indent += tab;
+                    }
+                });
+                return formatted.trim();
+            } catch (e) {
+                // console.error("XML formatting error:", e);
+                return xmlInput; // Return original if formatting fails
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Проверяем наличие всех необходимых элементов перед инициализацией
+            if (document.getElementById('machinesTableBody') && 
+                document.getElementById('mtconnectStatus')?.querySelector('.status-dot') &&
+                document.getElementById('autoRefreshBtn')) {
+                
+                fetchData(); 
+                setInterval(updateDataAge, 1000); 
+                // Для запуска автообновления по умолчанию:
+                // toggleAutoRefresh(); 
+            } else {
+                console.error('Dashboard HTML structure is incomplete. Could not initialize all features.');
+            }
+        });
+    </script>
+</body>
+</html> 

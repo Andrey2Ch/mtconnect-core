@@ -1,0 +1,28 @@
+## Project Refactoring and Cleanup
+
+**Objective:** To streamline the project by removing duplicated, obsolete, and unnecessary files and directories. This will improve clarity and maintainability.
+
+**Key Requirements:**
+
+1.  **Remove Duplicate 'Fanuc' Directory:**
+    - The `PIM/Fanuc` directory is the single source of truth for all machine configurations and adapters.
+    - The top-level `Fanuc` directory is a duplicate and must be completely removed.
+
+2.  **Delete Obsolete Scripts:**
+    - The `install_and_start_services.bat` file is an old, non-functional script.
+    - It has been replaced by the more robust `start-all-fanuc-services.ps1`.
+    - The `.bat` file must be deleted.
+
+3.  **Analyze and Prune C++ Source Code:**
+    - The `fanuc-adapter` and `fanuc-reference` directories contain C++ source code for the adapters.
+    - The project currently uses pre-compiled `.exe` binaries.
+    - These directories should be reviewed with the user. If they are not needed for active development, they should be removed to reduce project size and complexity.
+
+4.  **Clean Up 'public' Directory:**
+    - The `public` directory contains several legacy HTML files (`dashboard.html`, `data-analyzer.html`, etc.).
+    - The only active and current dashboard is `dashboard-pro.html`.
+    - All other HTML files in the `public` root should be deleted.
+
+5.  **Clean Up Screenshots:**
+    - The `screenshot` directory should be reviewed.
+    - Unless these images are required for specific documentation, the directory should be cleared out. 

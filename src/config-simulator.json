@@ -1,0 +1,45 @@
+{
+  "machines": [
+    {
+      "id": "SR-26-SIM",
+      "name": "SR-26 Simulator",
+      "ip": "localhost",
+      "port": 7878,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:7878",
+      "uuid": "sr26sim",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"],
+      "isSimulator": true
+    },
+    {
+      "id": "SR-10",
+      "name": "SR-10 (Real)",
+      "ip": "192.168.1.91",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://192.168.1.91:8193",
+      "uuid": "sr10",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"]
+    },
+    {
+      "id": "SR-21",
+      "name": "SR-21 (Real)",
+      "ip": "192.168.1.199",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://192.168.1.199:8193",
+      "uuid": "sr21",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"]
+    }
+  ],
+  "settings": {
+    "serverPort": 5000,
+    "dataUpdateInterval": 1000,
+    "connectionTimeout": 2500,
+    "maxRetries": 3,
+    "debugDetails": true
+  }
+} 
