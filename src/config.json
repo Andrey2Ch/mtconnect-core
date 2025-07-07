@@ -87,6 +87,32 @@
       "uuid": "xd38",
       "spindles": ["S0"],
       "axes": ["X", "Y", "Z"]
+    },
+    {
+      "id": "K-16",
+      "name": "K-16",
+      "ip": "192.168.1.116",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5009",
+      "uuid": "k16",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"],
+      "adamChannel": 6,
+      "countingMethod": "DIRECT_PULSE"
+    },
+    {
+      "id": "L-20",
+      "name": "L-20",
+      "ip": "192.168.1.120",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5010",
+      "uuid": "l20",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"],
+      "adamChannel": 5,
+      "countingMethod": "DIRECT_PULSE"
     }
   ],
   "settings": {

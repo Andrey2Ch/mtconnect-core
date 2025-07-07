@@ -6,6 +6,8 @@ import { parseStringPromise as xmlParse, Builder as XmlBuilder } from 'xml2js';
 import xml2js from 'xml2js';
 import * as fs from 'fs';
 import { SHDRManager, SHDRConnectionConfig } from './shdr-client';
+import { MachineHandlerFactory } from './machine-handlers/factory';
+import { AdamReader } from './adam-reader';
 // import cycleTracker from './cycle-tracker'; // Закомментируйте или удалите, если не используется
 
 // Загружаем конфигурацию из файла (поддержка разных конфигураций)
@@ -65,6 +67,9 @@ const FANUC_MACHINES: MachineConfig[] = config.machines;
 
 // Инициализация SHDR Manager для симуляторов и прямых SHDR подключений
 const shdrManager = new SHDRManager();
+
+// Создаём экземпляр AdamReader
+const adamReader = new AdamReader();
 
 // Настройка SHDR подключений для машин с isSimulator: true
 FANUC_MACHINES.filter(machine => machine.isSimulator).forEach(machine => {
@@ -149,68 +154,100 @@ async function generateMTConnectXML(): Promise<string> {
                             return component; // Возвращаем компонент без изменений
                         }
 
-                        // --- Логика обработки PartCount и добавления CycleTime (остается прежней) ---
+                        // --- ИНДИВИДУАЛЬНАЯ ЛОГИКА ОБРАБОТКИ ДЛЯ КАЖДОГО СТАНКА ---
+                        const handler = MachineHandlerFactory.getHandler(machine.id);
+                        if (!handler) {
+                            console.warn(`⚠️ Не найден обработчик для станка ${machine.id}`);
+                            return component;
+                        }
+
+                        // Получаем данные через индивидуальный обработчик
+                        const currentPartCount = handler.getPartCount(deviceStreamDataObject);
+                        
+                        // Получаем timestamp из PartCount события или используем текущее время
+                        let currentTimestampDate = new Date();
                         const partCountEvent = component.Events?.PartCount;
-                        if (partCountEvent && partCountEvent._ && partCountEvent.$.timestamp) {
-                            const currentPartCount = parseInt(partCountEvent._, 10);
-                            if (!isNaN(currentPartCount)) {
-                                const currentTimestampDate = new Date(partCountEvent.$.timestamp);
-                                const machineState = partCountStates.get(machine.id);
+                        if (partCountEvent && partCountEvent.$.timestamp) {
+                            currentTimestampDate = new Date(partCountEvent.$.timestamp);
+                        }
+                        
+                        if (currentPartCount !== null) {
+                            const machineState = partCountStates.get(machine.id);
 
-                                if (machineState && currentPartCount > machineState.lastCount) {
-                                    const cycleTimeMs = currentTimestampDate.getTime() - machineState.lastTimestamp.getTime();
+                            if (machineState && currentPartCount > machineState.lastCount) {
+                                // Используем индивидуальную логику расчёта времени цикла
+                                const cycleTimeMs = handler.calculateCycleTime(
+                                    currentPartCount, 
+                                    machineState.lastCount, 
+                                    currentTimestampDate, 
+                                    machineState.lastTimestamp
+                                );
+
+                                if (cycleTimeMs !== null) {
                                     const partsProduced = currentPartCount - machineState.lastCount;
-                                    const averageCycleTimeMs = cycleTimeMs / partsProduced;
-
-                                    console.log(` machinedetails ⏱️ Цикл для ${machine.name} (${machine.id}): ${partsProduced} дет. за ${cycleTimeMs / 1000} сек. (среднее: ${averageCycleTimeMs / 1000} сек/дет.)`);
+                                    console.log(` machinedetails ⏱️ Цикл для ${machine.name} (${machine.id}): ${partsProduced} дет. за ${cycleTimeMs / 1000} сек. (среднее: ${cycleTimeMs / 1000} сек/дет.)`);
 
                                     const cycleTimeSample = {
                                         $: {
-                                            dataItemId: 'cycle_time_avg',
+                                            dataItemId: handler.getDataItemId(),
                                             timestamp: currentTimestampDate.toISOString(),
                                             name: 'CycleTime',
                                             sequence: Math.floor(Math.random() * 100000),
-                                            subType: 'AVERAGE',
+                                            subType: handler.getCycleTimeFormat(),
                                             type: 'PROCESS_TIMER'
                                         },
-                                        _: (averageCycleTimeMs / 1000).toFixed(2)
+                                        _: (cycleTimeMs / 1000).toFixed(2)
                                     };
 
                                     if (!component.Samples) component.Samples = {};
-                                    if (!component.Samples.ProcessTimer) {
-                                        component.Samples.ProcessTimer = [];
-                                    }
+                                    if (!component.Samples.ProcessTimer) component.Samples.ProcessTimer = [];
                                     if (!Array.isArray(component.Samples.ProcessTimer)) {
                                         component.Samples.ProcessTimer = [component.Samples.ProcessTimer];
                                     }
                                     component.Samples.ProcessTimer.push(cycleTimeSample);
+
                                     console.log(`✅ Добавлен CycleTime Sample для ${machine.name}`);
                                     
                                     partCountStates.set(machine.id, {
                                         lastCount: currentPartCount,
                                         lastTimestamp: currentTimestampDate,
-                                        lastCycleTimeMs: averageCycleTimeMs,
-                                        lastCycleTimeSample: cycleTimeSample // Сохраняем Sample
+                                        lastCycleTimeMs: cycleTimeMs,
+                                        lastCycleTimeSample: cycleTimeSample
                                     });
-                                } else if (!machineState || currentPartCount !== machineState.lastCount) {
-                                    console.log(` machinedetails ⚙️ Обновлен PartCount для ${machine.name} (${machine.id}): ${currentPartCount} в ${partCountEvent.$.timestamp}`);
-                                    partCountStates.set(machine.id, {
-                                        lastCount: currentPartCount,
-                                        lastTimestamp: currentTimestampDate
-                                    });
+                                }
+                            } else if (!machineState || currentPartCount !== machineState.lastCount) {
+                                console.log(` machinedetails ⚙️ Обновлен PartCount для ${machine.name} (${machine.id}): ${currentPartCount} в ${currentTimestampDate.toISOString()}`);
+                                partCountStates.set(machine.id, {
+                                    lastCount: currentPartCount,
+                                    lastTimestamp: currentTimestampDate
+                                });
+                            }
+
+                            // Восстанавливаем последний Sample если есть
+                            const currentState = partCountStates.get(machine.id);
+                            if (currentState?.lastCycleTimeSample) {
+                                if (!component.Samples) component.Samples = {};
+                                if (!component.Samples.ProcessTimer) component.Samples.ProcessTimer = [];
+                                if (!Array.isArray(component.Samples.ProcessTimer)) {
+                                    component.Samples.ProcessTimer = [component.Samples.ProcessTimer];
+                                }
+                                
+                                const existingSample = component.Samples.ProcessTimer.find(
+                                    (sample: any) => sample.$?.dataItemId === handler.getDataItemId()
+                                );
+                                
+                                if (!existingSample) {
+                                    component.Samples.ProcessTimer.push(currentState.lastCycleTimeSample);
+                                    console.log(`✅ Восстановлен CycleTime Sample для ${machine.name}`);
                                 }
                             }
                         }
-                        // --- Конец логики ---
                         
-                        return component; // Возвращаем измененный (или нет) компонент
+                        return component;
                     };
 
-                    // Запускаем обработку и ПЕРЕЗАПИСЫВАЕМ корневой объект
                     deviceStreamDataObject = processComponentTree(deviceStreamDataObject);
-                    // ---> КОНЕЦ ФИНАЛЬНОЙ ВЕРСИИ ЛОГИКИ <---
 
-                    // ---> НАЧАЛО ОБНОВЛЕНИЯ НОМЕРА ПРОГРАММЫ (из Block) <---
                     try {
                         let pathComponentStream: any = null;
                         if (deviceStreamDataObject && deviceStreamDataObject.ComponentStream) {
@@ -219,7 +256,7 @@ async function generateMTConnectXML(): Promise<string> {
                         }
 
                         if (pathComponentStream?.Events) {
-                            const events = pathComponentStream.Events; // С explicitArray: false, Events - объект, если уникален
+                            const events = pathComponentStream.Events;
 
                             let blockValue: string | null = null;
                             let blockTimestamp: string | null = null;
@@ -238,7 +275,6 @@ async function generateMTConnectXML(): Promise<string> {
                             const parsedProgFromBlock = blockValue ? extractProgramFromBlock(blockValue) : null;
 
                             let finalProgramDisplayValue = "-";
-                            // Используем общий timestamp итерации как fallback, если ниоткуда не смогли взять timestamp программы
                             let finalProgramDisplayTimestamp = parsedAgentXml?.MTConnectStreams?.Header?.creationTime || timestamp; 
 
                             if (parsedProgFromBlock && blockTimestamp) {
@@ -249,12 +285,11 @@ async function generateMTConnectXML(): Promise<string> {
                                 finalProgramDisplayTimestamp = originalProgramTimestamp;
                             }
                             
-                            // Обновляем или создаем Program DataItem в pathComponentStream.Events
-                            if (!events.Program) { // Если Program DataItem отсутствует
+                            if (!events.Program) {
                                 events.Program = { $: {} }; 
                             }
                             events.Program._ = finalProgramDisplayValue;
-                            events.Program.$ = events.Program.$ || {}; // Убедимся, что $ существует
+                            events.Program.$ = events.Program.$ || {};
                             events.Program.$.timestamp = finalProgramDisplayTimestamp;
                             events.Program.$.dataItemId = 'program'; 
                             events.Program.$.name = 'program'; 
@@ -266,7 +301,6 @@ async function generateMTConnectXML(): Promise<string> {
                     } catch (e: any) {
                         console.error(`❌ Ошибка при обновлении номера программы для ${machine.name} (${machine.id}): ${e.message}`);
                     }
-                    // ---> КОНЕЦ ОБНОВЛЕНИЯ НОМЕРА ПРОГРАММЫ <---
 
                     // Обработка Execution Status
                     const componentsArg = deviceStreamDataObject?.ComponentStream;
@@ -307,21 +341,30 @@ async function generateMTConnectXML(): Promise<string> {
             continue;
         }
 
-        // Добавляем только если есть реальные данные
         if (deviceStreamDataObject) {
-            // --- НАЧАЛО: ВРЕМЕННЫЙ ОТЛАДОЧНЫЙ КОД ---
-            if (['SR-10', 'SR-21', 'SR-23'].includes(machine.id)) {
-                try {
-                    // Сохраняем в файл для детального анализа
-                    const debugFileName = `debug-${machine.id}-object.json`;
-                    fs.writeFileSync(path.join(__dirname, '..', debugFileName), JSON.stringify(deviceStreamDataObject, null, 2));
-                    console.log(`✅ DEBUG: Объект для ${machine.id} сохранен в ${debugFileName}`);
-                } catch (e: any) {
-                    console.error(`❌ DEBUG: Не удалось сохранить отладочный файл для ${machine.id}.`, e.message);
+
+            
+            let deviceXml = xmlBuilder.buildObject({ DeviceStream: deviceStreamDataObject }) as string;
+            
+            const currentState = partCountStates.get(machine.id);
+            if (currentState?.lastCycleTimeMs) {
+                const cycleTimeSec = (currentState.lastCycleTimeMs / 1000).toFixed(2);
+                const timestamp = currentState.lastTimestamp.toISOString();
+                const sequence = Math.floor(Math.random() * 100000);
+                
+                const pathSamplesRegex = /(<ComponentStream[^>]*name="path"[^>]*>.*?<Samples>)/s;
+                const match = deviceXml.match(pathSamplesRegex);
+                
+                if (match) {
+                    const processTimerXml = `\n        <ProcessTimer dataItemId="cycle_time_avg" timestamp="${timestamp}" name="CycleTime" sequence="${sequence}" subType="AVERAGE" type="PROCESS_TIMER">${cycleTimeSec}</ProcessTimer>`;
+                    deviceXml = deviceXml.replace(match[1], match[1] + processTimerXml);
+                    console.log(`✅ Добавлен ProcessTimer в XML для ${machine.name} (${machine.id}): ${cycleTimeSec} сек`);
+                } else {
+                    console.log(`⚠️ Не удалось найти Samples секцию в path компоненте для ${machine.name} (${machine.id})`);
                 }
             }
-            // --- КОНЕЦ: ВРЕМЕННЫЙ ОТЛАДОЧНЫЙ КОД ---
-            deviceStreamsXmlParts.push(xmlBuilder.buildObject({ DeviceStream: deviceStreamDataObject }) as string);
+            
+            deviceStreamsXmlParts.push(deviceXml);
         }
     }
 
@@ -407,12 +450,105 @@ app.get('/current', async (req, res) => {
     }
 });
 
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime()
-    });
+app.get('/health', async (req, res) => {
+    try {
+        // Проверка соединения с Adam-6050
+        let adamStatus = 'OK';
+        let adamCounters = 0;
+        try {
+            const counters = await adamReader.readCounters();
+            adamCounters = counters.length;
+        } catch (error) {
+            adamStatus = 'ERROR';
+        }
+        
+        res.json({
+            status: 'OK',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime(),
+            adam6050: {
+                status: adamStatus,
+                counters: adamCounters
+            },
+            machines: FANUC_MACHINES.length,
+            shdrConnections: shdrManager.getAllConnectionStatuses()
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'ERROR',
+            timestamp: new Date().toISOString(),
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+
+// Детальный статус всех соединений
+app.get('/status', async (req, res) => {
+    try {
+        // Проверка MTConnect агентов
+        const agentStatuses = [];
+        for (const machine of FANUC_MACHINES) {
+            let status = 'UNKNOWN';
+            let responseTime = 0;
+            let error = null;
+            
+            if (machine.mtconnectAgentUrl) {
+                try {
+                    const startTime = Date.now();
+                    await axios.get(`${machine.mtconnectAgentUrl}/current`, { timeout: 3000 });
+                    responseTime = Date.now() - startTime;
+                    status = 'OK';
+                } catch (err: any) {
+                    status = 'ERROR';
+                    error = err.message;
+                }
+            } else {
+                status = 'NO_AGENT';
+            }
+            
+            agentStatuses.push({
+                id: machine.id,
+                name: machine.name,
+                status,
+                responseTime,
+                error,
+                url: machine.mtconnectAgentUrl
+            });
+        }
+        
+        // Проверка Adam-6050
+        let adamStatus = 'OK';
+        let adamError = null;
+        let adamCounters = [];
+        try {
+            adamCounters = await adamReader.readCounters();
+        } catch (error: any) {
+            adamStatus = 'ERROR';
+            adamError = error.message;
+        }
+        
+        res.json({
+            timestamp: new Date().toISOString(),
+            server: {
+                status: 'OK',
+                uptime: process.uptime(),
+                memory: process.memoryUsage()
+            },
+            mtconnectAgents: agentStatuses,
+            adam6050: {
+                status: adamStatus,
+                error: adamError,
+                counters: adamCounters.length,
+                host: '192.168.1.120:502'
+            },
+            shdrConnections: shdrManager.getAllConnectionStatuses()
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            timestamp: new Date().toISOString(),
+            error: error.message
+        });
+    }
 });
 
 // API для получения сырых XML данных конкретного станка
@@ -458,6 +594,49 @@ app.get('/api/machines', (req, res) => {
     
     res.json(machinesList);
 });
+
+// API для получения времени цикла всех машин (запасной вариант)
+app.get('/api/cycle-times', (req, res) => {
+    const result: { [key: string]: { lastCycleTimeSec: string | null, lastUpdate: string | null } } = {};
+    
+    for (const [machineId, state] of partCountStates.entries()) {
+        result[machineId] = {
+            lastCycleTimeSec: state.lastCycleTimeMs ? (state.lastCycleTimeMs / 1000).toFixed(2) : null,
+            lastUpdate: state.lastTimestamp ? state.lastTimestamp.toISOString() : null
+        };
+    }
+    
+    res.json(result);
+});
+
+// Эндпоинт для получения данных Adam-6050
+app.get('/api/adam/counters', async (req, res) => {
+    try {
+        const counters = await getAdamCounters();
+        res.json({
+            success: true,
+            timestamp: new Date().toISOString(),
+            counters: counters
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Добавляем функцию для чтения данных Adam-6050
+async function getAdamCounters() {
+    try {
+        const counters = await adamReader.readCounters();
+        console.log(`📊 Получено ${counters.length} счётчиков с Adam-6050`);
+        return counters;
+    } catch (error) {
+        console.error('❌ Ошибка чтения Adam-6050:', error);
+        return [];
+    }
+}
 
 // Запуск сервера
 async function startServer(): Promise<void> {

@@ -1,0 +1,440 @@
+{
+  "$": {
+    "name": "SR-23",
+    "uuid": "SR-23"
+  },
+  "ComponentStream": [
+    {
+      "$": {
+        "component": "Device",
+        "name": "SR-23",
+        "componentId": ""
+      },
+      "Events": {
+        "AssetChanged": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "_asset_chg",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "sequence": "20",
+            "assetType": ""
+          }
+        },
+        "Availability": {
+          "_": "AVAILABLE",
+          "$": {
+            "dataItemId": "avail",
+            "timestamp": "2025-07-03T05:52:17.028Z",
+            "sequence": "34"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Rotary",
+        "name": "A",
+        "componentId": "a1"
+      },
+      "Samples": {
+        "Angle": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Aact",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "ALact",
+            "sequence": "1"
+          }
+        },
+        "Load": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Aload",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "ALload",
+            "sequence": "2"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Rotary",
+        "name": "B",
+        "componentId": "b1"
+      },
+      "Samples": {
+        "Angle": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Bact",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Bact",
+            "sequence": "3"
+          }
+        },
+        "Load": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Bload",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Bload",
+            "sequence": "4"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Rotary",
+        "name": "C",
+        "componentId": "c1"
+      },
+      "Samples": {
+        "Angle": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Cact",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Cact",
+            "sequence": "5"
+          }
+        },
+        "Load": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Cload",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Cload",
+            "sequence": "6"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Controller",
+        "name": "controller",
+        "componentId": "cn1"
+      },
+      "Events": {
+        "EmergencyStop": {
+          "_": "ARMED",
+          "$": {
+            "dataItemId": "estop",
+            "timestamp": "2025-07-03T05:52:17.251Z",
+            "sequence": "42"
+          }
+        }
+      },
+      "Condition": {
+        "Normal": {
+          "$": {
+            "dataItemId": "system",
+            "timestamp": "2025-07-03T05:52:17.028Z",
+            "sequence": "35",
+            "type": "SYSTEM"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Path",
+        "name": "path",
+        "componentId": "pth"
+      },
+      "Samples": {
+        "PathFeedrate": [
+          {
+            "_": "UNAVAILABLE",
+            "$": {
+              "dataItemId": "fd1",
+              "timestamp": "2025-07-03T05:52:16.030Z",
+              "name": "feedrate",
+              "sequence": "25"
+            }
+          },
+          {
+            "_": "100",
+            "$": {
+              "dataItemId": "fd2",
+              "timestamp": "2025-07-03T05:52:17.251Z",
+              "name": "Fovr",
+              "sequence": "38",
+              "subType": "OVERRIDE"
+            }
+          }
+        ],
+        "FeedrateOverride": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "fd3",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Rovr",
+            "sequence": "27",
+            "subType": "RAPID"
+          }
+        },
+        "ProcessTimer": [
+          {
+            "$": {
+              "dataItemId": "cycle_time_avg",
+              "timestamp": "2025-07-03T08:18:49.496Z",
+              "name": "CycleTime",
+              "sequence": 18197,
+              "subType": "AVERAGE",
+              "type": "PROCESS_TIMER"
+            },
+            "_": "38.91"
+          }
+        ]
+      },
+      "Events": {
+        "Block": {
+          "_": "G1Z0",
+          "$": {
+            "dataItemId": "block",
+            "timestamp": "2025-07-03T08:18:55.978Z",
+            "name": "block",
+            "sequence": "9935"
+          }
+        },
+        "Execution": {
+          "_": "ACTIVE",
+          "$": {
+            "dataItemId": "execution",
+            "timestamp": "2025-07-03T05:52:17.251Z",
+            "name": "exec",
+            "sequence": "37"
+          }
+        },
+        "Line": {
+          "_": "1111",
+          "$": {
+            "dataItemId": "line",
+            "timestamp": "2025-07-03T08:11:07.020Z",
+            "name": "line",
+            "sequence": "9408"
+          }
+        },
+        "ControllerMode": {
+          "_": "AUTOMATIC",
+          "$": {
+            "dataItemId": "mode",
+            "timestamp": "2025-07-03T05:52:17.251Z",
+            "name": "mode",
+            "sequence": "41"
+          }
+        },
+        "PartCount": {
+          "_": "131877",
+          "$": {
+            "dataItemId": "part_count",
+            "timestamp": "2025-07-03T08:18:49.496Z",
+            "name": "part_count",
+            "sequence": "9923"
+          }
+        },
+        "Program": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "program",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "program",
+            "sequence": "31"
+          }
+        },
+        "ToolId": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "tool_id",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "ToolId",
+            "sequence": "33"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Rotary",
+        "name": "S0",
+        "componentId": "s0"
+      },
+      "Samples": {
+        "SpindleSpeed": [
+          {
+            "_": "UNAVAILABLE",
+            "$": {
+              "dataItemId": "SSovr",
+              "timestamp": "2025-07-03T05:52:16.030Z",
+              "name": "Sovr",
+              "sequence": "11",
+              "subType": "OVERRIDE"
+            }
+          },
+          {
+            "_": "UNAVAILABLE",
+            "$": {
+              "dataItemId": "Sspeed",
+              "timestamp": "2025-07-03T05:52:16.030Z",
+              "name": "Sspeed",
+              "sequence": "13",
+              "subType": "ACTUAL"
+            }
+          }
+        ],
+        "Load": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Sload",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Sload",
+            "sequence": "12",
+            "subType": "ACTUAL"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Rotary",
+        "name": "S1",
+        "componentId": "s1"
+      },
+      "Samples": {
+        "Load": {
+          "_": "1",
+          "$": {
+            "dataItemId": "S1load",
+            "timestamp": "2025-07-03T08:18:55.978Z",
+            "name": "S1load",
+            "sequence": "9936",
+            "subType": "ACTUAL"
+          }
+        },
+        "SpindleSpeed": {
+          "_": "2500",
+          "$": {
+            "dataItemId": "S1speed",
+            "timestamp": "2025-07-03T08:18:54.356Z",
+            "name": "S1speed",
+            "sequence": "9934",
+            "subType": "ACTUAL"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Rotary",
+        "name": "S2",
+        "componentId": "s2"
+      },
+      "Samples": {
+        "Load": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "S2load",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "S2load",
+            "sequence": "9",
+            "subType": "ACTUAL"
+          }
+        },
+        "SpindleSpeed": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "S2speed",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "S2speed",
+            "sequence": "10",
+            "subType": "ACTUAL"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Linear",
+        "name": "X",
+        "componentId": "x1"
+      },
+      "Samples": {
+        "Position": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Xact",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Xact",
+            "sequence": "14"
+          }
+        },
+        "Load": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Xload",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Xload",
+            "sequence": "15"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Linear",
+        "name": "Y",
+        "componentId": "z1"
+      },
+      "Samples": {
+        "Position": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Yact",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Yact",
+            "sequence": "16"
+          }
+        },
+        "Load": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Yload",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Yload",
+            "sequence": "17"
+          }
+        }
+      }
+    },
+    {
+      "$": {
+        "component": "Linear",
+        "name": "Z",
+        "componentId": "z1"
+      },
+      "Samples": {
+        "Position": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Zact",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Zact",
+            "sequence": "18"
+          }
+        },
+        "Load": {
+          "_": "UNAVAILABLE",
+          "$": {
+            "dataItemId": "Zload",
+            "timestamp": "2025-07-03T05:52:16.030Z",
+            "name": "Zload",
+            "sequence": "19"
+          }
+        }
+      }
+    }
+  ]
+}
