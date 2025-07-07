@@ -1,5 +1,6 @@
 FROM node:18-alpine
 
+# Force rebuild - 2025-01-07
 WORKDIR /app
 
 COPY package*.json ./
