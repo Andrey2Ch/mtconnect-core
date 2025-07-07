@@ -1,21 +1,6 @@
 import { IsString, IsArray, IsDateString, ValidateNested, IsOptional, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class MachineDataItemDto {
-  @IsString()
-  machineId: string;
-
-  @IsString()
-  machineName: string;
-
-  @IsDateString()
-  timestamp: string;
-
-  @ValidateNested()
-  @Type(() => MachineDataValueDto)
-  data: MachineDataValueDto;
-}
-
 export class MachineDataValueDto {
   @IsOptional()
   @IsNumber()
@@ -47,6 +32,21 @@ export class MachineDataValueDto {
 
   @IsOptional()
   adamData?: any;
+}
+
+export class MachineDataItemDto {
+  @IsString()
+  machineId: string;
+
+  @IsString()
+  machineName: string;
+
+  @IsDateString()
+  timestamp: string;
+
+  @ValidateNested()
+  @Type(() => MachineDataValueDto)
+  data: MachineDataValueDto;
 }
 
 export class EdgeGatewayDataDto {
