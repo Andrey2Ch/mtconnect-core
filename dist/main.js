@@ -59,7 +59,7 @@ const DEBUG_DETAILS = process.env.DEBUG_DETAILS === 'true' || config.settings.de
 const partCountStates = new Map();
 const executionStatusStates = new Map();
 const app = (0, express_1.default)();
-const port = config.settings.serverPort || 5000;
+const port = parseInt(process.env.PORT || '3000', 10);
 // Middleware
 app.use((0, cors_1.default)());
 app.use(express_1.default.static('public'));
