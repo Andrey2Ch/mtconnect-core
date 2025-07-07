@@ -53,7 +53,7 @@ const partCountStates = new Map<string, PartCountState>();
 const executionStatusStates = new Map<string, ExecutionStatusState>();
 
 const app = express();
-const port = config.settings.serverPort || 5000;
+const port = process.env.PORT || config.settings.serverPort || 5000;
 
 // Middleware
 app.use(cors());
