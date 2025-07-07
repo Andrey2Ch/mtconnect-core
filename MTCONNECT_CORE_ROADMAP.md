@@ -9,34 +9,34 @@
 * Используем Taskmaster-AI (MCP) для трекинга задач и синхронизации команд.
 
 ---
-## 1. Эпики и подпроекты
+## 1. Эпики и подпроекты (Edge Gateway архитектура)
 | ID | Эпик | Описание |
 |----|------|----------|
-| **E1** | Core API MVP | Внутренние `/internal` и публичные `/api/v1`, CRUD машин, ingest данных |
-| **E2** | Outbox & Kafka | Коллекция `outbox`, воркер, публикация в `kafka.raw_data` |
-| **E3** | External API (`/api/ext/*`) | Гварды API-Key, idempotency, эндпоинты `setup`, `event`, `cycle-time` |
-| **E4** | Web-hook Registry | Коллекция `webhooks`, dispatcher, retry, HMAC |
-| **E5** | Observability | Prometheus metrics, structured logs, Grafana dashboard |
+| **E1** | Edge Gateway | Текущий код + HTTP клиент → отправка в Railway, локальный dashboard |
+| **E2** | Cloud API (Railway) | NestJS + MongoDB + эндпоинты `/api/ext/*` |
+| **E3** | External API (`/api/ext/*`) | API-Key, idempotency, `setup`, `event`, `cycle-time` |
+| **E4** | Edge → Cloud Sync | Буферизация, retry, health check |
+| **E5** | Observability | Мониторинг Edge + Cloud, алерты, dashboard |
 
 ---
 ## 2. 4-спринтовый план (по 7 дней)
 | Sprint | Цели | Deliverable |
 |--------|------|-------------|
-| **S1** | E1-Core API скелет, Mongo RS, Docker Compose  | Demo `POST /internal/machines/:id/data` сохраняет в TS bucket |
-| **S2** | E2-Outbox, Kafka stack, Redis idempotency     | Event в outbox → Kafka; `/api/ext/setup` 200/409 |
-| **S3** | E3-External API полный, Rate-Limit            | FastAPI клиент проходит openapi-tck; p95 ≤200 мс |
-| **S4** | E4 + E5, Web-hooks & Observability            | Web-hook demo + Grafana board, alerts 5xx/lag |
+| **S1** | E1-Edge Gateway готов, Railway NestJS скелет  | Edge отправляет данные в Railway `/api/ext/data` |
+| **S2** | E2-Cloud API полный, MongoDB, idempotency     | `/api/ext/setup` 200/409, хранение в MongoDB |
+| **S3** | E3-External API для FastAPI, retry edge→cloud | FastAPI клиент работает с `/api/ext/cycle-time` |
+| **S4** | E4 + E5, Sync & Observability                | Health check, dashboard, monitoring |
 
 ---
 ## 3. Синх-чекпоинты с FastAPI
-1. **S1-END** – контракт `/api/ext/setup` v0.1 залит в репо → FastAPI начинает интеграцию.
-2. **S2-MID** – Redis idempotency включен, FastAPI переключается с Mongo-хранимой схемы на Redis.
+1. **S1-END** – Railway API живёт, эндпоинт `/api/ext/setup` v0.1 доступен → FastAPI начинает интеграцию.
+2. **S2-MID** – MongoDB idempotency включён, FastAPI переключается на Railway URL.
 3. **S3-END** – pull `cycle-time` стабилен, FastAPI синхронизация зелёная.
-4. **S4-END** – web-hook включён в staging; обе стороны проводят end-to-end.
+4. **S4-END** – мониторинг включён; обе стороны проводят end-to-end.
 
 ---
 ## 4. Taskmaster-AI процесс
-* Тэг `core` – задачи ядра, `integration` – пересечения с FastAPI.
+* Тэг `edge` – задачи Edge Gateway, `cloud` – Railway API, `integration` – пересечения с FastAPI.
 * Команды:
   * `next_task` каждое утро стендапа.
   * `expand_task` для задач с complexity ≥8.

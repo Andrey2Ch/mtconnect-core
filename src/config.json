@@ -121,5 +121,12 @@
     "connectionTimeout": 2500,
     "maxRetries": 3,
     "debugDetails": false
+  },
+  "railway": {
+    "enabled": true,
+    "baseUrl": "https://mtconnect-core-production.up.railway.app",
+    "apiKey": "edge-gateway-api-key",
+    "retryAttempts": 3,
+    "retryDelay": 5000
   }
 } 

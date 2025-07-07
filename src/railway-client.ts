@@ -1,0 +1,176 @@
+import axios from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface RailwayConfig {
+    baseUrl: string;
+    apiKey: string;
+    retryAttempts: number;
+    retryDelay: number;
+    enabled: boolean;
+}
+
+interface EdgeGatewayData {
+    machineId: string;
+    machineName: string;
+    timestamp: string;
+    data: {
+        partCount?: number;
+        cycleTime?: number;
+        executionStatus?: string;
+        availability?: string;
+        program?: string;
+        block?: string;
+        line?: string;
+        adamData?: any;
+    };
+}
+
+interface DataBuffer {
+    data: EdgeGatewayData[];
+    lastSent: Date;
+    retryCount: number;
+}
+
+export class RailwayClient {
+    private config: RailwayConfig;
+    private httpClient: any;
+    private dataBuffer: DataBuffer;
+    private isOnline: boolean;
+    private retryTimer: NodeJS.Timeout | null;
+
+    constructor(config: RailwayConfig) {
+        this.config = config;
+        this.isOnline = false;
+        this.retryTimer = null;
+        
+        this.dataBuffer = {
+            data: [],
+            lastSent: new Date(),
+            retryCount: 0
+        };
+
+        this.httpClient = axios.create({
+            baseURL: this.config.baseUrl,
+            timeout: 10000,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.config.apiKey}`
+            }
+        });
+
+        // Запускаем периодическую отправку данных
+        this.startPeriodicSync();
+    }
+
+    async sendData(data: EdgeGatewayData): Promise<boolean> {
+        if (!this.config.enabled) {
+            console.log('🔕 Railway клиент отключён');
+            return false;
+        }
+
+        // Добавляем данные в буфер
+        this.dataBuffer.data.push(data);
+
+        // Если буфер большой или прошло много времени, отправляем сразу
+        if (this.dataBuffer.data.length >= 10 || 
+            Date.now() - this.dataBuffer.lastSent.getTime() > 30000) {
+            return await this.flushBuffer();
+        }
+
+        return true;
+    }
+
+    async flushBuffer(): Promise<boolean> {
+        if (!this.config.enabled || this.dataBuffer.data.length === 0) {
+            return false;
+        }
+
+        try {
+            const payload = {
+                edgeGatewayId: 'edge-gateway-01',
+                timestamp: new Date().toISOString(),
+                data: this.dataBuffer.data
+            };
+
+            console.log(`📤 Отправка ${this.dataBuffer.data.length} записей в Railway...`);
+            
+            const response = await this.httpClient.post('/api/ext/data', payload);
+            
+            if (response.status === 200) {
+                console.log(`✅ Данные успешно отправлены в Railway (${this.dataBuffer.data.length} записей)`);
+                this.dataBuffer.data = [];
+                this.dataBuffer.lastSent = new Date();
+                this.dataBuffer.retryCount = 0;
+                this.isOnline = true;
+                return true;
+            } else {
+                throw new Error(`Неожиданный статус ответа: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('❌ Ошибка отправки данных в Railway:', error);
+            this.isOnline = false;
+            this.dataBuffer.retryCount++;
+            
+            // Если превышено количество попыток, удаляем старые данные
+            if (this.dataBuffer.retryCount > this.config.retryAttempts) {
+                console.warn(`⚠️ Превышено количество попыток (${this.config.retryAttempts}), удаляем старые данные`);
+                this.dataBuffer.data = [];
+                this.dataBuffer.retryCount = 0;
+            }
+            
+            return false;
+        }
+    }
+
+    async healthCheck(): Promise<boolean> {
+        if (!this.config.enabled) {
+            return false;
+        }
+
+        try {
+            const response = await this.httpClient.get('/api/ext/health');
+            this.isOnline = response.status === 200;
+            return this.isOnline;
+        } catch (error) {
+            this.isOnline = false;
+            return false;
+        }
+    }
+
+    private startPeriodicSync() {
+        // Отправляем данные каждые 30 секунд
+        setInterval(async () => {
+            if (this.dataBuffer.data.length > 0) {
+                await this.flushBuffer();
+            }
+        }, 30000);
+
+        // Проверяем подключение каждые 2 минуты
+        setInterval(async () => {
+            await this.healthCheck();
+        }, 120000);
+    }
+
+    getStatus() {
+        return {
+            isOnline: this.isOnline,
+            bufferSize: this.dataBuffer.data.length,
+            retryCount: this.dataBuffer.retryCount,
+            lastSent: this.dataBuffer.lastSent
+        };
+    }
+}
+
+// Функция для загрузки конфигурации Railway
+export function loadRailwayConfig(configPath: string): RailwayConfig {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    
+    return {
+        baseUrl: config.railway?.baseUrl || 'https://mtconnect-core-production.up.railway.app',
+        apiKey: config.railway?.apiKey || 'edge-gateway-api-key',
+        retryAttempts: config.railway?.retryAttempts || 3,
+        retryDelay: config.railway?.retryDelay || 5000,
+        enabled: config.railway?.enabled || true
+    };
+} 

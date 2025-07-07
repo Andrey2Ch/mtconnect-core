@@ -27,20 +27,36 @@
 * Схемы версионируются через JSON-schema (`schema_version`).
 
 ---
-## III. Потоки данных
+## III. Потоки данных (Edge Gateway архитектура)
 
 ```mermaid
 flowchart LR
-    Fanuc & ADAM -->|MTConnect / Modbus| Ingest[fanuc-adapter / adam-gateway]
-    Ingest -->|POST /internal| CoreAPI[NestJS API]
-    CoreAPI -->|Write| Mongo[(MongoDB 7<br>+ TimeSeries)]
-    CoreAPI -->|Outbox| Outbox[Mongo outbox]
-    Outbox -->|Publish| Kafka{{kafka.raw_data}}
-    Kafka --> Spark[Spark Structured Streaming]
-    Spark --> Parquet[(Parquet data lake)]
-    CoreAPI --> WS(WS /api/v1/stream) --> HMI
-    CoreAPI --> REST(/api/v1/*) --> Dashboard
-    Parquet --> Trino[Trino / Presto] --> Dashboard
+    subgraph "Цех (локальная сеть)"
+        Fanuc[8 станков Fanuc]
+        ADAM[ADAM-6050]
+        EdgeGW[Edge Gateway<br/>Node.js сервер]
+        LocalDash[Локальный Dashboard<br/>localhost:5000]
+        
+        Fanuc -->|MTConnect| EdgeGW
+        ADAM -->|Modbus TCP| EdgeGW
+        EdgeGW --> LocalDash
+    end
+    
+    subgraph "Railway (облако)"
+        CloudAPI[Cloud API<br/>NestJS]
+        Mongo[(MongoDB)]
+        CloudDash[Облачный Dashboard]
+        
+        CloudAPI --> Mongo
+        CloudAPI --> CloudDash
+    end
+    
+    subgraph "Внешние системы"
+        FastAPI[FastAPI бот]
+    end
+    
+    EdgeGW -->|HTTPS POST<br/>/api/ext/data| CloudAPI
+    CloudAPI -->|REST API<br/>/api/ext/*| FastAPI
 ```
 
 ---

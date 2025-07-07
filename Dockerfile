@@ -1,14 +1,24 @@
 FROM node:18-alpine
 
-# Force rebuild - 2025-01-07
 WORKDIR /app
 
+# Копируем package.json и package-lock.json
 COPY package*.json ./
+
+# Устанавливаем зависимости
 RUN npm ci --only=production
 
-COPY dist/ ./dist/
-COPY src/ ./src/
+# Копируем исходный код
+COPY . .
 
+# Собираем проект
+RUN npm run build
+
+# Удаляем dev зависимости
+RUN npm prune --production
+
+# Открываем порт
 EXPOSE 3000
 
-CMD ["node", "dist/main.js"] 
+# Запускаем приложение
+CMD ["node", "dist/main"] 
