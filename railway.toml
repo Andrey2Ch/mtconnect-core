@@ -1,0 +1,8 @@
+[build]
+builder = "docker"
+
+[deploy]
+startCommand = "node dist/main.js"
+
+[deploy.envs]
+PORT = "3000" 

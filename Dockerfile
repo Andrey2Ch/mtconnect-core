@@ -17,7 +17,7 @@ RUN npm run build
 # Удаляем dev зависимости после build
 RUN npm prune --production
 
-# Открываем порт
+# Открываем порт (Railway автоматически устанавливает PORT)
 EXPOSE 3000
 
 # Запускаем приложение
