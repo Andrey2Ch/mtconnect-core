@@ -20,46 +20,86 @@
             --font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        /* Предотвращаем мигание при загрузке */
+        html {
+            height: 100%;
+            width: 100%;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: var(--font-family-sans-serif);
             background-color: var(--color-bg);
             color: var(--color-text);
             margin: 0;
-            padding: 20px;
+            padding: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        
+        body.loaded {
+            opacity: 1;
         }
 
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding: 0 10px;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
         }
 
         h1 {
             margin: 0;
             color: var(--color-text);
+            font-size: 1.3em;
+            font-weight: 600;
         }
 
         .status-indicator {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
         }
 
-        #connection-status::before {
+        .server-status, .adam-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8em;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .server-status::before, .adam-status::before {
             content: '';
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background-color: var(--color-red);
-            animation: pulse-red 2s infinite;
         }
         
-        #connection-status.connected::before {
+        .server-status.online::before {
             background-color: var(--color-green);
-            animation: pulse-green 2s infinite;
+        }
+        
+        .adam-status.online::before {
+            background-color: var(--color-green);
         }
 
         @keyframes pulse-red {
@@ -74,116 +114,83 @@
             100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
         }
 
-        .section-title {
-            font-size: 1.8em;
-            margin: 30px 0 20px 0;
-            color: var(--color-text);
-            border-bottom: 2px solid var(--color-border);
-            padding-bottom: 10px;
-        }
-
         .machines-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
+            /* Будет установлено динамически через JavaScript */
+            grid-template-columns: repeat(1, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 0 8px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
-        .adam-counters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 15px;
-            margin-bottom: 40px;
+        /* Адаптивные размеры для разных экранов */
+        @media (min-width: 600px) {
+            .machines-grid {
+                gap: 16px;
+                padding: 0 12px;
+            }
         }
 
-        .connections-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
+        @media (min-width: 1200px) {
+            .machines-grid {
+                gap: 20px;
+                padding: 0 16px;
+            }
         }
 
-        .connection-card {
-            background: var(--color-card);
-            border: 1px solid var(--color-border);
-            border-radius: 8px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            transition: transform 0.2s ease;
-        }
-
-        .connection-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .connection-title {
-            font-weight: bold;
-            font-size: 1.1em;
-            color: var(--color-text-primary);
-        }
-
-        .connection-status {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 8px;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-
-        .connection-ok {
-            background-color: rgba(40, 167, 69, 0.2);
-            color: var(--color-green);
-        }
-
-        .connection-error {
-            background-color: rgba(220, 53, 69, 0.2);
-            color: var(--color-red);
-        }
-
-        .connection-warning {
-            background-color: rgba(255, 193, 7, 0.2);
-            color: var(--color-yellow);
-        }
-
-        .connection-details {
-            font-size: 0.9em;
-            color: var(--color-text-secondary);
-            line-height: 1.4;
+        @media (min-width: 1800px) {
+            .machines-grid {
+                gap: 24px;
+                padding: 0 20px;
+            }
         }
 
         .machine-card {
             background-color: var(--color-card);
-            border: 1px solid var(--color-border);
+            border: 2px solid var(--color-border);
             border-radius: 8px;
-            padding: 20px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            gap: 8px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.3s ease;
+            position: relative;
+            min-height: 140px;
         }
-
+        
+        /* Цветные рамки для статусов */
+        .machine-card.status-executing {
+            border-color: var(--color-green);
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
+        }
+        
+        .machine-card.status-idle {
+            border-color: var(--color-yellow);
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+        }
+        
+        .machine-card.status-offline {
+            border-color: var(--color-red);
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.3);
+        }
+        
+        .machine-card.status-setup {
+            border-color: var(--color-purple);
+            box-shadow: 0 0 10px rgba(111, 66, 193, 0.3);
+        }
+        
+        .machine-card.adam-card {
+            /* Adam карточки используют обычные статусы */
+        }
+        
         .machine-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        .adam-card {
-            background-color: var(--color-card);
-            border: 1px solid var(--color-purple);
-            border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .adam-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 16px rgba(111, 66, 193, 0.3);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
+
+        /* Adam карточки теперь используют machine-card стили */
         
         .card-header {
             font-size: 1.5em;
@@ -194,81 +201,180 @@
             padding-bottom: 10px;
         }
 
-        .adam-header {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: var(--color-purple);
-            text-align: center;
-            border-bottom: 1px solid var(--color-purple);
-            padding-bottom: 8px;
+        /* Значок Adam для отличия */
+        .adam-indicator {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 0.8em;
+            opacity: 0.6;
         }
 
-        .data-point {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 1.2em;
-        }
-
-        .adam-data-point {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .machine-header {
             font-size: 1.1em;
-        }
-
-        .data-label {
-            color: var(--color-text-secondary);
-        }
-
-        .data-value {
             font-weight: bold;
-        }
-
-        .adam-counter {
-            font-size: 1.4em;
-            font-weight: bold;
-            color: var(--color-orange);
+            color: var(--color-text-primary);
             text-align: center;
-            padding: 10px;
-            background-color: rgba(253, 126, 20, 0.1);
-            border-radius: 5px;
+            margin-bottom: 6px;
         }
         
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 1em;
-            color: #fff;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        .machine-info {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            font-size: 0.8em;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            padding: 6px 2px;
+            margin-bottom: 6px;
         }
-
-        .status-executing { background-color: var(--color-green); }
-        .status-idle { background-color: var(--color-yellow); color: #333; }
-        .status-offline, .status-unavailable, .status-no_data { background-color: var(--color-red); }
-
-        .adam-status {
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        
+        .info-emoji {
+            font-size: 1.2em;
+        }
+        
+        .info-value {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--color-text-primary);
             text-align: center;
-            padding: 8px;
-            border-radius: 5px;
+            min-width: 40px;
+        }
+        
+        .timeline-area {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 3px;
+            padding: 4px 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-secondary);
+            font-size: 0.7em;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            min-height: 24px;
+        }
+        
+        .timeline-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Старые адаптивные правила удалены - теперь используется JavaScript */
+
+        @media (max-width: 768px) {
+            body {
+                padding: 4px;
+            }
+            
+            .header h1 {
+                font-size: 1.1em;
+            }
+            
+            .status-indicator {
+                flex-direction: column;
+                gap: 2px;
+            }
+            
+            .machines-grid {
+                gap: 6px;
+                padding: 0 4px;
+            }
+            
+            .machine-card {
+                min-height: 120px;
+                padding: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .machines-grid {
+                gap: 4px;
+                padding: 0 2px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 4px;
+                text-align: center;
+            }
+            
+            .machine-card {
+                min-height: 110px;
+                padding: 6px;
+            }
+        }
+        
+        /* Старые стили - убираем */
+        .data-point {
+            display: none;
+        }
+
+        /* Выделение правильных счетчиков деталей */
+        .part-count-reliable {
+            color: var(--color-green) !important;
             font-weight: bold;
-        }
-
-        .adam-online {
-            background-color: rgba(40, 167, 69, 0.2);
-            color: var(--color-green);
-        }
-
-        .adam-offline {
-            background-color: rgba(220, 53, 69, 0.2);
-            color: var(--color-red);
         }
 
         .footer {
-            text-align: center;
-            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
             color: var(--color-text-secondary);
-            font-size: 0.9em;
+            font-size: 0.7em;
+        }
+
+        .legend {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            border: 2px solid;
+        }
+        
+        .legend-color.green { border-color: var(--color-green); }
+        .legend-color.yellow { border-color: var(--color-yellow); }
+        .legend-color.red { border-color: var(--color-red); }
+        .legend-color.purple { border-color: var(--color-purple); }
+
+        .update-info {
+            font-size: 0.7em;
+            color: var(--color-text-secondary);
         }
 
     </style>
@@ -276,113 +382,156 @@
 <body>
 
     <div class="header">
-        <h1>Панель мониторинга станков</h1>
+        <h1>Мониторинг станков</h1>
         <div class="status-indicator">
-            <span id="connection-status"></span>
-            <span id="last-updated">Никогда не обновлялось</span>
+            <span id="main-server-status" class="server-status">Сервер</span>
+            <span id="adam-status" class="adam-status">Adam-6050</span>
+            <span id="last-updated">Обновление...</span>
         </div>
     </div>
 
-    <!-- Статус соединений -->
-    <div class="section-title">Статус соединений</div>
-    <div id="connection-status-grid" class="connections-grid">
-        <!-- Статус соединений будет вставлен сюда динамически -->
-    </div>
-
-    <div class="section-title">MTConnect Станки</div>
     <div id="machines-grid" class="machines-grid">
-        <!-- Карточки станков будут вставлены сюда динамически -->
-    </div>
-
-    <div class="section-title">Счетчики деталей Adam-6050</div>
-    <div id="adam-counters-grid" class="adam-counters-grid">
-        <!-- Карточки счетчиков Adam будут вставлены сюда динамически -->
+        <!-- Все карточки станков будут вставлены сюда динамически -->
     </div>
     
     <div class="footer">
-        Автоматическое обновление каждые 5 секунд
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color green"></div>
+                <span>В работе</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color yellow"></div>
+                <span>Простой</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color purple"></div>
+                <span>Наладка</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color red"></div>
+                <span>Проблема</span>
+            </div>
+        </div>
+        <div class="update-info">⟳ Обновление каждые 5 сек</div>
     </div>
 
     <script>
-        const API_URL = '/current';
-        const ADAM_API_URL = '/api/adam/counters';
-        const STATUS_API_URL = '/status';
-        const UPDATE_INTERVAL = 5000; // 5 секунд
+        // Плавная загрузка страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Добавляем класс loaded для плавного появления
+            setTimeout(() => {
+                document.body.classList.add('loaded');
+            }, 100);
+        });
 
+        const UPDATE_INTERVAL = 5000; // 5 секунд
         const grid = document.getElementById('machines-grid');
-        const adamGrid = document.getElementById('adam-counters-grid');
-        const connectionsGrid = document.getElementById('connection-status-grid');
-        const connectionStatusEl = document.getElementById('connection-status');
+        const mainServerStatusEl = document.getElementById('main-server-status');
+        const adamStatusEl = document.getElementById('adam-status');
         const lastUpdatedEl = document.getElementById('last-updated');
 
-        function getNestedValue(obj, path) {
-            try {
-                const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
-                return value || 'UNAVAILABLE';
-            } catch (e) {
-                return 'UNAVAILABLE';
-            }
-        }
-        
-        function parseValue(value) {
-            if (typeof value === 'object' && value._) {
-                return value._;
-            }
-            if (typeof value === 'string') {
-                return value;
-            }
-            return 'UNAVAILABLE';
-        }
+        // Объект для хранения предыдущих значений времени цикла Adam машин
+        const adamCycleHistory = {};
 
-        function findComponent(deviceStream, componentName) {
-            const streams = Array.isArray(deviceStream.ComponentStream) 
-                ? deviceStream.ComponentStream 
-                : [deviceStream.ComponentStream];
-            return streams.find(cs => getNestedValue(cs, '$.name') === componentName);
+        // Функция для динамической настройки количества колонок (максимум 5)
+        function updateGridColumns() {
+            const machineCards = grid.querySelectorAll('.machine-card');
+            const totalCards = machineCards.length;
+            
+            if (totalCards === 0) {
+                grid.style.gridTemplateColumns = 'repeat(1, 1fr)';
+                return;
+            }
+            
+            // Максимум 5 колонок, минимум 1
+            const columns = Math.min(totalCards, 5);
+            grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+            
+            console.log(`🎯 Установлено ${columns} колонок для ${totalCards} станков`);
         }
 
         function findDataItem(component, dataItemId) {
-             if (!component) return 'UNAVAILABLE';
-             
-             // Безопасно получаем дочерние элементы Events, Samples, Condition
-             const events = component.getElementsByTagName('Events')[0];
-             const samples = component.getElementsByTagName('Samples')[0];
-             const condition = component.getElementsByTagName('Condition')[0];
-
-             const searchInChildren = (parentElement) => {
-                 if (!parentElement) return 'UNAVAILABLE';
-                 for (const child of parentElement.children) {
-                     if (child.getAttribute('dataItemId') === dataItemId) {
-                         return child.textContent;
-                     }
-                 }
-                 return 'UNAVAILABLE';
-             }
-             
-             let result = searchInChildren(events);
-             if (result !== 'UNAVAILABLE') return result;
-
-             result = searchInChildren(samples);
-             if (result !== 'UNAVAILABLE') return result;
-
-             result = searchInChildren(condition);
-             return result;
+            if (!component) return 'UNAVAILABLE';
+            
+            // Расширенный поиск в Events
+            const events = component.getElementsByTagName('Events');
+            if (events.length > 0) {
+                for (const child of events[0].children) {
+                    const childDataItemId = child.getAttribute('dataItemId');
+                    const childName = child.getAttribute('name');
+                    const tagName = child.tagName.toLowerCase();
+                    
+                    if (childDataItemId === dataItemId || 
+                        childName === dataItemId || 
+                        tagName === dataItemId.toLowerCase() ||
+                        tagName === dataItemId.replace('_', '').toLowerCase()) {
+                        return child.textContent.trim();
+                    }
+                }
+            }
+            
+            // Расширенный поиск в Samples  
+            const samples = component.getElementsByTagName('Samples');
+            if (samples.length > 0) {
+                for (const child of samples[0].children) {
+                    const childDataItemId = child.getAttribute('dataItemId');
+                    const childName = child.getAttribute('name');
+                    const tagName = child.tagName.toLowerCase();
+                    
+                    if (childDataItemId === dataItemId || 
+                        childName === dataItemId || 
+                        tagName === dataItemId.toLowerCase() ||
+                        tagName === dataItemId.replace('_', '').toLowerCase()) {
+                        return child.textContent.trim();
+                    }
+                }
+            }
+            
+            // Расширенный поиск в Condition
+            const conditions = component.getElementsByTagName('Condition');
+            if (conditions.length > 0) {
+                for (const child of conditions[0].children) {
+                    const childDataItemId = child.getAttribute('dataItemId');
+                    const childName = child.getAttribute('name');
+                    const tagName = child.tagName.toLowerCase();
+                    
+                    if (childDataItemId === dataItemId || 
+                        childName === dataItemId || 
+                        tagName === dataItemId.toLowerCase() ||
+                        tagName === dataItemId.replace('_', '').toLowerCase()) {
+                        return child.textContent.trim();
+                    }
+                }
+            }
+            
+            return 'UNAVAILABLE';
         }
 
         async function fetchMTConnectData() {
             try {
-                const response = await fetch(API_URL);
+                const response = await fetch('/current');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const xmlText = await response.text();
+                console.log('📄 Полученный XML:', xmlText.substring(0, 500) + '...');
+                
+                // Дополнительная диагностика XML
+                console.log('🔍 Полный XML документ:', xmlText);
                 
                 const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                
+                // Проверяем на ошибки парсинга
+                const parseError = xmlDoc.querySelector('parsererror');
+                if (parseError) {
+                    console.error('❌ Ошибка парсинга XML:', parseError.textContent);
+                    return false;
+                }
                 
                 updateMTConnectUI(xmlDoc);
                 return true;
-
             } catch (error) {
                 console.error("Ошибка получения данных MTConnect:", error);
                 return false;
@@ -391,15 +540,13 @@
 
         async function fetchAdamData() {
             try {
-                const response = await fetch(ADAM_API_URL);
+                const response = await fetch('/api/adam/counters');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
-                
                 updateAdamUI(data);
                 return true;
-
             } catch (error) {
                 console.error("Ошибка получения данных Adam:", error);
                 updateAdamUI({ error: error.message });
@@ -407,103 +554,283 @@
             }
         }
 
-        async function fetchConnectionsStatus() {
+        // Функция для проверки доступности MTConnect Agent'ов
+        async function checkMTConnectAgents() {
             try {
-                const response = await fetch(STATUS_API_URL);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                const response = await fetch('/status');
+                if (response.ok) {
+                    const statusData = await response.json();
+                    console.log('📊 Статус MTConnect Agent\'ов:', statusData.mtconnectAgents);
+                    
+                    const agentStatuses = statusData.mtconnectAgents || [];
+                    const onlineAgents = agentStatuses.filter(agent => agent.status === 'OK');
+                    const totalAgents = agentStatuses.length;
+                    
+                    console.log(`📊 MTConnect Agent'ы: ${onlineAgents.length}/${totalAgents} онлайн`);
+                    
+                    // Выводим детали по каждому агенту
+                    agentStatuses.forEach(agent => {
+                        const status = agent.status === 'OK' ? '✅' : '❌';
+                        console.log(`  ${status} ${agent.name} (${agent.id}): ${agent.status} ${agent.error ? '- ' + agent.error : ''}`);
+                    });
                 }
-                const data = await response.json();
-                
-                updateConnectionsUI(data);
-                return true;
-
             } catch (error) {
-                console.error("Ошибка получения статуса соединений:", error);
-                return false;
+                console.error('❌ Ошибка проверки статуса MTConnect Agent\'ов:', error);
             }
         }
 
         async function fetchData() {
+            // Проверяем статус MTConnect Agent'ов
+            await checkMTConnectAgents();
+            
             const mtConnectOk = await fetchMTConnectData();
             const adamOk = await fetchAdamData();
-            const connectionsOk = await fetchConnectionsStatus();
+            
+            // Обновляем статус основного сервера
+            if (mtConnectOk) {
+                mainServerStatusEl.classList.add('online');
+                mainServerStatusEl.title = 'Сервер работает';
+            } else {
+                mainServerStatusEl.classList.remove('online');
+                mainServerStatusEl.title = 'Сервер недоступен';
+            }
+            
+            // Обновляем статус Adam-6050
+            if (adamOk) {
+                adamStatusEl.classList.add('online');
+                adamStatusEl.title = 'Adam-6050 подключен';
+            } else {
+                adamStatusEl.classList.remove('online');
+                adamStatusEl.title = 'Adam-6050 недоступен';
+            }
             
             if (mtConnectOk || adamOk) {
-                connectionStatusEl.classList.add('connected');
-                connectionStatusEl.title = 'Подключено';
                 lastUpdatedEl.textContent = `Обновлено: ${new Date().toLocaleTimeString()}`;
-            } else {
-                connectionStatusEl.classList.remove('connected');
-                connectionStatusEl.title = 'Ошибка подключения';
             }
         }
 
         function updateMTConnectUI(xmlDoc) {
+            // Диагностика структуры XML документа
+            console.log('🔍 XML документ:', xmlDoc);
+            console.log('🔍 Root element:', xmlDoc.documentElement);
+            
             const deviceStreams = xmlDoc.getElementsByTagName('DeviceStream');
+            console.log(`🔍 Найдено DeviceStream элементов: ${deviceStreams.length}`);
+            
+            // Показываем все элементы верхнего уровня
+            if (xmlDoc.documentElement) {
+                console.log('🔍 Структура документа:', xmlDoc.documentElement.tagName);
+                for (let child of xmlDoc.documentElement.children) {
+                    console.log(`  - ${child.tagName}:`, child);
+                }
+            }
+            
             const foundMachines = new Set();
 
             for (const deviceStream of deviceStreams) {
                 const machineName = deviceStream.getAttribute('name');
-                foundMachines.add(machineName);
+                const machineUuid = deviceStream.getAttribute('uuid');
+                const machineId = deviceStream.getAttribute('id');
+                
+                console.log(`🔍 Обрабатываем станок: name='${machineName}', uuid='${machineUuid}', id='${machineId}'`);
+                
+                // Используем имя машины из атрибута name, если оно есть
+                const displayName = machineName || machineUuid || machineId || 'Unknown';
+                foundMachines.add(displayName);
 
-                let card = document.getElementById(`machine-${machineName}`);
+                let card = document.getElementById(`machine-${displayName}`);
                 if (!card) {
                     card = document.createElement('div');
                     card.className = 'machine-card';
-                    card.id = `machine-${machineName}`;
+                    card.id = `machine-${displayName}`;
                     grid.appendChild(card);
                 }
 
                 const findComponentByName = (name) => {
                     const components = deviceStream.getElementsByTagName('ComponentStream');
+                    console.log(`🔍 ${displayName}: Поиск компонента '${name}', найдено компонентов: ${components.length}`);
+                    
                     for(const comp of components) {
-                        if(comp.getAttribute('name') === name) {
+                        const compName = comp.getAttribute('name');
+                        const compId = comp.getAttribute('id');
+                        const compComponentId = comp.getAttribute('componentId');
+                        const compComponent = comp.getAttribute('component');
+                        
+                        console.log(`  - Компонент: name=${compName}, id=${compId}, componentId=${compComponentId}, component=${compComponent}`);
+                        
+                        if(compName === name || 
+                           compId === name || 
+                           compComponentId === name || 
+                           compComponent === name ||
+                           (name === 'path' && (compName === 'path' || compId === 'pth' || compComponentId === 'pth' || compComponent === 'Path'))) {
+                            console.log(`  ✅ Найден компонент '${name}'`);
                             return comp;
                         }
                     }
+                    
+                    // Если не найден компонент path, попробуем найти другие компоненты
+                    if (name === 'path') {
+                        for(const comp of components) {
+                            const compName = comp.getAttribute('name');
+                            console.log(`  - Альтернативный поиск: ${compName}`);
+                            if(compName && compName.toLowerCase().includes('path')) {
+                                console.log(`  ✅ Найден альтернативный компонент '${compName}'`);
+                                return comp;
+                            }
+                        }
+                        
+                        // Если все еще не найден, возвращаем первый компонент
+                        if (components.length > 0) {
+                            console.log(`  ⚠️ Используем первый доступный компонент`);
+                            return components[0];
+                        }
+                    }
+                    
+                    console.log(`  ❌ Компонент '${name}' не найден`);
                     return null;
                 }
 
                 // Извлекаем данные
                 const pathComponent = findComponentByName('path');
                 
-                const execution = findDataItem(pathComponent, 'execution');
-                const program = findDataItem(pathComponent, 'program');
-                const partCount = findDataItem(pathComponent, 'part_count');
-                const cycleTime = findDataItem(pathComponent, 'cycle_time_avg');
-
-                // Определяем статус
-                let statusText = execution.toUpperCase();
-                let statusClass = 'status-unavailable';
-
-                if (statusText === 'ACTIVE' || statusText === 'EXECUTING') {
-                    statusClass = 'status-executing';
-                } else if (statusText === 'READY' || statusText === 'IDLE' || statusText === 'STOPPED') {
-                    statusClass = 'status-idle';
-                } else { // UNAVAILABLE, NO_DATA, etc.
-                    statusText = 'OFFLINE';
-                    statusClass = 'status-offline';
+                // Пробуем несколько вариантов поиска execution
+                let execution = findDataItem(pathComponent, 'execution');
+                if (execution === 'UNAVAILABLE') {
+                    execution = findDataItem(pathComponent, 'exec');
+                }
+                if (execution === 'UNAVAILABLE') {
+                    execution = findDataItem(pathComponent, 'Execution');
+                }
+                
+                // Пробуем несколько вариантов поиска других данных
+                let program = findDataItem(pathComponent, 'program');
+                if (program === 'UNAVAILABLE') {
+                    program = findDataItem(pathComponent, 'Program');
+                }
+                
+                let partCount = findDataItem(pathComponent, 'part_count');
+                if (partCount === 'UNAVAILABLE') {
+                    partCount = findDataItem(pathComponent, 'partcount');
+                }
+                if (partCount === 'UNAVAILABLE') {
+                    partCount = findDataItem(pathComponent, 'PartCount');
+                }
+                
+                let cycleTime = findDataItem(pathComponent, 'cycle_time_avg');
+                if (cycleTime === 'UNAVAILABLE') {
+                    cycleTime = findDataItem(pathComponent, 'cycle_time');
+                }
+                if (cycleTime === 'UNAVAILABLE') {
+                    cycleTime = findDataItem(pathComponent, 'CycleTime');
                 }
 
-                // Обновляем HTML
+                // Отладочная информация
+                console.log(`🔍 ${displayName}: execution=${execution}, program=${program}, partCount=${partCount}, cycleTime=${cycleTime}`);
+                
+                // Дополнительная диагностика для понимания структуры XML
+                if (pathComponent) {
+                    console.log(`📋 ${displayName}: Найденный компонент path:`, pathComponent);
+                    const events = pathComponent.getElementsByTagName('Events');
+                    const samples = pathComponent.getElementsByTagName('Samples');
+                    if (events.length > 0) {
+                        console.log(`📋 ${displayName}: События в компоненте:`, Array.from(events[0].children).map(child => ({
+                            tag: child.tagName,
+                            dataItemId: child.getAttribute('dataItemId'),
+                            name: child.getAttribute('name'),
+                            value: child.textContent
+                        })));
+                    }
+                    if (samples.length > 0) {
+                        console.log(`📋 ${displayName}: Примеры в компоненте:`, Array.from(samples[0].children).map(child => ({
+                            tag: child.tagName,
+                            dataItemId: child.getAttribute('dataItemId'),
+                            name: child.getAttribute('name'),
+                            value: child.textContent
+                        })));
+                    }
+                } else {
+                    console.log(`⚠️ ${displayName}: Компонент path не найден!`);
+                }
+
+                // Определяем статус с улучшенной логикой
+                let statusClass = 'status-offline'; // Красный - проблема по умолчанию
+
+                if (execution !== 'UNAVAILABLE') {
+                    const execUpper = execution.toUpperCase();
+                    
+                    if (execUpper === 'ACTIVE' || execUpper === 'EXECUTING') {
+                        statusClass = 'status-executing'; // Зеленый - в работе
+                    } else if (execUpper === 'READY' || execUpper === 'IDLE') {
+                        statusClass = 'status-idle'; // Желтый - простой
+                    } else if (execUpper === 'STOPPED' || execUpper === 'FEED_HOLD' || execUpper === 'PROGRAM_STOPPED') {
+                        statusClass = 'status-setup'; // Фиолетовый - наладка (остановлен для настройки)
+                    } else if (execUpper === 'UNAVAILABLE') {
+                        statusClass = 'status-offline'; // Красный - проблема
+                    } else {
+                                                 // Неизвестный статус - попробуем определить по контексту
+                         console.log(`⚠️ ${displayName}: Неизвестный статус execution: '${execution}'`);
+                         
+                         // Если есть данные о программе или счетчике деталей, значит станок подключен
+                         if (program !== 'UNAVAILABLE' || partCount !== 'UNAVAILABLE') {
+                             statusClass = 'status-idle'; // Желтый - предполагаем простой
+                         } else {
+                             statusClass = 'status-offline'; // Красный - нет данных
+                         }
+                     }
+                 } else {
+                     // execution недоступен, но проверим другие данные
+                     if (program !== 'UNAVAILABLE' || partCount !== 'UNAVAILABLE' || cycleTime !== 'UNAVAILABLE') {
+                         console.log(`⚠️ ${displayName}: Execution недоступен, но есть другие данные - считаем станок подключенным`);
+                         statusClass = 'status-idle'; // Желтый - станок подключен, но статус неясен
+                     } else {
+                         console.log(`❌ ${displayName}: Нет доступных данных - станок отключен`);
+                         statusClass = 'status-offline'; // Красный - нет данных вообще
+                     }
+                 }
+
+                console.log(`🎨 ${displayName}: statusClass=${statusClass} (execution: ${execution})`);
+                
+                // Альтернативные имена для поиска данных
+                if (execution === 'UNAVAILABLE') {
+                    const altExecution = findDataItem(pathComponent, 'exec') || findDataItem(pathComponent, 'Execution');
+                    if (altExecution !== 'UNAVAILABLE') {
+                        console.log(`🔄 ${displayName}: Найден execution через альтернативный поиск: ${altExecution}`);
+                    }
+                }
+
+                // Применяем класс статуса к карточке
+                card.className = `machine-card ${statusClass}`;
+
+                // Определяем текст для timeline в зависимости от статуса
+                let timelineText = '📊 Timeline данные (Railway)';
+                if (statusClass === 'status-executing') {
+                    timelineText = '🟢 В работе';
+                } else if (statusClass === 'status-idle') {
+                    timelineText = '🟡 Простой';
+                } else if (statusClass === 'status-setup') {
+                    timelineText = '🟣 Наладка';
+                } else if (statusClass === 'status-offline') {
+                    timelineText = '🔴 Проблема';
+                }
+
                 card.innerHTML = `
-                    <div class="card-header">${machineName}</div>
-                    <div class="data-point">
-                        <span class="data-label">Статус:</span>
-                        <span class="data-value status-badge ${statusClass}">${statusText}</span>
+                    <div class="machine-header">${displayName}</div>
+                    <div class="machine-info">
+                        <div class="info-item">
+                            <div class="info-emoji">⚙️</div>
+                            <div class="info-value">${program}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">🔢</div>
+                            <div class="info-value ${['SR-10', 'XD-38', 'XD-20'].includes(displayName) ? 'part-count-reliable' : ''}">${partCount}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">⏱️</div>
+                            <div class="info-value">${cycleTime !== 'UNAVAILABLE' ? parseFloat(cycleTime).toFixed(1) + 's' : '---'}</div>
+                        </div>
                     </div>
-                    <div class="data-point">
-                        <span class="data-label">Программа:</span>
-                        <span class="data-value">${program}</span>
-                    </div>
-                    <div class="data-point">
-                        <span class="data-label">Счетчик деталей:</span>
-                        <span class="data-value">${partCount}</span>
-                    </div>
-                    <div class="data-point">
-                        <span class="data-label">Время цикла (сек):</span>
-                        <span class="data-value">${cycleTime !== 'UNAVAILABLE' ? parseFloat(cycleTime).toFixed(2) : '---'}</span>
+                    <div class="timeline-area">
+                        ${timelineText}
                     </div>
                 `;
             }
@@ -512,176 +839,175 @@
             const machineCards = grid.getElementsByClassName('machine-card');
             for (let i = machineCards.length - 1; i >= 0; i--) {
                 const card = machineCards[i];
-                const machineName = card.id.replace('machine-', '');
-                if (!foundMachines.has(machineName)) {
+                const cardMachineName = card.id.replace('machine-', '');
+                if (!foundMachines.has(cardMachineName) && !card.id.startsWith('adam-')) {
+                    console.log(`🗑️ Удаляем карточку станка: ${cardMachineName}`);
                     card.remove();
                 }
             }
+
+            // Обновляем количество колонок после изменения MTConnect карточек
+            updateGridColumns();
         }
 
         function updateAdamUI(data) {
-            // Очищаем предыдущие карточки
-            adamGrid.innerHTML = '';
+            // Удаляем предыдущие Adam карточки
+            const existingAdamCards = grid.querySelectorAll('[id^="adam-"]');
+            existingAdamCards.forEach(card => card.remove());
 
             if (data.error) {
                 const errorCard = document.createElement('div');
-                errorCard.className = 'adam-card';
+                errorCard.className = 'machine-card status-offline';
                 errorCard.innerHTML = `
-                    <div class="adam-header">Ошибка Adam-6050</div>
-                    <div class="adam-status adam-offline">Не удалось подключиться</div>
-                    <div class="adam-data-point">
-                        <span class="data-label">Ошибка:</span>
-                        <span class="data-value">${data.error}</span>
+                    <div class="adam-indicator">📊</div>
+                    <div class="machine-header">Ошибка Adam-6050</div>
+                    <div class="machine-info">
+                        <div class="info-item">
+                            <div class="info-emoji">⚙️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">🔢</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">⏱️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                    </div>
+                    <div class="timeline-area">
+                        🔴 Проблема
                     </div>
                 `;
-                adamGrid.appendChild(errorCard);
+                grid.appendChild(errorCard);
                 return;
             }
 
             if (data.counters && data.counters.length > 0) {
                 data.counters.forEach(counter => {
                     const card = document.createElement('div');
-                    card.className = 'adam-card';
                     card.id = `adam-${counter.machineId}`;
                     
-                    // Определяем статус активности
-                    let activityStatus = 'adam-online';
-                    let activityText = 'Онлайн';
+                    // Улучшенная логика определения статуса Adam
+                    let statusClass = 'status-offline'; // Красный - проблема
                     
-                    if (counter.cycleTimeMs && counter.confidence === 'ВЫСОКАЯ') {
-                        activityStatus = 'adam-producing';
-                        activityText = 'ПРОИЗВОДИТ';
-                    } else if (counter.cycleTimeMs && counter.confidence === 'СРЕДНЯЯ') {
-                        activityStatus = 'adam-active';
-                        activityText = 'АКТИВЕН';
-                    } else if (counter.partsInCycle && counter.partsInCycle > 0) {
-                        activityStatus = 'adam-active';
-                        activityText = 'НАБОР ДАННЫХ';
+                    if (counter.cycleTimeMs && counter.cycleTimeMs > 0) {
+                        const currentCycleTime = counter.cycleTimeMs / 1000; // в секундах
+                        const machineId = counter.machineId;
+                        
+                        // Проверяем историю времени цикла
+                        if (!adamCycleHistory[machineId]) {
+                            adamCycleHistory[machineId] = [];
+                        }
+                        
+                        const history = adamCycleHistory[machineId];
+                        history.push(currentCycleTime);
+                        
+                        // Храним только последние 3 значения
+                        if (history.length > 3) {
+                            history.shift();
+                        }
+                        
+                        if (history.length >= 2) {
+                            // Вычисляем среднее и отклонение
+                            const avg = history.reduce((sum, time) => sum + time, 0) / history.length;
+                            const maxDeviation = Math.max(...history.map(time => Math.abs(time - avg) / avg));
+                            
+                            if (maxDeviation <= 0.1) {
+                                // Время цикла стабильное (отклонение не более 10%)
+                                statusClass = 'status-executing'; // Зеленый - в работе
+                            } else {
+                                // Время цикла нестабильное (возможно остановился)
+                                statusClass = 'status-idle'; // Желтый - простой
+                            }
+                        } else {
+                            // Недостаточно данных для анализа
+                            statusClass = 'status-idle'; // Желтый - простой
+                        }
+                    } else if (counter.count > 0) {
+                        // Есть счетчик, но нет времени цикла
+                        statusClass = 'status-idle'; // Желтый - простой
                     }
                     
+                    // Применяем классы
+                    card.className = `machine-card ${statusClass}`;
+                    
+                    // Определяем текст для timeline в зависимости от статуса Adam
+                    let timelineText = '📊 Timeline данные (Railway)';
+                    if (statusClass === 'status-executing') {
+                        timelineText = '🟢 В работе';
+                    } else if (statusClass === 'status-idle') {
+                        timelineText = '🟡 Простой';
+                    } else if (statusClass === 'status-setup') {
+                        timelineText = '🟣 Наладка';
+                    } else if (statusClass === 'status-offline') {
+                        timelineText = '🔴 Проблема';
+                    }
+
                     card.innerHTML = `
-                        <div class="adam-header">${counter.machineId}</div>
-                        <div class="adam-status ${activityStatus}">${activityText}</div>
-                        <div class="adam-counter">${counter.count.toLocaleString()}</div>
-                        <div class="adam-data-point">
-                            <span class="data-label">Канал:</span>
-                            <span class="data-value">${counter.channel}</span>
+                        <div class="adam-indicator">📊</div>
+                        <div class="machine-header">${counter.machineId}</div>
+                        <div class="machine-info">
+                            <div class="info-item">
+                                <div class="info-emoji">⚙️</div>
+                                <div class="info-value">O1001</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-emoji">🔢</div>
+                                <div class="info-value">${counter.count.toLocaleString()}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-emoji">⏱️</div>
+                                <div class="info-value">${counter.cycleTimeMs ? (counter.cycleTimeMs / 1000).toFixed(1) + 's' : '---'}</div>
+                            </div>
                         </div>
-                        <div class="adam-data-point">
-                            <span class="data-label">Время цикла:</span>
-                            <span class="data-value">${counter.cycleTimeMs ? (counter.cycleTimeMs / 1000).toFixed(2) + ' сек' : 'Расчет...'}</span>
-                        </div>
-                        <div class="adam-data-point">
-                            <span class="data-label">Данных для расчета:</span>
-                            <span class="data-value">${counter.partsInCycle || 0} деталей</span>
-                        </div>
-                        <div class="adam-data-point">
-                            <span class="data-label">Точность:</span>
-                            <span class="data-value">${counter.confidence || 'Набор данных'}</span>
-                        </div>
-                        <div class="adam-data-point">
-                            <span class="data-label">Обновлено:</span>
-                            <span class="data-value">${new Date(counter.timestamp).toLocaleTimeString()}</span>
+                        <div class="timeline-area">
+                            ${timelineText}
                         </div>
                     `;
                     
-                    adamGrid.appendChild(card);
+                    grid.appendChild(card);
                 });
             } else {
                 const noDataCard = document.createElement('div');
-                noDataCard.className = 'adam-card';
+                noDataCard.className = 'machine-card status-offline';
                 noDataCard.innerHTML = `
-                    <div class="adam-header">Adam-6050</div>
-                    <div class="adam-status adam-offline">Нет данных</div>
-                    <div class="adam-data-point">
-                        <span class="data-label">Статус:</span>
-                        <span class="data-value">Счетчики не найдены</span>
+                    <div class="adam-indicator">📊</div>
+                    <div class="machine-header">Adam-6050</div>
+                    <div class="machine-info">
+                        <div class="info-item">
+                            <div class="info-emoji">⚙️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">🔢</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">⏱️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                    </div>
+                    <div class="timeline-area">
+                        🔴 Проблема
                     </div>
                 `;
-                adamGrid.appendChild(noDataCard);
+                grid.appendChild(noDataCard);
             }
+
+            // Обновляем количество колонок после изменения Adam карточек
+            updateGridColumns();
         }
 
-        function updateConnectionsUI(data) {
-            // Очищаем предыдущие карточки
-            connectionsGrid.innerHTML = '';
-
-            // Карточка сервера
-            const serverCard = document.createElement('div');
-            serverCard.className = 'connection-card';
-            serverCard.innerHTML = `
-                <div class="connection-title">Основной сервер</div>
-                <div class="connection-status connection-ok">РАБОТАЕТ</div>
-                <div class="connection-details">
-                    Время работы: ${Math.floor(data.server.uptime / 3600)}ч ${Math.floor((data.server.uptime % 3600) / 60)}м<br>
-                    Память: ${(data.server.memory.heapUsed / 1024 / 1024).toFixed(1)} MB
-                </div>
-            `;
-            connectionsGrid.appendChild(serverCard);
-
-            // Карточка Adam-6050
-            const adamCard = document.createElement('div');
-            adamCard.className = 'connection-card';
-            const adamStatus = data.adam6050.status === 'OK' ? 'connection-ok' : 'connection-error';
-            const adamStatusText = data.adam6050.status === 'OK' ? 'ПОДКЛЮЧЕН' : 'ОШИБКА';
-            
-            adamCard.innerHTML = `
-                <div class="connection-title">Adam-6050 (${data.adam6050.host})</div>
-                <div class="connection-status ${adamStatus}">${adamStatusText}</div>
-                <div class="connection-details">
-                    Счетчиков: ${data.adam6050.counters}<br>
-                    ${data.adam6050.error ? `Ошибка: ${data.adam6050.error}` : 'Modbus/TCP активен'}
-                </div>
-            `;
-            connectionsGrid.appendChild(adamCard);
-
-            // Карточки MTConnect агентов
-            if (data.mtconnectAgents) {
-                const agentGroups = {};
-                data.mtconnectAgents.forEach(agent => {
-                    const status = agent.status;
-                    if (!agentGroups[status]) {
-                        agentGroups[status] = [];
-                    }
-                    agentGroups[status].push(agent);
-                });
-
-                Object.keys(agentGroups).forEach(status => {
-                    const agents = agentGroups[status];
-                    const agentCard = document.createElement('div');
-                    agentCard.className = 'connection-card';
-                    
-                    let statusClass = 'connection-warning';
-                    let statusText = status;
-                    
-                    if (status === 'OK') {
-                        statusClass = 'connection-ok';
-                        statusText = `${agents.length} АГЕНТОВ АКТИВНО`;
-                    } else if (status === 'ERROR') {
-                        statusClass = 'connection-error';
-                        statusText = `${agents.length} АГЕНТОВ НЕДОСТУПНО`;
-                    } else if (status === 'NO_AGENT') {
-                        statusClass = 'connection-warning';
-                        statusText = `${agents.length} БЕЗ АГЕНТОВ`;
-                    }
-                    
-                    const agentsList = agents.map(agent => {
-                        const responseInfo = agent.responseTime > 0 ? ` (${agent.responseTime}ms)` : '';
-                        return `${agent.name}${responseInfo}`;
-                    }).join('<br>');
-                    
-                    agentCard.innerHTML = `
-                        <div class="connection-title">MTConnect Агенты</div>
-                        <div class="connection-status ${statusClass}">${statusText}</div>
-                        <div class="connection-details">${agentsList}</div>
-                    `;
-                    connectionsGrid.appendChild(agentCard);
-                });
-            }
-        }
         
+        // Первоначальная загрузка данных
         fetchData();
+        
+        // Устанавливаем интервал обновления
         setInterval(fetchData, UPDATE_INTERVAL);
+        
+        // Устанавливаем правильное количество колонок при загрузке
+        setTimeout(updateGridColumns, 100);
     </script>
 </body>
 </html>

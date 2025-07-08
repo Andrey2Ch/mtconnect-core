@@ -1,0 +1,126 @@
+# Edge-to-Cloud Architecture Migration PRD
+
+## Project Overview
+Transform the existing local MTConnect monitoring system into a modern Edge-Cloud architecture where:
+- **Edge**: Local data collection stays on-premises for security
+- **Cloud**: Dashboard and analytics move to cloud for accessibility
+
+## Current State Analysis
+- ✅ **Local System**: 100% complete, monitoring 8 FANUC machines
+- ✅ **ADAM-6050 PoC**: Proven jsmodbus can replace .NET DLL
+- 🔄 **Architecture**: Currently everything runs locally
+
+## Target Architecture
+
+### Edge Component (Local)
+- **Data Collection**: MTConnect agents + ADAM-6050 digital I/O
+- **Data Processing**: Real-time machine state management
+- **Data Transmission**: HTTP/HTTPS to cloud API
+- **Security**: No inbound ports, only outbound connections
+- **Technology**: Node.js/TypeScript (existing codebase)
+
+### Cloud Component (Railway.app)
+- **Dashboard**: Web interface accessible from anywhere
+- **API**: RESTful endpoints for data ingestion and serving
+- **Database**: MongoDB for machine data and TimeSeries
+- **Technology**: NestJS/TypeScript/Mongoose
+- **Deployment**: Docker containers on Railway
+
+## Technical Requirements
+
+### Edge Requirements
+1. **Data Collection**
+   - Maintain existing MTConnect XML parsing
+   - Integrate ADAM-6050 using jsmodbus (no .NET dependency)
+   - Real-time machine state tracking
+   - Cycle time calculations
+
+2. **Data Transmission**
+   - HTTP/HTTPS client with retry logic
+   - Batch data sending (every 30 seconds)
+   - Outbox pattern for reliability
+   - Compression for efficiency
+
+3. **Security**
+   - No inbound network connections
+   - HTTPS only for outbound
+   - API key authentication
+   - Local data encryption at rest
+
+### Cloud Requirements
+1. **Data Ingestion API**
+   - RESTful endpoints for receiving edge data
+   - Authentication and authorization
+   - Data validation and sanitization
+   - Rate limiting and DDoS protection
+
+2. **Dashboard API**
+   - Real-time machine status endpoints
+   - Historical data queries
+   - Aggregated statistics
+   - WebSocket for real-time updates
+
+3. **Database Design**
+   - Machine configurations (MongoDB collections)
+   - Real-time machine states (MongoDB TimeSeries)
+   - Historical data with time-series optimization
+   - User management and permissions
+
+4. **Frontend Dashboard**
+   - Responsive web interface
+   - Real-time machine status display
+   - Historical charts and analytics
+   - Mobile-friendly design
+
+## Implementation Strategy
+
+### Phase 1: Cloud Infrastructure
+- Set up Railway.app deployment
+- Create NestJS application structure
+- Implement PostgreSQL database
+- Basic API endpoints
+
+### Phase 2: Edge Integration
+- Modify existing local system
+- Add HTTP client for cloud communication
+- Implement ADAM-6050 integration
+- Test data transmission
+
+### Phase 3: Dashboard Development
+- Create cloud-based web dashboard
+- Implement real-time updates
+- Add historical data visualization
+- Mobile optimization
+
+### Phase 4: Production Deployment
+- Security hardening
+- Performance optimization
+- Monitoring and alerting
+- Documentation and training
+
+## Data Flow
+1. **Edge**: MTConnect agents → Local processor → ADAM-6050 → Data aggregation
+2. **Transmission**: Edge → HTTPS → Cloud API
+3. **Cloud**: API → Database → Dashboard
+4. **Users**: Browser → Cloud Dashboard
+
+## Success Criteria
+- ✅ All 8 FANUC machines monitored in real-time
+- ✅ ADAM-6050 digital I/O integrated without .NET
+- ✅ Dashboard accessible from anywhere with internet
+- ✅ No inbound network connections to edge
+- ✅ Sub-second latency for real-time updates
+- ✅ 99.9% uptime for cloud services
+- ✅ Mobile-responsive interface
+
+## Risk Mitigation
+- **Network Security**: Only outbound HTTPS, no inbound ports
+- **Data Loss**: Outbox pattern with local persistence
+- **Cloud Downtime**: Local data buffering and retry logic
+- **Performance**: Batch transmission and database optimization
+
+## Technologies
+- **Edge**: Node.js, TypeScript, jsmodbus, axios
+- **Cloud**: NestJS, MongoDB, Railway.app, Docker
+- **Frontend**: HTML5, CSS3, JavaScript, WebSocket
+- **Security**: HTTPS, API keys, data encryption 

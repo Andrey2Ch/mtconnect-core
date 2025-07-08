@@ -9,29 +9,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EdgeGatewayDataDto = exports.MachineDataValueDto = exports.MachineDataItemDto = void 0;
+exports.EdgeGatewayDataDto = exports.MachineDataItemDto = exports.MachineDataValueDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
-class MachineDataItemDto {
-}
-exports.MachineDataItemDto = MachineDataItemDto;
-__decorate([
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], MachineDataItemDto.prototype, "machineId", void 0);
-__decorate([
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], MachineDataItemDto.prototype, "machineName", void 0);
-__decorate([
-    (0, class_validator_1.IsDateString)(),
-    __metadata("design:type", String)
-], MachineDataItemDto.prototype, "timestamp", void 0);
-__decorate([
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_transformer_1.Type)(() => MachineDataValueDto),
-    __metadata("design:type", MachineDataValueDto)
-], MachineDataItemDto.prototype, "data", void 0);
 class MachineDataValueDto {
 }
 exports.MachineDataValueDto = MachineDataValueDto;
@@ -74,6 +54,26 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Object)
 ], MachineDataValueDto.prototype, "adamData", void 0);
+class MachineDataItemDto {
+}
+exports.MachineDataItemDto = MachineDataItemDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], MachineDataItemDto.prototype, "machineId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], MachineDataItemDto.prototype, "machineName", void 0);
+__decorate([
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], MachineDataItemDto.prototype, "timestamp", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => MachineDataValueDto),
+    __metadata("design:type", MachineDataValueDto)
+], MachineDataItemDto.prototype, "data", void 0);
 class EdgeGatewayDataDto {
 }
 exports.EdgeGatewayDataDto = EdgeGatewayDataDto;

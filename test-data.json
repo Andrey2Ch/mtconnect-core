@@ -1,0 +1,16 @@
+{
+  "edgeGatewayId": "edge-gateway-01",
+  "timestamp": "2025-01-08T10:50:00.000Z",
+  "data": [
+    {
+      "machineId": "SR-22",
+      "machineName": "STUDER SR-22", 
+      "timestamp": "2025-01-08T10:50:00.000Z",
+      "data": {
+        "partCount": 389085,
+        "cycleTime": 45.2,
+        "executionStatus": "ACTIVE"
+      }
+    }
+  ]
+} 

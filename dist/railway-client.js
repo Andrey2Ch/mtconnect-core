@@ -100,7 +100,10 @@ class RailwayClient {
             }
         }
         catch (error) {
-            console.error('❌ Ошибка отправки данных в Railway:', error);
+            console.error('❌ Ошибка отправки данных в Railway:');
+            console.error(`🔗 URL: ${this.config.baseUrl}/api/ext/data`);
+            console.error(`📝 Статус: ${error.response?.status || 'N/A'}`);
+            console.error(`💬 Сообщение: ${error.response?.data || error.message || error.toString()}`);
             this.isOnline = false;
             this.dataBuffer.retryCount++;
             // Если превышено количество попыток, удаляем старые данные

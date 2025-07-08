@@ -107,8 +107,12 @@ export class RailwayClient {
             } else {
                 throw new Error(`Неожиданный статус ответа: ${response.status}`);
             }
-        } catch (error) {
-            console.error('❌ Ошибка отправки данных в Railway:', error);
+        } catch (error: any) {
+            console.error('❌ Ошибка отправки данных в Railway:');
+            console.error(`🔗 URL: ${this.config.baseUrl}/api/ext/data`);
+            console.error(`📝 Статус: ${error.response?.status || 'N/A'}`);
+            console.error(`💬 Сообщение: ${error.response?.data || error.message || error.toString()}`);
+            
             this.isOnline = false;
             this.dataBuffer.retryCount++;
             

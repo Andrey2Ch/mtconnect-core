@@ -126,7 +126,10 @@ async function sendToRailway(data: any[]) {
 
     console.log('✅ Данные отправлены в Railway:', response.data);
   } catch (error: any) {
-    console.error('❌ Ошибка отправки в Railway:', error.response?.data || error.message);
+    console.error('❌ Ошибка отправки в Railway:');
+    console.error(`🔗 URL: ${localConfig.railway.baseUrl}/api/ext/data`);
+    console.error(`📝 Статус: ${error.response?.status || 'N/A'}`);
+    console.error(`💬 Сообщение: ${error.response?.data || error.message || error.toString()}`);
   }
 }
 

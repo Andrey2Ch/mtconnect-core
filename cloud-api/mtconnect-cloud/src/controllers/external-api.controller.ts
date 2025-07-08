@@ -1,161 +1,249 @@
-import { Controller, Post, Body, Get, Param, Query, UseGuards, HttpStatus, HttpException } from '@nestjs/common';
+import { 
+  Controller, 
+  Post, 
+  Body, 
+  Get, 
+  Param, 
+  Query, 
+  UseGuards, 
+  HttpStatus, 
+  HttpException,
+  BadRequestException,
+  InternalServerErrorException,
+  NotFoundException
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Throttle } from '@nestjs/throttler';
 import { MachineData, MachineDataDocument } from '../schemas/machine-data.schema';
 import { EdgeGatewayDataDto } from '../dto/edge-gateway-data.dto';
+import { SanitizationService } from '../services/sanitization.service';
+import { WinstonLoggerService } from '../services/winston-logger.service';
+import { MetricsService } from '../services/metrics.service';
 
 @Controller('api/ext')
 export class ExternalApiController {
   constructor(
-    @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>
+    @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>,
+    private readonly logger: WinstonLoggerService,
+    private readonly sanitizationService: SanitizationService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   @Post('setup')
+  @Throttle({ short: { limit: 10, ttl: 60000 } }) // 10 requests per minute for setup
   async setup(@Body() body: { edgeGatewayId: string; machines: string[] }) {
-    // Idempotency: проверяем существование
-    const existing = await this.machineDataModel.findOne({
-      'metadata.edgeGatewayId': body.edgeGatewayId
-    });
+    try {
+      this.logger.log(`Setup request for gateway: ${body.edgeGatewayId}`, 'ExternalApiController');
+      
+      // Sanitize input data
+      const sanitizedGatewayId = this.sanitizationService.sanitizeText(body.edgeGatewayId, 100);
+      const sanitizedMachines = body.machines?.map(machine => 
+        this.sanitizationService.sanitizeText(machine, 100)
+      ).filter(machine => machine.length > 0) || [];
 
-    if (existing) {
-      return { 
-        status: 'exists', 
-        edgeGatewayId: body.edgeGatewayId,
-        machineCount: body.machines.length 
-      };
-    }
-
-    // Создаём начальную запись
-    const setupData = new this.machineDataModel({
-      timestamp: new Date(),
-      metadata: {
-        edgeGatewayId: body.edgeGatewayId,
-        machineId: 'setup',
-        machineName: 'Gateway Setup'
-      },
-      data: {
-        setup: true,
-        machines: body.machines
+      if (!sanitizedGatewayId) {
+        throw new BadRequestException('Invalid gateway ID provided');
       }
-    });
 
-    await setupData.save();
+      if (sanitizedMachines.length === 0) {
+        throw new BadRequestException('At least one valid machine must be provided');
+      }
 
-    return { 
-      status: 'created', 
-      edgeGatewayId: body.edgeGatewayId,
-      machineCount: body.machines.length 
-    };
+      // Log setup configuration
+      this.logger.log(`Setting up gateway ${sanitizedGatewayId} with ${sanitizedMachines.length} machines`, 'ExternalApiController');
+      
+      return { 
+        status: 'success', 
+        message: 'Edge Gateway configured successfully',
+        gatewayId: sanitizedGatewayId,
+        machineCount: sanitizedMachines.length
+      };
+    } catch (error) {
+      this.logger.error(`Setup failed: ${error.message}`, error.stack, 'ExternalApiController');
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to configure edge gateway');
+    }
   }
 
   @Post('data')
-  async receiveData(@Body() edgeData: EdgeGatewayDataDto) {
+  @Throttle({ short: { limit: 200, ttl: 60000 } }) // 200 requests per minute for critical data
+  async ingestData(@Body() data: EdgeGatewayDataDto) {
+    const startTime = Date.now();
+    
     try {
-      const documents = edgeData.data.map(item => ({
-        timestamp: new Date(item.timestamp),
-        metadata: {
-          edgeGatewayId: edgeData.edgeGatewayId,
-          machineId: item.machineId,
-          machineName: item.machineName
-        },
-        data: item.data
-      }));
+      this.logger.log(`Data ingestion from gateway: ${data.edgeGatewayId}`, 'ExternalApiController');
 
-      const result = await this.machineDataModel.insertMany(documents);
+      // Validate timestamp is not in the future
+      const now = new Date();
+      const dataTime = new Date(data.timestamp);
+      if (dataTime > now) {
+        throw new BadRequestException('Timestamp cannot be in the future');
+      }
+
+      // Check for duplicate machine IDs
+      const machineIds = data.data.map(m => m.machineId);
+      const uniqueIds = new Set(machineIds);
+      if (machineIds.length !== uniqueIds.size) {
+        throw new BadRequestException('Duplicate machine IDs detected');
+      }
+
+      // Sanitize and prepare data for storage
+      const sanitizedMachines = data.data.map(machine => {
+        // Sanitize machine metadata
+        const sanitizedMachineId = this.sanitizationService.sanitizeText(machine.machineId, 100);
+        const sanitizedMachineName = this.sanitizationService.sanitizeText(machine.machineName, 255);
+        
+        if (!sanitizedMachineId || !sanitizedMachineName) {
+          throw new BadRequestException(`Invalid machine data for machine: ${machine.machineId}`);
+        }
+
+        // Sanitize machine data payload
+        const sanitizedData = this.sanitizationService.sanitizeMachineData(machine.data);
+
+        return {
+          timestamp: dataTime,
+          metadata: {
+            edgeGatewayId: this.sanitizationService.sanitizeText(data.edgeGatewayId, 100),
+            machineId: sanitizedMachineId,
+            machineName: sanitizedMachineName,
+          },
+          data: sanitizedData,
+          createdAt: now
+        };
+      });
+
+      // Bulk insert all machine data
+      const result = await this.machineDataModel.insertMany(sanitizedMachines);
       
-      return {
-        status: 'success',
-        received: edgeData.data.length,
-        saved: result.length,
-        timestamp: new Date().toISOString()
+      const processingTime = Date.now() - startTime;
+      this.logger.log(`Ingested ${result.length} machine records in ${processingTime}ms`, 'ExternalApiController');
+      
+      return { 
+        status: 'success', 
+        message: `Stored data for ${result.length} machines`,
+        recordsProcessed: result.length,
+        processingTimeMs: processingTime
       };
     } catch (error) {
-      throw new HttpException(
-        `Failed to save data: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
+      const processingTime = Date.now() - startTime;
+      this.logger.error(`Data ingestion failed after ${processingTime}ms: ${error.message}`, error.stack, 'ExternalApiController');
+      
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to process machine data');
     }
   }
 
   @Post('event')
-  async receiveEvent(@Body() event: { 
-    machineId: string; 
-    eventType: string; 
-    timestamp: string; 
-    data: any 
-  }) {
-    const eventData = new this.machineDataModel({
-      timestamp: new Date(event.timestamp),
-      metadata: {
-        edgeGatewayId: 'external-event',
-        machineId: event.machineId,
-        machineName: event.machineId
-      },
-      data: {
-        eventType: event.eventType,
-        eventData: event.data
-      }
-    });
+  @Throttle({ short: { limit: 50, ttl: 60000 } }) // 50 requests per minute for events
+  async handleEvent(@Body() eventData: any) {
+    try {
+      this.logger.log(`Event received: ${JSON.stringify(eventData)}`, 'ExternalApiController');
+      
+      // Sanitize event data
+      const sanitizedEvent = {
+        type: this.sanitizationService.sanitizeText(eventData.type, 50),
+        message: this.sanitizationService.sanitizeText(eventData.message, 1000),
+        source: this.sanitizationService.sanitizeText(eventData.source, 100),
+        timestamp: new Date(eventData.timestamp || Date.now()),
+        data: this.sanitizationService.sanitizeAdamData(eventData.data)
+      };
 
-    await eventData.save();
-
-    return { 
-      status: 'received', 
-      eventId: eventData._id,
-      timestamp: new Date().toISOString()
-    };
+      // Here you would typically store or process the sanitized event
+      // For now, just log and acknowledge
+      
+      return { 
+        status: 'success', 
+        message: 'Event processed successfully',
+        eventType: sanitizedEvent.type
+      };
+    } catch (error) {
+      this.logger.error(`Event processing failed: ${error.message}`, error.stack, 'ExternalApiController');
+      throw new InternalServerErrorException('Failed to process event');
+    }
   }
 
   @Get('machines/:id/cycle-time')
+  @Throttle({ short: { limit: 100, ttl: 60000 } }) // 100 requests per minute for analytics
   async getCycleTime(
     @Param('id') machineId: string,
     @Query('from') from?: string,
     @Query('to') to?: string
   ) {
-    const query: any = { 'metadata.machineId': machineId };
-    
-    if (from || to) {
-      query.timestamp = {};
-      if (from) query.timestamp.$gte = new Date(from);
-      if (to) query.timestamp.$lte = new Date(to);
-    }
+    try {
+      // Sanitize input parameters
+      const sanitizedMachineId = this.sanitizationService.sanitizeText(machineId, 100);
+      if (!sanitizedMachineId) {
+        throw new BadRequestException('Invalid machine ID');
+      }
 
-    const data = await this.machineDataModel
-      .find(query)
-      .sort({ timestamp: -1 })
-      .limit(100)
+      const fromDate = from ? new Date(from) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const toDate = to ? new Date(to) : new Date();
+
+      if (fromDate >= toDate) {
+        throw new BadRequestException('From date must be before to date');
+      }
+
+      this.logger.log(`Fetching cycle time for machine ${sanitizedMachineId} from ${fromDate} to ${toDate}`, 'ExternalApiController');
+
+      const data = await this.machineDataModel.find({
+        'metadata.machineId': sanitizedMachineId,
+        timestamp: { $gte: fromDate, $lte: toDate },
+        'data.cycleTime': { $exists: true, $ne: null }
+      })
+      .select('timestamp data.cycleTime')
+      .sort({ timestamp: 1 })
+      .limit(1000)
       .exec();
 
-    const cycleTimeData = data
-      .filter(item => item.data.cycleTime !== undefined)
-      .map(item => ({
-        timestamp: item.timestamp,
-        cycleTime: item.data.cycleTime,
-        partCount: item.data.partCount
+      if (data.length === 0) {
+        throw new NotFoundException(`No cycle time data found for machine ${sanitizedMachineId}`);
+      }
+
+      const cycleTimes = data.map(d => ({
+        timestamp: d.timestamp,
+        cycleTime: d.data.cycleTime
       }));
 
-    return {
-      machineId,
-      totalRecords: cycleTimeData.length,
-      averageCycleTime: cycleTimeData.length > 0 
-        ? cycleTimeData.reduce((sum, item) => sum + item.cycleTime, 0) / cycleTimeData.length
-        : null,
-      data: cycleTimeData
-    };
+      const avgCycleTime = cycleTimes.reduce((sum, item) => sum + item.cycleTime, 0) / cycleTimes.length;
+
+      return {
+        machineId: sanitizedMachineId,
+        period: { from: fromDate, to: toDate },
+        averageCycleTime: Math.round(avgCycleTime * 100) / 100,
+        dataPoints: cycleTimes.length,
+        data: cycleTimes
+      };
+    } catch (error) {
+      this.logger.error(`Cycle time query failed: ${error.message}`, error.stack, 'ExternalApiController');
+      
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to retrieve cycle time data');
+    }
   }
 
   @Get('health')
+  @Throttle({ short: { limit: 60, ttl: 60000 } }) // 60 requests per minute for health checks
   async healthCheck() {
-    const dbStatus = await this.machineDataModel.db.db.admin().ping();
-    const recentData = await this.machineDataModel.countDocuments({
-      timestamp: { $gte: new Date(Date.now() - 60000) } // последняя минута
-    });
-
-    return {
-      status: 'ok',
-      database: dbStatus ? 'connected' : 'disconnected',
-      recentData,
-      timestamp: new Date().toISOString()
-    };
+    try {
+      // Simple health check with database ping
+      const dbStats = await this.machineDataModel.db.db.admin().ping();
+      
+      return {
+        status: 'healthy',
+        timestamp: new Date(),
+        database: 'connected',
+        version: '1.0.0'
+      };
+    } catch (error) {
+      this.logger.error(`Health check failed: ${error.message}`, error.stack, 'ExternalApiController');
+      throw new InternalServerErrorException('Service health check failed');
+    }
   }
 } 

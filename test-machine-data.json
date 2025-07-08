@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-01-08T12:15:30.000Z",
+  "metadata": {
+    "machineId": "SR-22",
+    "machineName": "STUDER SR-22",
+    "edgeGatewayId": "edge-gateway-01",
+    "dataType": "production",
+    "source": "mtconnect"
+  },
+  "data": {
+    "production": {
+      "partCount": 389087,
+      "cycleTime": 42.3,
+      "executionStatus": "ACTIVE",
+      "availability": "AVAILABLE",
+      "program": "GRIND_CYCLE_V2.nc",
+      "feedRate": 850,
+      "spindleSpeed": 2500
+    },
+    "spindle": {
+      "rpm": 2500,
+      "load": 75.5,
+      "temperature": 65.2,
+      "vibration": 2.1
+    },
+    "coolant": {
+      "pressure": 6.8,
+      "temperature": 22.5,
+      "flow": 12.5,
+      "ph": 8.2
+    },
+    "power": {
+      "total": 12.8,
+      "spindle": 8.2,
+      "auxiliary": 4.6,
+      "consumption": 12.5
+    },
+    "adam": {
+      "isConnected": true,
+      "digitalInputs": [true, false, true, false, false, true, false, false],
+      "digitalOutputs": [false, true, false, true, false, false, false, false],
+      "readingTime": "2025-01-08T12:15:30.000Z"
+    },
+    "quality": {
+      "currentPartGrade": "A",
+      "surfaceRoughness": 0.8,
+      "dimensionalAccuracy": 0.02,
+      "toolWear": 12.5
+    }
+  }
+} 
