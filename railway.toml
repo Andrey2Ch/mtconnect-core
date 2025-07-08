@@ -1,9 +1,10 @@
 [build]
 builder = "nixpacks"
+workingDirectory = "cloud-api/mtconnect-cloud"
 
 [build.nixpacksConfig]
-install = "cd cloud-api/mtconnect-cloud && npm install"
-build = "cd cloud-api/mtconnect-cloud && npm run build"
+install = "npm install"
+build = "npm run build"
 
 [deploy]
-startCommand = "cd cloud-api/mtconnect-cloud && npm run start:prod" 
+startCommand = "npm run start:prod" 
