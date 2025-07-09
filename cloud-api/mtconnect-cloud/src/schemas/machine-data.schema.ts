@@ -66,6 +66,10 @@ export class MachineData {
       adamData: {
         digitalInputs: [Boolean],
         digitalOutputs: [Boolean],
+        analogData: {
+          type: Object,  // Для Record<string, number>
+          of: Number     // Все значения должны быть числами
+        },
         connectionStatus: String,
       },
       
@@ -125,6 +129,7 @@ export class MachineData {
     adamData?: {
       digitalInputs?: boolean[];
       digitalOutputs?: boolean[];
+      analogData?: Record<string, number>;
       connectionStatus?: string;
     };
     

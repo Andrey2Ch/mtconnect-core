@@ -114,14 +114,41 @@ export class SanitizationService {
   }
 
   /**
+   * Sanitize enum values with fallback defaults
+   */
+  sanitizeEnum(value: any, allowedValues: string[], defaultValue: string): string {
+    if (!value || typeof value !== 'string' || value.trim() === '') {
+      return defaultValue;
+    }
+    
+    const cleanValue = this.sanitizeText(value, 50).toUpperCase();
+    
+    // Check if cleaned value is in allowed values
+    if (allowedValues.includes(cleanValue)) {
+      return cleanValue;
+    }
+    
+    // Return default if not found
+    return defaultValue;
+  }
+
+  /**
    * Sanitize machine data payload
    */
   sanitizeMachineData(data: any): any {
     return {
       partCount: this.sanitizeNumber(data.partCount),
       cycleTime: this.sanitizeNumber(data.cycleTime),
-      executionStatus: this.sanitizeText(data.executionStatus, 50),
-      availability: this.sanitizeText(data.availability, 50),
+      executionStatus: this.sanitizeEnum(
+        data.executionStatus, 
+        ['ACTIVE', 'READY', 'STOPPED', 'UNAVAILABLE', 'INTERRUPTED', 'FEED_HOLD'],
+        'UNAVAILABLE'  // Default для неизвестных значений
+      ),
+      availability: this.sanitizeEnum(
+        data.availability,
+        ['AVAILABLE', 'UNAVAILABLE'], 
+        'UNAVAILABLE'  // Default для неизвестных значений
+      ),
       program: this.sanitizeCncCode(data.program),
       block: this.sanitizeCncCode(data.block, 1000),
       line: this.sanitizeCncCode(data.line, 500),
