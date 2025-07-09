@@ -678,6 +678,19 @@
             machines.forEach(machine => {
                 console.log(`🔍 Обрабатываем машину: ${machine.machineId} (${machine.machineName})`);
                 
+                // Debug логирование для MTConnect машин
+                if (!machine.machineId.includes('SR-') && !machine.machineId.includes('SB-') && 
+                    !machine.machineId.includes('BT-') && !machine.machineId.includes('K-') && 
+                    !machine.machineId.includes('L-')) {
+                    console.log(`🔧 MTConnect машина ${machine.machineId}:`, {
+                        lastData: machine.lastData,
+                        executionStatus: machine.lastData?.executionStatus,
+                        partCount: machine.lastData?.partCount,
+                        program: machine.lastData?.program,
+                        cycleTime: machine.lastData?.cycleTime
+                    });
+                }
+                
                 const card = document.createElement('div');
                 card.id = `machine-${machine.machineId}`;
                 
@@ -714,15 +727,17 @@
                     } else {
                         statusClass = 'status-offline'; // Красный - нет Adam данных
                     }
-                } else if (machine.lastStatus) {
+                } else if (machine.lastData?.executionStatus) {
                     // Логика для MTConnect машин
-                    const status = machine.lastStatus.toUpperCase();
+                    const status = machine.lastData.executionStatus.toUpperCase();
                     if (status === 'ACTIVE' || status === 'EXECUTING') {
                         statusClass = 'status-executing'; // Зеленый - в работе
                     } else if (status === 'READY' || status === 'IDLE') {
                         statusClass = 'status-idle'; // Желтый - простой
                     } else if (status === 'STOPPED' || status === 'FEED_HOLD') {
                         statusClass = 'status-setup'; // Фиолетовый - наладка
+                    } else if (status === 'INTERRUPTED') {
+                        statusClass = 'status-offline'; // Красный - проблема
                     }
                 } else {
                     // Если нет статуса, но данные свежие - предполагаем подключение
@@ -750,21 +765,33 @@
                     <div class="machine-info">
                         <div class="info-item">
                             <div class="info-emoji">⚙️</div>
-                            <div class="info-value">${machine.lastProgram || (isAdamMachine ? 'O1001' : '---')}</div>
+                            <div class="info-value">${
+                                isAdamMachine 
+                                    ? 'O1001'
+                                    : machine.lastData?.program || machine.lastProgram || '---'
+                            }</div>
                         </div>
                         <div class="info-item">
                             <div class="info-emoji">🔢</div>
                             <div class="info-value">${
                                 isAdamMachine && machine.lastData && machine.lastData.adamData && machine.lastData.adamData.analogData 
                                     ? machine.lastData.adamData.analogData.count.toLocaleString() 
-                                    : machine.lastPartCount 
-                                        ? machine.lastPartCount.toLocaleString() 
-                                        : '---'
+                                    : machine.lastData?.partCount 
+                                        ? machine.lastData.partCount.toLocaleString()
+                                        : machine.lastPartCount 
+                                            ? machine.lastPartCount.toLocaleString() 
+                                            : '---'
                             }</div>
                         </div>
                         <div class="info-item">
                             <div class="info-emoji">⏱️</div>
-                            <div class="info-value">${machine.lastCycleTime ? parseFloat(machine.lastCycleTime).toFixed(1) + 's' : '---'}</div>
+                            <div class="info-value">${
+                                machine.lastData?.cycleTime 
+                                    ? parseFloat(machine.lastData.cycleTime).toFixed(1) + 's'
+                                    : machine.lastCycleTime 
+                                        ? parseFloat(machine.lastCycleTime).toFixed(1) + 's' 
+                                        : '---'
+                            }</div>
                         </div>
                     </div>
                     <div class="timeline-area">
