@@ -689,9 +689,33 @@
                 const now = new Date();
                 const minutesAgo = (now - lastSeen) / (1000 * 60);
                 
+                // Определяем является ли это Adam машиной
+                const isAdamMachine = machine.isAdamMachine || machine.machineId.includes('SR-') || 
+                                    machine.machineId.includes('SB-') || 
+                                    machine.machineId.includes('BT-') || 
+                                    machine.machineId.includes('K-') || 
+                                    machine.machineId.includes('L-');
+                
                 if (minutesAgo > 10) {
                     statusClass = 'status-offline'; // Красный - данные устарели
+                } else if (isAdamMachine) {
+                    // Логика для Adam машин
+                    if (machine.lastData && machine.lastData.adamData) {
+                        const adamData = machine.lastData.adamData;
+                        
+                        // Проверяем есть ли analogData с count > 0
+                        if (adamData.analogData && adamData.analogData.count > 0) {
+                            statusClass = 'status-executing'; // Зеленый - считаем детали
+                        } else if (adamData.analogData) {
+                            statusClass = 'status-idle'; // Желтый - подключен но не работает
+                        } else {
+                            statusClass = 'status-offline'; // Красный - нет данных
+                        }
+                    } else {
+                        statusClass = 'status-offline'; // Красный - нет Adam данных
+                    }
                 } else if (machine.lastStatus) {
+                    // Логика для MTConnect машин
                     const status = machine.lastStatus.toUpperCase();
                     if (status === 'ACTIVE' || status === 'EXECUTING') {
                         statusClass = 'status-executing'; // Зеленый - в работе
@@ -700,6 +724,9 @@
                     } else if (status === 'STOPPED' || status === 'FEED_HOLD') {
                         statusClass = 'status-setup'; // Фиолетовый - наладка
                     }
+                } else {
+                    // Если нет статуса, но данные свежие - предполагаем подключение
+                    statusClass = 'status-idle'; // Желтый - подключен но статус неизвестен
                 }
                 
                 // Применяем класс статуса
@@ -716,15 +743,7 @@
                 } else if (statusClass === 'status-offline') {
                     timelineText = '🔴 Проблема';
                 }
-                
-                // Определяем является ли это Adam машиной
-                const isAdamMachine = machine.isAdamMachine || machine.machineId.includes('SR-') || 
-                                    machine.machineId.includes('SB-') || 
-                                    machine.machineId.includes('BT-') || 
-                                    machine.machineId.includes('K-') || 
-                                    machine.machineId.includes('L-');
-                
-                // Создаем HTML карточки
+
                 card.innerHTML = `
                     ${isAdamMachine ? '<div class="adam-indicator">📊</div>' : ''}
                     <div class="machine-header">${machine.machineName || machine.machineId}</div>
@@ -735,7 +754,13 @@
                         </div>
                         <div class="info-item">
                             <div class="info-emoji">🔢</div>
-                            <div class="info-value">${machine.lastPartCount ? machine.lastPartCount.toLocaleString() : '---'}</div>
+                            <div class="info-value">${
+                                isAdamMachine && machine.lastData && machine.lastData.adamData && machine.lastData.adamData.analogData 
+                                    ? machine.lastData.adamData.analogData.count.toLocaleString() 
+                                    : machine.lastPartCount 
+                                        ? machine.lastPartCount.toLocaleString() 
+                                        : '---'
+                            }</div>
                         </div>
                         <div class="info-item">
                             <div class="info-emoji">⏱️</div>
