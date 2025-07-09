@@ -62,7 +62,12 @@ export class DashboardController {
             lastStatus: { $last: '$data.executionStatus' },
             lastPartCount: { $last: '$data.partCount' },
             lastCycleTime: { $last: '$data.cycleTime' },
-            lastProgram: { $last: '$data.program' }
+            lastProgram: { $last: '$data.program' },
+            // Добавляем Adam данные
+            lastAdamData: { $last: '$data.adamData' },
+            lastAdamCount: { $last: '$data.adamData.analogData.count' },
+            lastAdamCycleTime: { $last: '$data.adamData.analogData.cycleTimeMs' },
+            lastAdamConfidence: { $last: '$data.adamData.analogData.confidence' }
           }
         },
         {
@@ -75,6 +80,19 @@ export class DashboardController {
             lastPartCount: 1,
             lastCycleTime: 1,
             lastProgram: 1,
+            // Проецируем Adam данные
+            lastAdamData: 1,
+            lastAdamCount: 1,
+            lastAdamCycleTime: 1,
+            lastAdamConfidence: 1,
+            // Определяем тип машины
+            isAdamMachine: {
+              $cond: {
+                if: { $ne: ['$lastAdamData', null] },
+                then: true,
+                else: false
+              }
+            },
             _id: 0
           }
         },

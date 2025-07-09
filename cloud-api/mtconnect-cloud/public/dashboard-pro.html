@@ -617,8 +617,8 @@
                     }
                 }
                 
-                // Определяем является ли это Adam машиной (по наличию определенных данных)
-                const isAdamMachine = machine.machineId.includes('SR-') || 
+                // Определяем является ли это Adam машиной
+                const isAdamMachine = machine.isAdamMachine || machine.machineId.includes('SR-') || 
                                     machine.machineId.includes('SB-') || 
                                     machine.machineId.includes('BT-') || 
                                     machine.machineId.includes('K-') || 
@@ -638,15 +638,27 @@
                     timelineText = '🔴 Проблема';
                 }
                 
-                // Форматируем время цикла
-                const cycleTimeDisplay = machine.lastCycleTime 
-                    ? `${machine.lastCycleTime.toFixed(1)}s` 
-                    : '---';
+                // Форматируем время цикла (для Adam машин используем Adam данные)
+                let cycleTimeDisplay = '---';
+                if (isAdamMachine && machine.lastAdamCycleTime) {
+                    // Adam время цикла в миллисекундах, конвертируем в секунды
+                    cycleTimeDisplay = `${(machine.lastAdamCycleTime / 1000).toFixed(1)}s`;
+                } else if (machine.lastCycleTime) {
+                    cycleTimeDisplay = `${machine.lastCycleTime.toFixed(1)}s`;
+                }
                 
-                // Форматируем счетчик деталей
-                const partCountDisplay = machine.lastPartCount 
-                    ? machine.lastPartCount.toLocaleString() 
-                    : '---';
+                // Форматируем счетчик деталей (для Adam машин используем Adam данные)
+                let partCountDisplay = '---';
+                if (isAdamMachine && machine.lastAdamCount) {
+                    partCountDisplay = machine.lastAdamCount.toLocaleString();
+                } else if (machine.lastPartCount) {
+                    partCountDisplay = machine.lastPartCount.toLocaleString();
+                }
+                
+                // Определяем программу (для Adam машин всегда O1001)
+                const programDisplay = isAdamMachine ? 'O1001' : (machine.lastProgram || '---');
+                
+                console.log(`🔍 ${machine.machineId}: isAdam=${isAdamMachine}, partCount=${partCountDisplay}, cycleTime=${cycleTimeDisplay}, program=${programDisplay}`);
                 
                 card.innerHTML = `
                     ${isAdamMachine ? '<div class="adam-indicator">📊</div>' : ''}
@@ -654,7 +666,7 @@
                     <div class="machine-info">
                         <div class="info-item">
                             <div class="info-emoji">⚙️</div>
-                            <div class="info-value">${isAdamMachine ? 'O1001' : (machine.lastProgram || '---')}</div>
+                            <div class="info-value">${programDisplay}</div>
                         </div>
                         <div class="info-item">
                             <div class="info-emoji">🔢</div>

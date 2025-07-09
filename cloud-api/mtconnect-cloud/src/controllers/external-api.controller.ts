@@ -74,12 +74,14 @@ export class ExternalApiController {
     const startTime = Date.now();
     
     try {
-      this.logger.log(`Data ingestion from gateway: ${data.edgeGatewayId}`, 'ExternalApiController');
+      this.logger.log(`🔍 Data ingestion from gateway: ${data.edgeGatewayId}`, 'ExternalApiController');
+      this.logger.log(`🔍 Data payload structure: ${JSON.stringify(data, null, 2).substring(0, 500)}...`, 'ExternalApiController');
 
       // Validate timestamp is not in the future
       const now = new Date();
       const dataTime = new Date(data.timestamp);
       if (dataTime > now) {
+        this.logger.error(`❌ Timestamp validation failed: ${data.timestamp} is in the future`, 'ExternalApiController');
         throw new BadRequestException('Timestamp cannot be in the future');
       }
 
@@ -87,8 +89,11 @@ export class ExternalApiController {
       const machineIds = data.data.map(m => m.machineId);
       const uniqueIds = new Set(machineIds);
       if (machineIds.length !== uniqueIds.size) {
+        this.logger.error(`❌ Duplicate machine IDs detected: ${JSON.stringify(machineIds)}`, 'ExternalApiController');
         throw new BadRequestException('Duplicate machine IDs detected');
       }
+
+      this.logger.log(`✅ Basic validation passed for ${data.data.length} machines`, 'ExternalApiController');
 
       // Sanitize and prepare data for storage
       const sanitizedMachines = data.data.map(machine => {
