@@ -77,7 +77,8 @@ const port = parseInt(process.env.PORT || '5000', 10);
 
 // Middleware
 app.use(cors());
-app.use(express.static('public'));
+// Используем папку дашборда из облачного API для единого файла
+app.use(express.static(path.join(__dirname, '..', 'cloud-api', 'mtconnect-cloud', 'public')));
 app.use(express.json());
 
 // Configuration машин FANUC из config.json

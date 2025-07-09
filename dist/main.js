@@ -51,7 +51,18 @@ const shdr_client_1 = require("./shdr-client");
 const factory_1 = require("./machine-handlers/factory");
 const railway_client_1 = require("./railway-client");
 // Загружаем конфигурацию из файла (поддержка разных конфигураций)
-const configName = process.argv.includes('--simulator') ? 'config-simulator.json' : 'config.json';
+let configName;
+// Проверяем аргументы командной строки для кастомной конфигурации
+const customConfigArg = process.argv.find(arg => arg.endsWith('.json') && !arg.startsWith('--'));
+if (customConfigArg) {
+    configName = customConfigArg;
+}
+else if (process.argv.includes('--simulator')) {
+    configName = 'config-simulator.json';
+}
+else {
+    configName = 'config.json';
+}
 const configPath = path.join(__dirname, configName);
 console.log(`🔧 Используется конфигурация: ${configName}`);
 if (!fs.existsSync(configPath)) {
@@ -66,7 +77,8 @@ const app = (0, express_1.default)();
 const port = parseInt(process.env.PORT || '5000', 10);
 // Middleware
 app.use((0, cors_1.default)());
-app.use(express_1.default.static('public'));
+// Используем папку дашборда из облачного API для единого файла
+app.use(express_1.default.static(path.join(__dirname, '..', 'cloud-api', 'mtconnect-cloud', 'public')));
 app.use(express_1.default.json());
 // Configuration машин FANUC из config.json
 const FANUC_MACHINES = config.machines;
