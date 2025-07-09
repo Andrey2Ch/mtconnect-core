@@ -783,6 +783,74 @@ async function getAdamCounters() {
     try {
         const counters = await adamReader.readCounters();
         console.log(`📊 Получено ${counters.length} счётчиков с Adam-6050`);
+        
+        // Подготавливаем данные Adam для отправки БАТЧЕМ (не поштучно!)
+        if (counters.length > 0) {
+            const adamDataBatch = [];
+            
+            for (const counter of counters) {
+                // Преобразуем строковое значение confidence в число
+                let confidenceValue: number = 1.0;
+                if (typeof counter.confidence === 'string') {
+                    switch (counter.confidence.toUpperCase()) {
+                        case 'ВЫСОКАЯ':
+                        case 'HIGH':
+                            confidenceValue = 1.0;
+                            break;
+                        case 'СРЕДНЯЯ':
+                        case 'MEDIUM':
+                            confidenceValue = 0.7;
+                            break;
+                        case 'НИЗКАЯ':
+                        case 'LOW':
+                            confidenceValue = 0.3;
+                            break;
+                        default:
+                            confidenceValue = 0.5; // Для неизвестных значений
+                    }
+                } else if (typeof counter.confidence === 'number') {
+                    confidenceValue = counter.confidence;
+                }
+
+                const railwayData = {
+                    machineId: counter.machineId,
+                    machineName: counter.machineId, // Для Adam машин ID и имя одинаковые
+                    timestamp: counter.timestamp,
+                    data: {
+                        partCount: counter.count,
+                        cycleTime: counter.cycleTimeMs ? counter.cycleTimeMs / 1000 : undefined, // Конвертируем в секунды
+                        adamData: {
+                            analogData: {
+                                "count": counter.count,
+                                "cycleTimeMs": counter.cycleTimeMs || 0,
+                                "partsInCycle": counter.partsInCycle || 1,
+                                "confidence": confidenceValue
+                            } as Record<string, number>
+                        }
+                    }
+                };
+                
+                adamDataBatch.push(railwayData);
+            }
+            
+            // Отправка Adam данных в Railway как batch
+            if (adamDataBatch.length > 0) {
+                const batchData = {
+                    edgeGatewayId: 'adam-6050-gateway',
+                    timestamp: new Date().toISOString(),
+                    data: adamDataBatch.map(item => ({
+                        machineId: item.machineId,
+                        machineName: item.machineName,
+                        timestamp: item.timestamp,
+                        data: item.data
+                    }))
+                };
+                
+                railwayClient.sendDataBatch(batchData);
+                console.log(`📊 Adam данные подготовлены и отправлены в Railway как batch (${counters.length} машин)`);
+            }
+        }
+        
         return counters;
     } catch (error) {
         console.error('❌ Ошибка чтения Adam-6050:', error);

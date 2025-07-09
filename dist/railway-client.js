@@ -75,6 +75,32 @@ class RailwayClient {
         }
         return true;
     }
+    async sendDataBatch(batchData) {
+        if (!this.config.enabled) {
+            console.log('🔕 Railway клиент отключён');
+            return false;
+        }
+        try {
+            console.log(`📤 Отправка batch данных в Railway (${batchData.data.length} машин)...`);
+            const response = await this.httpClient.post('/api/ext/data', batchData);
+            if (response.status === 200 || response.status === 201) {
+                console.log(`✅ Batch данные успешно отправлены в Railway (${batchData.data.length} машин)`);
+                this.isOnline = true;
+                return true;
+            }
+            else {
+                throw new Error(`Неожиданный статус ответа: ${response.status}`);
+            }
+        }
+        catch (error) {
+            console.error('❌ Ошибка отправки batch данных в Railway:');
+            console.error(`🔗 URL: ${this.config.baseUrl}/api/ext/data`);
+            console.error(`📝 Статус: ${error.response?.status || 'N/A'}`);
+            console.error(`💬 Сообщение: ${error.response?.data || error.message || error.toString()}`);
+            this.isOnline = false;
+            return false;
+        }
+    }
     async flushBuffer() {
         if (!this.config.enabled || this.dataBuffer.data.length === 0) {
             return false;
