@@ -5,10 +5,12 @@
   "main": "src/main.ts",
   "scripts": {
     "dev": "ts-node src/main.ts",
+    "dev:local": "ts-node src/main.ts config.local.json",
     "dashboard": "ts-node src/local-dashboard.ts",
     "build": "tsc",
     "build-addon": "node-gyp rebuild",
     "start": "node dist/main.js",
+    "start:local": "node dist/main.js config.local.json",
     "start:prod": "node dist/main.js",
     "agent": "npm run dev",
     "machines": "ts-node src/machine-manager.ts",

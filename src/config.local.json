@@ -1,0 +1,106 @@
+{
+  "machines": [
+    {
+      "id": "DT-26",
+      "name": "STUDER DT-26",
+      "ip": "192.168.1.90",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5005",
+      "uuid": "002",
+      "spindles": ["S0", "S1", "S2"],
+      "axes": ["X", "Y", "Z", "A", "B", "C"]
+    },
+    {
+      "id": "SR-10",
+      "name": "SR-10",
+      "ip": "192.168.1.91",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5004",
+      "uuid": "sr10",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"]
+    },
+    {
+      "id": "SR-21",
+      "name": "SR-21",
+      "ip": "192.168.1.199",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5006",
+      "uuid": "sr21",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"]
+    },
+    {
+      "id": "SR-23",
+      "name": "SR-23",
+      "ip": "192.168.1.103",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5007",
+      "uuid": "sr23",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"]
+    },
+    {
+      "id": "SR-25",
+      "name": "SR-25",
+      "ip": "192.168.1.104",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5008",
+      "uuid": "sr25",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"]
+    },
+    {
+      "id": "SR-26",
+      "name": "SR-26",
+      "ip": "192.168.1.54",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5002",
+      "uuid": "sr26",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"]
+    },
+    {
+      "id": "XD-20",
+      "name": "XD-20",
+      "ip": "192.168.1.105",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5001",
+      "uuid": "xd20",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"]
+    },
+    {
+      "id": "XD-38",
+      "name": "XD-38",
+      "ip": "192.168.1.101",
+      "port": 8193,
+      "type": "CNC",
+      "mtconnectAgentUrl": "http://localhost:5003",
+      "uuid": "xd38",
+      "spindles": ["S0"],
+      "axes": ["X", "Y", "Z"]
+    }
+  ],
+  "settings": {
+    "serverPort": 5000,
+    "dataUpdateInterval": 2000,
+    "connectionTimeout": 2500,
+    "maxRetries": 3,
+    "debugDetails": true
+  },
+  "railway": {
+    "enabled": true,
+    "baseUrl": "http://localhost:3001",
+    "apiKey": "edge-gateway-api-key",
+    "retryAttempts": 3,
+    "retryDelay": 5000
+  }
+} 

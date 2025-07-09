@@ -16,7 +16,18 @@ import { MachineHandlerFactory } from './machine-handlers/factory';
 import { RailwayClient, loadRailwayConfig } from './railway-client';
 
 // Загружаем конфигурацию из файла (поддержка разных конфигураций)
-const configName = process.argv.includes('--simulator') ? 'config-simulator.json' : 'config.json';
+let configName: string;
+
+// Проверяем аргументы командной строки для кастомной конфигурации
+const customConfigArg = process.argv.find(arg => arg.endsWith('.json') && !arg.startsWith('--'));
+if (customConfigArg) {
+    configName = customConfigArg;
+} else if (process.argv.includes('--simulator')) {
+    configName = 'config-simulator.json';
+} else {
+    configName = 'config.json';
+}
+
 const configPath = path.join(__dirname, configName);
 
 console.log(`🔧 Используется конфигурация: ${configName}`);
