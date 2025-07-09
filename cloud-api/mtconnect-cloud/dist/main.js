@@ -4,12 +4,25 @@ const core_1 = require("@nestjs/core");
 const common_1 = require("@nestjs/common");
 const app_module_1 = require("./app.module");
 const helmet_1 = require("helmet");
+const express = require("express");
+const path = require("path");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const publicPath = path.join(__dirname, '..', 'public');
+    app.use('/static', express.static(publicPath));
     const isDevelopment = process.env.NODE_ENV === 'development';
     const isHttps = process.env.FORCE_HTTPS === 'true' || !isDevelopment;
     app.use((0, helmet_1.default)({
-        contentSecurityPolicy: false,
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+                fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+                imgSrc: ["'self'", "data:", "https:"],
+                connectSrc: ["'self'"]
+            },
+        },
         crossOriginEmbedderPolicy: false,
         hsts: isHttps ? {
             maxAge: 31536000,

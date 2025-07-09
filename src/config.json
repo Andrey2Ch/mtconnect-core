@@ -98,7 +98,7 @@
   },
   "railway": {
     "enabled": true,
-    "baseUrl": "http://localhost:3001",
+    "baseUrl": "https://mtconnect-core-production.up.railway.app",
     "apiKey": "edge-gateway-api-key",
     "retryAttempts": 3,
     "retryDelay": 5000

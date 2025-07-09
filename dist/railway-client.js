@@ -87,7 +87,7 @@ class RailwayClient {
             };
             console.log(`📤 Отправка ${this.dataBuffer.data.length} записей в Railway...`);
             const response = await this.httpClient.post('/api/ext/data', payload);
-            if (response.status === 200) {
+            if (response.status === 200 || response.status === 201) {
                 console.log(`✅ Данные успешно отправлены в Railway (${this.dataBuffer.data.length} записей)`);
                 this.dataBuffer.data = [];
                 this.dataBuffer.lastSent = new Date();

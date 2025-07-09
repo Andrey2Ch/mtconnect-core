@@ -9,8 +9,6 @@ const sr_26_handler_1 = require("./sr-26-handler");
 const xd_20_handler_1 = require("./xd-20-handler");
 const xd_38_handler_1 = require("./xd-38-handler");
 const dt_26_handler_1 = require("./dt-26-handler");
-const k_16_handler_1 = require("./k-16-handler");
-const l_20_handler_1 = require("./l-20-handler");
 class MachineHandlerFactory {
     static getHandler(machineId) {
         return this.handlers.get(machineId) || null;
@@ -28,7 +26,5 @@ MachineHandlerFactory.handlers = new Map([
     ['SR-26', new sr_26_handler_1.Sr26Handler()],
     ['XD-20', new xd_20_handler_1.Xd20Handler()],
     ['XD-38', new xd_38_handler_1.Xd38Handler()],
-    ['DT-26', new dt_26_handler_1.Dt26Handler()],
-    ['K-16', new k_16_handler_1.K16Handler()],
-    ['L-20', new l_20_handler_1.L20Handler()]
+    ['DT-26', new dt_26_handler_1.Dt26Handler()]
 ]);

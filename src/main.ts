@@ -227,6 +227,30 @@ async function generateMTConnectXML(): Promise<string> {
                                     });
 
                                     // Отправляем данные в Railway
+                                    // Маппинг MTConnect статусов в API enum
+                                    const currentStatus = executionStatusStates.get(machine.id)?.lastStatus || 'UNKNOWN';
+                                    let apiExecutionStatus = "UNAVAILABLE";
+                                    switch(currentStatus) {
+                                        case "ACTIVE":
+                                        case "EXECUTING":
+                                            apiExecutionStatus = "ACTIVE";
+                                            break;
+                                        case "IDLE":
+                                        case "READY":
+                                            apiExecutionStatus = "READY";
+                                            break;
+                                        case "STOPPED":
+                                        case "STOP":
+                                            apiExecutionStatus = "STOPPED";
+                                            break;
+                                        case "INTERRUPTED":
+                                        case "FAULT":
+                                            apiExecutionStatus = "INTERRUPTED";
+                                            break;
+                                        default:
+                                            apiExecutionStatus = "UNAVAILABLE";
+                                    }
+                                    
                                     const railwayData = {
                                         machineId: machine.id,
                                         machineName: machine.name,
@@ -234,7 +258,9 @@ async function generateMTConnectXML(): Promise<string> {
                                         data: {
                                             partCount: currentPartCount,
                                             cycleTime: cycleTimeMs / 1000,
-                                            executionStatus: executionStatusStates.get(machine.id)?.lastStatus || 'UNKNOWN'
+                                            executionStatus: apiExecutionStatus,
+                                            availability: "AVAILABLE",
+                                            program: "O1001"
                                         }
                                     };
                                     railwayClient.sendData(railwayData);
@@ -326,10 +352,90 @@ async function generateMTConnectXML(): Promise<string> {
                             if (currentExecutionStatus !== previousExecutionState.lastStatus) {
                                 console.log(`🔄 Статус Execution для ${machine.name} (${machine.id}) изменился: БЫЛ ${previousExecutionState.lastStatus}, СТАЛ ${currentExecutionStatus} в ${currentExecutionStatusTimestamp}`);
                                 executionStatusStates.set(machine.id, { lastStatus: currentExecutionStatus, timestamp: currentExecutionStatusTimestamp });
+                                
+                                // Отправляем данные в Railway при изменении статуса
+                                const currentPartCount = partCountStates.get(machine.id)?.lastCount || 0;
+                                
+                                // Маппинг MTConnect статусов в API enum
+                                let apiExecutionStatus = "UNAVAILABLE";
+                                switch(currentExecutionStatus) {
+                                    case "ACTIVE":
+                                    case "EXECUTING":
+                                        apiExecutionStatus = "ACTIVE";
+                                        break;
+                                    case "IDLE":
+                                    case "READY":
+                                        apiExecutionStatus = "READY";
+                                        break;
+                                    case "STOPPED":
+                                    case "STOP":
+                                        apiExecutionStatus = "STOPPED";
+                                        break;
+                                    case "INTERRUPTED":
+                                    case "FAULT":
+                                        apiExecutionStatus = "INTERRUPTED";
+                                        break;
+                                    default:
+                                        apiExecutionStatus = "UNAVAILABLE";
+                                }
+                                
+                                const railwayData = {
+                                    machineId: machine.id,
+                                    machineName: machine.name,
+                                    timestamp: currentExecutionStatusTimestamp,
+                                    data: {
+                                        partCount: currentPartCount,
+                                        executionStatus: apiExecutionStatus,
+                                        availability: "AVAILABLE",
+                                        program: "O1001"
+                                    }
+                                };
+                                railwayClient.sendData(railwayData);
+                                console.log(`📤 Отправлены данные в Railway при изменении статуса: ${machine.name} -> ${currentExecutionStatus}`);
                             }
                         } else {
                             console.log(`ℹ️ Инициализирован Execution статус для ${machine.name} (${machine.id}): ${currentExecutionStatus} в ${currentExecutionStatusTimestamp}`);
                             executionStatusStates.set(machine.id, { lastStatus: currentExecutionStatus, timestamp: currentExecutionStatusTimestamp });
+                            
+                            // Отправляем данные в Railway при первой инициализации
+                            const currentPartCount = partCountStates.get(machine.id)?.lastCount || 0;
+                            
+                            // Маппинг MTConnect статусов в API enum
+                            let apiExecutionStatus = "UNAVAILABLE";
+                            switch(currentExecutionStatus) {
+                                case "ACTIVE":
+                                case "EXECUTING":
+                                    apiExecutionStatus = "ACTIVE";
+                                    break;
+                                case "IDLE":
+                                case "READY":
+                                    apiExecutionStatus = "READY";
+                                    break;
+                                case "STOPPED":
+                                case "STOP":
+                                    apiExecutionStatus = "STOPPED";
+                                    break;
+                                case "INTERRUPTED":
+                                case "FAULT":
+                                    apiExecutionStatus = "INTERRUPTED";
+                                    break;
+                                default:
+                                    apiExecutionStatus = "UNAVAILABLE";
+                            }
+                            
+                            const railwayData = {
+                                machineId: machine.id,
+                                machineName: machine.name,
+                                timestamp: currentExecutionStatusTimestamp,
+                                data: {
+                                    partCount: currentPartCount,
+                                    executionStatus: apiExecutionStatus,
+                                    availability: "AVAILABLE",
+                                    program: "O1001"
+                                }
+                            };
+                            railwayClient.sendData(railwayData);
+                            console.log(`📤 Отправлены данные в Railway при инициализации: ${machine.name} -> ${currentExecutionStatus}`);
                         }
                     }
 

@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель мониторинга станков</title>
+    <style>
+        :root {
+            --color-bg: #1a1a1c;
+            --color-card: #2c2c2e;
+            --color-border: #444;
+            --color-text: #f0f0f0;
+            --color-text-secondary: #aaa;
+            --color-green: #28a745;
+            --color-yellow: #ffc107;
+            --color-red: #dc3545;
+            --color-blue: #007bff;
+            --color-purple: #6f42c1;
+            --color-orange: #fd7e14;
+            --font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        /* Предотвращаем мигание при загрузке */
+        html {
+            height: 100%;
+            width: 100%;
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-family-sans-serif);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            margin: 0;
+            padding: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        
+        body.loaded {
+            opacity: 1;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+        }
+
+        h1 {
+            margin: 0;
+            color: var(--color-text);
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .server-status, .adam-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8em;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .server-status::before, .adam-status::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--color-red);
+        }
+        
+        .server-status.online::before {
+            background-color: var(--color-green);
+        }
+        
+        .adam-status.online::before {
+            background-color: var(--color-green);
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+        }
+
+        .machines-grid {
+            display: grid;
+            /* Будет установлено динамически через JavaScript */
+            grid-template-columns: repeat(1, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 0 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Адаптивные размеры для разных экранов */
+        @media (min-width: 600px) {
+            .machines-grid {
+                gap: 16px;
+                padding: 0 12px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .machines-grid {
+                gap: 20px;
+                padding: 0 16px;
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .machines-grid {
+                gap: 24px;
+                padding: 0 20px;
+            }
+        }
+
+        .machine-card {
+            background-color: var(--color-card);
+            border: 2px solid var(--color-border);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.3s ease;
+            position: relative;
+            min-height: 140px;
+        }
+        
+        /* Цветные рамки для статусов */
+        .machine-card.status-executing {
+            border-color: var(--color-green);
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
+        }
+        
+        .machine-card.status-idle {
+            border-color: var(--color-yellow);
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+        }
+        
+        .machine-card.status-offline {
+            border-color: var(--color-red);
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.3);
+        }
+        
+        .machine-card.status-setup {
+            border-color: var(--color-purple);
+            box-shadow: 0 0 10px rgba(111, 66, 193, 0.3);
+        }
+        
+        .machine-card.adam-card {
+            /* Adam карточки используют обычные статусы */
+        }
+        
+        .machine-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Adam карточки теперь используют machine-card стили */
+        
+        .card-header {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--color-blue);
+            text-align: center;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 10px;
+        }
+
+        /* Значок Adam для отличия */
+        .adam-indicator {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 0.8em;
+            opacity: 0.6;
+        }
+
+        .machine-header {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: var(--color-text-primary);
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        
+        .machine-info {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            font-size: 0.8em;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            padding: 6px 2px;
+            margin-bottom: 6px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        
+        .info-emoji {
+            font-size: 1.2em;
+        }
+        
+        .info-value {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            text-align: center;
+            min-width: 40px;
+        }
+        
+        .timeline-area {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 3px;
+            padding: 4px 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-secondary);
+            font-size: 0.7em;
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            min-height: 24px;
+        }
+        
+        .timeline-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Старые адаптивные правила удалены - теперь используется JavaScript */
+
+        @media (max-width: 768px) {
+            body {
+                padding: 4px;
+            }
+            
+            .header h1 {
+                font-size: 1.1em;
+            }
+            
+            .status-indicator {
+                flex-direction: column;
+                gap: 2px;
+            }
+            
+            .machines-grid {
+                gap: 6px;
+                padding: 0 4px;
+            }
+            
+            .machine-card {
+                min-height: 120px;
+                padding: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .machines-grid {
+                gap: 4px;
+                padding: 0 2px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 4px;
+                text-align: center;
+            }
+            
+            .machine-card {
+                min-height: 110px;
+                padding: 6px;
+            }
+        }
+        
+        /* Старые стили - убираем */
+        .data-point {
+            display: none;
+        }
+
+        /* Выделение правильных счетчиков деталей */
+        .part-count-reliable {
+            color: var(--color-green) !important;
+            font-weight: bold;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            color: var(--color-text-secondary);
+            font-size: 0.7em;
+        }
+
+        .legend {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .legend-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            border: 2px solid;
+        }
+        
+        .legend-color.green { border-color: var(--color-green); }
+        .legend-color.yellow { border-color: var(--color-yellow); }
+        .legend-color.red { border-color: var(--color-red); }
+        .legend-color.purple { border-color: var(--color-purple); }
+
+        .update-info {
+            font-size: 0.7em;
+            color: var(--color-text-secondary);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Мониторинг станков</h1>
+        <div class="status-indicator">
+            <span id="main-server-status" class="server-status">Сервер</span>
+            <span id="adam-status" class="adam-status">Adam-6050</span>
+            <span id="last-updated">Обновление...</span>
+        </div>
+    </div>
+
+    <div id="machines-grid" class="machines-grid">
+        <!-- Все карточки станков будут вставлены сюда динамически -->
+    </div>
+    
+    <div class="footer">
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color green"></div>
+                <span>В работе</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color yellow"></div>
+                <span>Простой</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color purple"></div>
+                <span>Наладка</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color red"></div>
+                <span>Проблема</span>
+            </div>
+        </div>
+        <div class="update-info">⟳ Обновление каждые 5 сек</div>
+    </div>
+
+    <script>
+        // Плавная загрузка страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Добавляем класс loaded для плавного появления
+            setTimeout(() => {
+                document.body.classList.add('loaded');
+            }, 100);
+        });
+
+        const UPDATE_INTERVAL = 5000; // 5 секунд
+        const grid = document.getElementById('machines-grid');
+        const mainServerStatusEl = document.getElementById('main-server-status');
+        const adamStatusEl = document.getElementById('adam-status');
+        const lastUpdatedEl = document.getElementById('last-updated');
+
+        // Объект для хранения предыдущих значений времени цикла Adam машин
+        const adamCycleHistory = {};
+
+        // Функция для динамической настройки количества колонок (максимум 5)
+        function updateGridColumns() {
+            const machineCards = grid.querySelectorAll('.machine-card');
+            const totalCards = machineCards.length;
+            
+            if (totalCards === 0) {
+                grid.style.gridTemplateColumns = 'repeat(1, 1fr)';
+                return;
+            }
+            
+            // Максимум 5 колонок, минимум 1
+            const columns = Math.min(totalCards, 5);
+            grid.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+            
+            console.log(`🎯 Установлено ${columns} колонок для ${totalCards} станков`);
+        }
+
+        function findDataItem(component, dataItemId) {
+            if (!component) return 'UNAVAILABLE';
+            
+            // Расширенный поиск в Events
+            const events = component.getElementsByTagName('Events');
+            if (events.length > 0) {
+                for (const child of events[0].children) {
+                    const childDataItemId = child.getAttribute('dataItemId');
+                    const childName = child.getAttribute('name');
+                    const tagName = child.tagName.toLowerCase();
+                    
+                    if (childDataItemId === dataItemId || 
+                        childName === dataItemId || 
+                        tagName === dataItemId.toLowerCase() ||
+                        tagName === dataItemId.replace('_', '').toLowerCase()) {
+                        return child.textContent.trim();
+                    }
+                }
+            }
+            
+            // Расширенный поиск в Samples  
+            const samples = component.getElementsByTagName('Samples');
+            if (samples.length > 0) {
+                for (const child of samples[0].children) {
+                    const childDataItemId = child.getAttribute('dataItemId');
+                    const childName = child.getAttribute('name');
+                    const tagName = child.tagName.toLowerCase();
+                    
+                    if (childDataItemId === dataItemId || 
+                        childName === dataItemId || 
+                        tagName === dataItemId.toLowerCase() ||
+                        tagName === dataItemId.replace('_', '').toLowerCase()) {
+                        return child.textContent.trim();
+                    }
+                }
+            }
+            
+            // Расширенный поиск в Condition
+            const conditions = component.getElementsByTagName('Condition');
+            if (conditions.length > 0) {
+                for (const child of conditions[0].children) {
+                    const childDataItemId = child.getAttribute('dataItemId');
+                    const childName = child.getAttribute('name');
+                    const tagName = child.tagName.toLowerCase();
+                    
+                    if (childDataItemId === dataItemId || 
+                        childName === dataItemId || 
+                        tagName === dataItemId.toLowerCase() ||
+                        tagName === dataItemId.replace('_', '').toLowerCase()) {
+                        return child.textContent.trim();
+                    }
+                }
+            }
+            
+            return 'UNAVAILABLE';
+        }
+
+        async function fetchMTConnectData() {
+            try {
+                const response = await fetch('/current');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const xmlText = await response.text();
+                console.log('📄 Полученный XML:', xmlText.substring(0, 500) + '...');
+                
+                // Дополнительная диагностика XML
+                console.log('🔍 Полный XML документ:', xmlText);
+                
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                
+                // Проверяем на ошибки парсинга
+                const parseError = xmlDoc.querySelector('parsererror');
+                if (parseError) {
+                    console.error('❌ Ошибка парсинга XML:', parseError.textContent);
+                    return false;
+                }
+                
+                updateMTConnectUI(xmlDoc);
+                return true;
+            } catch (error) {
+                console.error("Ошибка получения данных MTConnect:", error);
+                return false;
+            }
+        }
+
+        async function fetchAdamData() {
+            try {
+                const response = await fetch('/api/adam/counters');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                updateAdamUI(data);
+                return true;
+            } catch (error) {
+                console.error("Ошибка получения данных Adam:", error);
+                updateAdamUI({ error: error.message });
+                return false;
+            }
+        }
+
+        // Функция для проверки доступности MTConnect Agent'ов
+        async function checkMTConnectAgents() {
+            try {
+                const response = await fetch('/status');
+                if (response.ok) {
+                    const statusData = await response.json();
+                    console.log('📊 Статус MTConnect Agent\'ов:', statusData.mtconnectAgents);
+                    
+                    const agentStatuses = statusData.mtconnectAgents || [];
+                    const onlineAgents = agentStatuses.filter(agent => agent.status === 'OK');
+                    const totalAgents = agentStatuses.length;
+                    
+                    console.log(`📊 MTConnect Agent'ы: ${onlineAgents.length}/${totalAgents} онлайн`);
+                    
+                    // Выводим детали по каждому агенту
+                    agentStatuses.forEach(agent => {
+                        const status = agent.status === 'OK' ? '✅' : '❌';
+                        console.log(`  ${status} ${agent.name} (${agent.id}): ${agent.status} ${agent.error ? '- ' + agent.error : ''}`);
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Ошибка проверки статуса MTConnect Agent\'ов:', error);
+            }
+        }
+
+        async function fetchData() {
+            // Проверяем статус MTConnect Agent'ов
+            await checkMTConnectAgents();
+            
+            const mtConnectOk = await fetchMTConnectData();
+            const adamOk = await fetchAdamData();
+            
+            // Обновляем статус основного сервера
+            if (mtConnectOk) {
+                mainServerStatusEl.classList.add('online');
+                mainServerStatusEl.title = 'Сервер работает';
+            } else {
+                mainServerStatusEl.classList.remove('online');
+                mainServerStatusEl.title = 'Сервер недоступен';
+            }
+            
+            // Обновляем статус Adam-6050
+            if (adamOk) {
+                adamStatusEl.classList.add('online');
+                adamStatusEl.title = 'Adam-6050 подключен';
+            } else {
+                adamStatusEl.classList.remove('online');
+                adamStatusEl.title = 'Adam-6050 недоступен';
+            }
+            
+            if (mtConnectOk || adamOk) {
+                lastUpdatedEl.textContent = `Обновлено: ${new Date().toLocaleTimeString()}`;
+            }
+        }
+
+        function updateMTConnectUI(xmlDoc) {
+            // Диагностика структуры XML документа
+            console.log('🔍 XML документ:', xmlDoc);
+            console.log('🔍 Root element:', xmlDoc.documentElement);
+            
+            const deviceStreams = xmlDoc.getElementsByTagName('DeviceStream');
+            console.log(`🔍 Найдено DeviceStream элементов: ${deviceStreams.length}`);
+            
+            // Показываем все элементы верхнего уровня
+            if (xmlDoc.documentElement) {
+                console.log('🔍 Структура документа:', xmlDoc.documentElement.tagName);
+                for (let child of xmlDoc.documentElement.children) {
+                    console.log(`  - ${child.tagName}:`, child);
+                }
+            }
+            
+            const foundMachines = new Set();
+
+            for (const deviceStream of deviceStreams) {
+                const machineName = deviceStream.getAttribute('name');
+                const machineUuid = deviceStream.getAttribute('uuid');
+                const machineId = deviceStream.getAttribute('id');
+                
+                console.log(`🔍 Обрабатываем станок: name='${machineName}', uuid='${machineUuid}', id='${machineId}'`);
+                
+                // Используем имя машины из атрибута name, если оно есть
+                const displayName = machineName || machineUuid || machineId || 'Unknown';
+                foundMachines.add(displayName);
+
+                let card = document.getElementById(`machine-${displayName}`);
+                if (!card) {
+                    card = document.createElement('div');
+                    card.className = 'machine-card';
+                    card.id = `machine-${displayName}`;
+                    grid.appendChild(card);
+                }
+
+                const findComponentByName = (name) => {
+                    const components = deviceStream.getElementsByTagName('ComponentStream');
+                    console.log(`🔍 ${displayName}: Поиск компонента '${name}', найдено компонентов: ${components.length}`);
+                    
+                    for(const comp of components) {
+                        const compName = comp.getAttribute('name');
+                        const compId = comp.getAttribute('id');
+                        const compComponentId = comp.getAttribute('componentId');
+                        const compComponent = comp.getAttribute('component');
+                        
+                        console.log(`  - Компонент: name=${compName}, id=${compId}, componentId=${compComponentId}, component=${compComponent}`);
+                        
+                        if(compName === name || 
+                           compId === name || 
+                           compComponentId === name || 
+                           compComponent === name ||
+                           (name === 'path' && (compName === 'path' || compId === 'pth' || compComponentId === 'pth' || compComponent === 'Path'))) {
+                            console.log(`  ✅ Найден компонент '${name}'`);
+                            return comp;
+                        }
+                    }
+                    
+                    // Если не найден компонент path, попробуем найти другие компоненты
+                    if (name === 'path') {
+                        for(const comp of components) {
+                            const compName = comp.getAttribute('name');
+                            console.log(`  - Альтернативный поиск: ${compName}`);
+                            if(compName && compName.toLowerCase().includes('path')) {
+                                console.log(`  ✅ Найден альтернативный компонент '${compName}'`);
+                                return comp;
+                            }
+                        }
+                        
+                        // Если все еще не найден, возвращаем первый компонент
+                        if (components.length > 0) {
+                            console.log(`  ⚠️ Используем первый доступный компонент`);
+                            return components[0];
+                        }
+                    }
+                    
+                    console.log(`  ❌ Компонент '${name}' не найден`);
+                    return null;
+                }
+
+                // Извлекаем данные
+                const pathComponent = findComponentByName('path');
+                
+                // Пробуем несколько вариантов поиска execution
+                let execution = findDataItem(pathComponent, 'execution');
+                if (execution === 'UNAVAILABLE') {
+                    execution = findDataItem(pathComponent, 'exec');
+                }
+                if (execution === 'UNAVAILABLE') {
+                    execution = findDataItem(pathComponent, 'Execution');
+                }
+                
+                // Пробуем несколько вариантов поиска других данных
+                let program = findDataItem(pathComponent, 'program');
+                if (program === 'UNAVAILABLE') {
+                    program = findDataItem(pathComponent, 'Program');
+                }
+                
+                let partCount = findDataItem(pathComponent, 'part_count');
+                if (partCount === 'UNAVAILABLE') {
+                    partCount = findDataItem(pathComponent, 'partcount');
+                }
+                if (partCount === 'UNAVAILABLE') {
+                    partCount = findDataItem(pathComponent, 'PartCount');
+                }
+                
+                let cycleTime = findDataItem(pathComponent, 'cycle_time_avg');
+                if (cycleTime === 'UNAVAILABLE') {
+                    cycleTime = findDataItem(pathComponent, 'cycle_time');
+                }
+                if (cycleTime === 'UNAVAILABLE') {
+                    cycleTime = findDataItem(pathComponent, 'CycleTime');
+                }
+
+                // Отладочная информация
+                console.log(`🔍 ${displayName}: execution=${execution}, program=${program}, partCount=${partCount}, cycleTime=${cycleTime}`);
+                
+                // Дополнительная диагностика для понимания структуры XML
+                if (pathComponent) {
+                    console.log(`📋 ${displayName}: Найденный компонент path:`, pathComponent);
+                    const events = pathComponent.getElementsByTagName('Events');
+                    const samples = pathComponent.getElementsByTagName('Samples');
+                    if (events.length > 0) {
+                        console.log(`📋 ${displayName}: События в компоненте:`, Array.from(events[0].children).map(child => ({
+                            tag: child.tagName,
+                            dataItemId: child.getAttribute('dataItemId'),
+                            name: child.getAttribute('name'),
+                            value: child.textContent
+                        })));
+                    }
+                    if (samples.length > 0) {
+                        console.log(`📋 ${displayName}: Примеры в компоненте:`, Array.from(samples[0].children).map(child => ({
+                            tag: child.tagName,
+                            dataItemId: child.getAttribute('dataItemId'),
+                            name: child.getAttribute('name'),
+                            value: child.textContent
+                        })));
+                    }
+                } else {
+                    console.log(`⚠️ ${displayName}: Компонент path не найден!`);
+                }
+
+                // Определяем статус с улучшенной логикой
+                let statusClass = 'status-offline'; // Красный - проблема по умолчанию
+
+                if (execution !== 'UNAVAILABLE') {
+                    const execUpper = execution.toUpperCase();
+                    
+                    if (execUpper === 'ACTIVE' || execUpper === 'EXECUTING') {
+                        statusClass = 'status-executing'; // Зеленый - в работе
+                    } else if (execUpper === 'READY' || execUpper === 'IDLE') {
+                        statusClass = 'status-idle'; // Желтый - простой
+                    } else if (execUpper === 'STOPPED' || execUpper === 'FEED_HOLD' || execUpper === 'PROGRAM_STOPPED') {
+                        statusClass = 'status-setup'; // Фиолетовый - наладка (остановлен для настройки)
+                    } else if (execUpper === 'UNAVAILABLE') {
+                        statusClass = 'status-offline'; // Красный - проблема
+                    } else {
+                                                 // Неизвестный статус - попробуем определить по контексту
+                         console.log(`⚠️ ${displayName}: Неизвестный статус execution: '${execution}'`);
+                         
+                         // Если есть данные о программе или счетчике деталей, значит станок подключен
+                         if (program !== 'UNAVAILABLE' || partCount !== 'UNAVAILABLE') {
+                             statusClass = 'status-idle'; // Желтый - предполагаем простой
+                         } else {
+                             statusClass = 'status-offline'; // Красный - нет данных
+                         }
+                     }
+                 } else {
+                     // execution недоступен, но проверим другие данные
+                     if (program !== 'UNAVAILABLE' || partCount !== 'UNAVAILABLE' || cycleTime !== 'UNAVAILABLE') {
+                         console.log(`⚠️ ${displayName}: Execution недоступен, но есть другие данные - считаем станок подключенным`);
+                         statusClass = 'status-idle'; // Желтый - станок подключен, но статус неясен
+                     } else {
+                         console.log(`❌ ${displayName}: Нет доступных данных - станок отключен`);
+                         statusClass = 'status-offline'; // Красный - нет данных вообще
+                     }
+                 }
+
+                console.log(`🎨 ${displayName}: statusClass=${statusClass} (execution: ${execution})`);
+                
+                // Альтернативные имена для поиска данных
+                if (execution === 'UNAVAILABLE') {
+                    const altExecution = findDataItem(pathComponent, 'exec') || findDataItem(pathComponent, 'Execution');
+                    if (altExecution !== 'UNAVAILABLE') {
+                        console.log(`🔄 ${displayName}: Найден execution через альтернативный поиск: ${altExecution}`);
+                    }
+                }
+
+                // Применяем класс статуса к карточке
+                card.className = `machine-card ${statusClass}`;
+
+                // Определяем текст для timeline в зависимости от статуса
+                let timelineText = '📊 Timeline данные (Railway)';
+                if (statusClass === 'status-executing') {
+                    timelineText = '🟢 В работе';
+                } else if (statusClass === 'status-idle') {
+                    timelineText = '🟡 Простой';
+                } else if (statusClass === 'status-setup') {
+                    timelineText = '🟣 Наладка';
+                } else if (statusClass === 'status-offline') {
+                    timelineText = '🔴 Проблема';
+                }
+
+                card.innerHTML = `
+                    <div class="machine-header">${displayName}</div>
+                    <div class="machine-info">
+                        <div class="info-item">
+                            <div class="info-emoji">⚙️</div>
+                            <div class="info-value">${program}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">🔢</div>
+                            <div class="info-value ${['SR-10', 'XD-38', 'XD-20'].includes(displayName) ? 'part-count-reliable' : ''}">${partCount}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">⏱️</div>
+                            <div class="info-value">${cycleTime !== 'UNAVAILABLE' ? parseFloat(cycleTime).toFixed(1) + 's' : '---'}</div>
+                        </div>
+                    </div>
+                    <div class="timeline-area">
+                        ${timelineText}
+                    </div>
+                `;
+            }
+
+            // Удаляем карточки для станков, которых больше нет в /current
+            const machineCards = grid.getElementsByClassName('machine-card');
+            for (let i = machineCards.length - 1; i >= 0; i--) {
+                const card = machineCards[i];
+                const cardMachineName = card.id.replace('machine-', '');
+                if (!foundMachines.has(cardMachineName) && !card.id.startsWith('adam-')) {
+                    console.log(`🗑️ Удаляем карточку станка: ${cardMachineName}`);
+                    card.remove();
+                }
+            }
+
+            // Обновляем количество колонок после изменения MTConnect карточек
+            updateGridColumns();
+        }
+
+        function updateAdamUI(data) {
+            // Удаляем предыдущие Adam карточки
+            const existingAdamCards = grid.querySelectorAll('[id^="adam-"]');
+            existingAdamCards.forEach(card => card.remove());
+
+            if (data.error) {
+                const errorCard = document.createElement('div');
+                errorCard.className = 'machine-card status-offline';
+                errorCard.innerHTML = `
+                    <div class="adam-indicator">📊</div>
+                    <div class="machine-header">Ошибка Adam-6050</div>
+                    <div class="machine-info">
+                        <div class="info-item">
+                            <div class="info-emoji">⚙️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">🔢</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">⏱️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                    </div>
+                    <div class="timeline-area">
+                        🔴 Проблема
+                    </div>
+                `;
+                grid.appendChild(errorCard);
+                return;
+            }
+
+            if (data.counters && data.counters.length > 0) {
+                data.counters.forEach(counter => {
+                    const card = document.createElement('div');
+                    card.id = `adam-${counter.machineId}`;
+                    
+                    // Улучшенная логика определения статуса Adam
+                    let statusClass = 'status-offline'; // Красный - проблема
+                    
+                    if (counter.cycleTimeMs && counter.cycleTimeMs > 0) {
+                        const currentCycleTime = counter.cycleTimeMs / 1000; // в секундах
+                        const machineId = counter.machineId;
+                        
+                        // Проверяем историю времени цикла
+                        if (!adamCycleHistory[machineId]) {
+                            adamCycleHistory[machineId] = [];
+                        }
+                        
+                        const history = adamCycleHistory[machineId];
+                        history.push(currentCycleTime);
+                        
+                        // Храним только последние 3 значения
+                        if (history.length > 3) {
+                            history.shift();
+                        }
+                        
+                        if (history.length >= 2) {
+                            // Вычисляем среднее и отклонение
+                            const avg = history.reduce((sum, time) => sum + time, 0) / history.length;
+                            const maxDeviation = Math.max(...history.map(time => Math.abs(time - avg) / avg));
+                            
+                            if (maxDeviation <= 0.1) {
+                                // Время цикла стабильное (отклонение не более 10%)
+                                statusClass = 'status-executing'; // Зеленый - в работе
+                            } else {
+                                // Время цикла нестабильное (возможно остановился)
+                                statusClass = 'status-idle'; // Желтый - простой
+                            }
+                        } else {
+                            // Недостаточно данных для анализа
+                            statusClass = 'status-idle'; // Желтый - простой
+                        }
+                    } else if (counter.count > 0) {
+                        // Есть счетчик, но нет времени цикла
+                        statusClass = 'status-idle'; // Желтый - простой
+                    }
+                    
+                    // Применяем классы
+                    card.className = `machine-card ${statusClass}`;
+                    
+                    // Определяем текст для timeline в зависимости от статуса Adam
+                    let timelineText = '📊 Timeline данные (Railway)';
+                    if (statusClass === 'status-executing') {
+                        timelineText = '🟢 В работе';
+                    } else if (statusClass === 'status-idle') {
+                        timelineText = '🟡 Простой';
+                    } else if (statusClass === 'status-setup') {
+                        timelineText = '🟣 Наладка';
+                    } else if (statusClass === 'status-offline') {
+                        timelineText = '🔴 Проблема';
+                    }
+
+                    card.innerHTML = `
+                        <div class="adam-indicator">📊</div>
+                        <div class="machine-header">${counter.machineId}</div>
+                        <div class="machine-info">
+                            <div class="info-item">
+                                <div class="info-emoji">⚙️</div>
+                                <div class="info-value">O1001</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-emoji">🔢</div>
+                                <div class="info-value">${counter.count.toLocaleString()}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-emoji">⏱️</div>
+                                <div class="info-value">${counter.cycleTimeMs ? (counter.cycleTimeMs / 1000).toFixed(1) + 's' : '---'}</div>
+                            </div>
+                        </div>
+                        <div class="timeline-area">
+                            ${timelineText}
+                        </div>
+                    `;
+                    
+                    grid.appendChild(card);
+                });
+            } else {
+                const noDataCard = document.createElement('div');
+                noDataCard.className = 'machine-card status-offline';
+                noDataCard.innerHTML = `
+                    <div class="adam-indicator">📊</div>
+                    <div class="machine-header">Adam-6050</div>
+                    <div class="machine-info">
+                        <div class="info-item">
+                            <div class="info-emoji">⚙️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">🔢</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">⏱️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                    </div>
+                    <div class="timeline-area">
+                        🔴 Проблема
+                    </div>
+                `;
+                grid.appendChild(noDataCard);
+            }
+
+            // Обновляем количество колонок после изменения Adam карточек
+            updateGridColumns();
+        }
+
+        
+        // Первоначальная загрузка данных
+        fetchData();
+        
+        // Устанавливаем интервал обновления
+        setInterval(fetchData, UPDATE_INTERVAL);
+        
+        // Устанавливаем правильное количество колонок при загрузке
+        setTimeout(updateGridColumns, 100);
+    </script>
+</body>
+</html>

@@ -15,6 +15,7 @@ const nestjs_prometheus_1 = require("@willsoto/nestjs-prometheus");
 const external_api_controller_1 = require("./controllers/external-api.controller");
 const monitoring_controller_1 = require("./controllers/monitoring.controller");
 const test_database_controller_1 = require("./controllers/test-database.controller");
+const dashboard_controller_1 = require("./controllers/dashboard.controller");
 const data_processing_service_1 = require("./services/data-processing.service");
 const data_events_gateway_1 = require("./gateways/data-events.gateway");
 const alerting_service_1 = require("./services/alerting.service");
@@ -78,6 +79,7 @@ exports.AppModule = AppModule = __decorate([
             external_api_controller_1.ExternalApiController,
             monitoring_controller_1.MonitoringController,
             test_database_controller_1.TestDatabaseController,
+            dashboard_controller_1.DashboardController,
         ],
         providers: [
             core_1.Reflector,

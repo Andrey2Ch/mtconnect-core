@@ -7,6 +7,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { ExternalApiController } from './controllers/external-api.controller';
 import { MonitoringController } from './controllers/monitoring.controller';
 import { TestDatabaseController } from './controllers/test-database.controller';
+import { DashboardController } from './controllers/dashboard.controller';
 import { DataProcessingService } from './services/data-processing.service';
 import { DataEventsGateway } from './gateways/data-events.gateway';
 import { AlertingService } from './services/alerting.service';
@@ -87,6 +88,7 @@ import { MetricsInterceptor } from './interceptors/metrics.interceptor';
     ExternalApiController,
     MonitoringController,
     TestDatabaseController,
+    DashboardController,
   ],
   providers: [
     // Core Services

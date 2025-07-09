@@ -2,17 +2,32 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
+import * as express from 'express';
+import * as path from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Статические файлы для дашборда
+  const publicPath = path.join(__dirname, '..', 'public');
+  app.use('/static', express.static(publicPath));
   
   // Security Headers with Helmet
   const isDevelopment = process.env.NODE_ENV === 'development';
   const isHttps = process.env.FORCE_HTTPS === 'true' || !isDevelopment;
   
   app.use(helmet({
-    // Content Security Policy - disabled for API (no HTML content)
-    contentSecurityPolicy: false,
+    // Content Security Policy - настроено для дашборда
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"]
+      },
+    },
     
     // Cross-Origin Embedder Policy - disabled for API compatibility
     crossOriginEmbedderPolicy: false,
