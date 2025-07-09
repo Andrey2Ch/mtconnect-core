@@ -310,7 +310,12 @@ app.get('/api/status', (req, res) => {
 
 // Главная страница - дашборд
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'dashboard-pro.html'));
+  res.sendFile(path.join(__dirname, '..', 'cloud-api', 'mtconnect-cloud', 'public', 'dashboard-pro.html'));
+});
+
+// Отдельный endpoint для дашборда
+app.get('/dashboard-pro.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'cloud-api', 'mtconnect-cloud', 'public', 'dashboard-pro.html'));
 });
 
 // Запуск сервера

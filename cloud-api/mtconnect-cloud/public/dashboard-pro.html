@@ -508,17 +508,69 @@
             return 'UNAVAILABLE';
         }
 
+        // Функция для определения среды выполнения
+        function isLocalEnvironment() {
+            return window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1';
+        }
+
         async function fetchMTConnectData() {
-            // В облачном дашборде MTConnect данные приходят через API, не напрямую
-            return true; // Данные будут загружены в fetchCloudData
+            // Работает только в локальной среде
+            if (!isLocalEnvironment()) {
+                return true; // В облачной среде данные получаются через fetchCloudData()
+            }
+            
+            try {
+                const response = await fetch('/current');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const xmlText = await response.text();
+                console.log('📄 Полученный XML:', xmlText.substring(0, 500) + '...');
+                
+                // Дополнительная диагностика XML
+                console.log('🔍 Полный XML документ:', xmlText);
+                
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                
+                // Проверяем на ошибки парсинга
+                const parseError = xmlDoc.querySelector('parsererror');
+                if (parseError) {
+                    console.error('❌ Ошибка парсинга XML:', parseError.textContent);
+                    return false;
+                }
+                
+                updateMTConnectUI(xmlDoc);
+                return true;
+            } catch (error) {
+                console.error("Ошибка получения данных MTConnect:", error);
+                return false;
+            }
         }
 
         async function fetchAdamData() {
-            // В облачном дашборде Adam данные приходят через API, не напрямую
-            return true; // Данные будут загружены в fetchCloudData
+            // Работает только в локальной среде
+            if (!isLocalEnvironment()) {
+                return true; // В облачной среде данные получаются через fetchCloudData()
+            }
+            
+            try {
+                const response = await fetch('/api/adam/counters');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                updateAdamUI(data);
+                return true;
+            } catch (error) {
+                console.error("Ошибка получения данных Adam:", error);
+                updateAdamUI({ error: error.message });
+                return false;
+            }
         }
 
-        // Новая функция для загрузки данных из облачной базы
+        // Функция для получения данных из облачной базы
         async function fetchCloudData() {
             try {
                 const response = await fetch('/api/dashboard/machines');
@@ -531,45 +583,92 @@
                 if (data.status === 'success' && data.machines) {
                     updateCloudUI(data.machines);
                     return true;
-                } else {
-                    console.error('❌ Неправильный формат ответа:', data);
-                    return false;
                 }
+                return false;
             } catch (error) {
-                console.error("Ошибка получения облачных данных:", error);
+                console.error('❌ Ошибка получения облачных данных:', error);
                 return false;
             }
         }
 
         // Функция для проверки доступности MTConnect Agent'ов
         async function checkMTConnectAgents() {
-            // В облачном варианте нет прямого доступа к агентам
-            console.log('📊 Облачный дашборд: статус агентов недоступен');
+            try {
+                const response = await fetch('/status');
+                if (response.ok) {
+                    const statusData = await response.json();
+                    console.log('📊 Статус MTConnect Agent\'ов:', statusData.mtconnectAgents);
+                    
+                    const agentStatuses = statusData.mtconnectAgents || [];
+                    const onlineAgents = agentStatuses.filter(agent => agent.status === 'OK');
+                    const totalAgents = agentStatuses.length;
+                    
+                    console.log(`📊 MTConnect Agent'ы: ${onlineAgents.length}/${totalAgents} онлайн`);
+                    
+                    // Выводим детали по каждому агенту
+                    agentStatuses.forEach(agent => {
+                        const status = agent.status === 'OK' ? '✅' : '❌';
+                        console.log(`  ${status} ${agent.name} (${agent.id}): ${agent.status} ${agent.error ? '- ' + agent.error : ''}`);
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Ошибка проверки статуса MTConnect Agent\'ов:', error);
+            }
         }
 
         async function fetchData() {
-            // Загружаем данные из облачной базы
-            const cloudOk = await fetchCloudData();
-            
-            // Обновляем статус основного сервера
-            if (cloudOk) {
-                mainServerStatusEl.classList.add('online');
-                mainServerStatusEl.title = 'Облачная база данных работает';
-                adamStatusEl.classList.add('online');
-                adamStatusEl.title = 'Данные из облачной базы';
+            if (isLocalEnvironment()) {
+                console.log('🏠 Локальная среда - используем локальные endpoints');
+                
+                // Проверяем статус MTConnect Agent'ов (только локально)
+                await checkMTConnectAgents();
+                
+                const mtConnectOk = await fetchMTConnectData();
+                const adamOk = await fetchAdamData();
+                
+                // Обновляем статус основного сервера
+                if (mtConnectOk) {
+                    mainServerStatusEl.classList.add('online');
+                    mainServerStatusEl.title = 'Сервер работает';
+                } else {
+                    mainServerStatusEl.classList.remove('online');
+                    mainServerStatusEl.title = 'Сервер недоступен';
+                }
+                
+                // Обновляем статус Adam-6050
+                if (adamOk) {
+                    adamStatusEl.classList.add('online');
+                    adamStatusEl.title = 'Adam-6050 подключен';
+                } else {
+                    adamStatusEl.classList.remove('online');
+                    adamStatusEl.title = 'Adam-6050 недоступен';
+                }
+                
+                if (mtConnectOk || adamOk) {
+                    lastUpdatedEl.textContent = `Обновлено: ${new Date().toLocaleTimeString()}`;
+                }
             } else {
-                mainServerStatusEl.classList.remove('online');
-                mainServerStatusEl.title = 'Облачная база недоступна';
-                adamStatusEl.classList.remove('online');
-                adamStatusEl.title = 'Нет данных из облачной базы';
-            }
-            
-            if (cloudOk) {
-                lastUpdatedEl.textContent = `Обновлено: ${new Date().toLocaleTimeString()}`;
+                console.log('☁️ Облачная среда - используем облачные endpoints');
+                
+                const cloudOk = await fetchCloudData();
+                
+                // Обновляем статус для облачной среды
+                if (cloudOk) {
+                    mainServerStatusEl.classList.add('online');
+                    mainServerStatusEl.title = 'Облачный сервер работает';
+                    adamStatusEl.classList.add('online');
+                    adamStatusEl.title = 'Данные из облачной базы';
+                    lastUpdatedEl.textContent = `Обновлено: ${new Date().toLocaleTimeString()}`;
+                } else {
+                    mainServerStatusEl.classList.remove('online');
+                    mainServerStatusEl.title = 'Облачный сервер недоступен';
+                    adamStatusEl.classList.remove('online');
+                    adamStatusEl.title = 'Облачная база недоступна';
+                }
             }
         }
 
-        // Новая функция для обработки облачных данных
+        // Функция для обработки данных из облачной базы
         function updateCloudUI(machines) {
             console.log(`🔍 Обрабатываем ${machines.length} машин из облачной базы`);
             
@@ -578,12 +677,11 @@
             
             machines.forEach(machine => {
                 console.log(`🔍 Обрабатываем машину: ${machine.machineId} (${machine.machineName})`);
-                console.log(`🔍 Данные машины:`, machine);
                 
                 const card = document.createElement('div');
                 card.id = `machine-${machine.machineId}`;
                 
-                // Определяем статус машины
+                // Определяем статус машины из облачных данных
                 let statusClass = 'status-offline'; // По умолчанию
                 
                 // Проверяем freshness данных (последние 10 минут)
@@ -591,39 +689,20 @@
                 const now = new Date();
                 const minutesAgo = (now - lastSeen) / (1000 * 60);
                 
-                console.log(`🔍 ${machine.machineId}: lastSeen=${machine.lastSeen}, minutesAgo=${minutesAgo.toFixed(1)}, lastStatus=${machine.lastStatus}`);
-                
                 if (minutesAgo > 10) {
                     statusClass = 'status-offline'; // Красный - данные устарели
-                    console.log(`🔍 ${machine.machineId}: Данные устарели (${minutesAgo.toFixed(1)} мин)`);
-                } else {
-                    // Если данные свежие, определяем статус по данным
-                    if (machine.lastStatus) {
-                        const status = machine.lastStatus.toUpperCase();
-                        if (status === 'ACTIVE' || status === 'EXECUTING') {
-                            statusClass = 'status-executing'; // Зеленый - в работе
-                        } else if (status === 'READY' || status === 'IDLE') {
-                            statusClass = 'status-idle'; // Желтый - простой
-                        } else if (status === 'STOPPED' || status === 'FEED_HOLD') {
-                            statusClass = 'status-setup'; // Фиолетовый - наладка
-                        } else {
-                            statusClass = 'status-offline'; // Красный - неизвестный статус
-                        }
-                        console.log(`🔍 ${machine.machineId}: Статус '${status}' -> ${statusClass}`);
-                    } else {
-                        // Если нет статуса, но данные свежие - предполагаем работу
-                        statusClass = 'status-executing';
-                        console.log(`🔍 ${machine.machineId}: Нет статуса, но данные свежие -> ${statusClass}`);
+                } else if (machine.lastStatus) {
+                    const status = machine.lastStatus.toUpperCase();
+                    if (status === 'ACTIVE' || status === 'EXECUTING') {
+                        statusClass = 'status-executing'; // Зеленый - в работе
+                    } else if (status === 'READY' || status === 'IDLE') {
+                        statusClass = 'status-idle'; // Желтый - простой
+                    } else if (status === 'STOPPED' || status === 'FEED_HOLD') {
+                        statusClass = 'status-setup'; // Фиолетовый - наладка
                     }
                 }
                 
-                // Определяем является ли это Adam машиной
-                const isAdamMachine = machine.isAdamMachine || machine.machineId.includes('SR-') || 
-                                    machine.machineId.includes('SB-') || 
-                                    machine.machineId.includes('BT-') || 
-                                    machine.machineId.includes('K-') || 
-                                    machine.machineId.includes('L-');
-                
+                // Применяем класс статуса
                 card.className = `machine-card ${statusClass}`;
                 
                 // Определяем текст для timeline в зависимости от статуса
@@ -638,43 +717,29 @@
                     timelineText = '🔴 Проблема';
                 }
                 
-                // Форматируем время цикла (для Adam машин используем Adam данные)
-                let cycleTimeDisplay = '---';
-                if (isAdamMachine && machine.lastAdamCycleTime) {
-                    // Adam время цикла в миллисекундах, конвертируем в секунды
-                    cycleTimeDisplay = `${(machine.lastAdamCycleTime / 1000).toFixed(1)}s`;
-                } else if (machine.lastCycleTime) {
-                    cycleTimeDisplay = `${machine.lastCycleTime.toFixed(1)}s`;
-                }
+                // Определяем является ли это Adam машиной
+                const isAdamMachine = machine.isAdamMachine || machine.machineId.includes('SR-') || 
+                                    machine.machineId.includes('SB-') || 
+                                    machine.machineId.includes('BT-') || 
+                                    machine.machineId.includes('K-') || 
+                                    machine.machineId.includes('L-');
                 
-                // Форматируем счетчик деталей (для Adam машин используем Adam данные)
-                let partCountDisplay = '---';
-                if (isAdamMachine && machine.lastAdamCount) {
-                    partCountDisplay = machine.lastAdamCount.toLocaleString();
-                } else if (machine.lastPartCount) {
-                    partCountDisplay = machine.lastPartCount.toLocaleString();
-                }
-                
-                // Определяем программу (для Adam машин всегда O1001)
-                const programDisplay = isAdamMachine ? 'O1001' : (machine.lastProgram || '---');
-                
-                console.log(`🔍 ${machine.machineId}: isAdam=${isAdamMachine}, partCount=${partCountDisplay}, cycleTime=${cycleTimeDisplay}, program=${programDisplay}`);
-                
+                // Создаем HTML карточки
                 card.innerHTML = `
                     ${isAdamMachine ? '<div class="adam-indicator">📊</div>' : ''}
                     <div class="machine-header">${machine.machineName || machine.machineId}</div>
                     <div class="machine-info">
                         <div class="info-item">
                             <div class="info-emoji">⚙️</div>
-                            <div class="info-value">${programDisplay}</div>
+                            <div class="info-value">${machine.lastProgram || (isAdamMachine ? 'O1001' : '---')}</div>
                         </div>
                         <div class="info-item">
                             <div class="info-emoji">🔢</div>
-                            <div class="info-value ${['SR-10', 'XD-38', 'XD-20'].includes(machine.machineId) ? 'part-count-reliable' : ''}">${partCountDisplay}</div>
+                            <div class="info-value">${machine.lastPartCount ? machine.lastPartCount.toLocaleString() : '---'}</div>
                         </div>
                         <div class="info-item">
                             <div class="info-emoji">⏱️</div>
-                            <div class="info-value">${cycleTimeDisplay}</div>
+                            <div class="info-value">${machine.lastCycleTime ? parseFloat(machine.lastCycleTime).toFixed(1) + 's' : '---'}</div>
                         </div>
                     </div>
                     <div class="timeline-area">
@@ -685,14 +750,17 @@
                 grid.appendChild(card);
             });
             
-            // Обновляем количество колонок
+            // Обновляем количество колонок после добавления всех карточек
             updateGridColumns();
         }
 
         function updateMTConnectUI(xmlDoc) {
-            // Устаревшая функция - теперь используется updateCloudUI
-            console.log('⚠️ updateMTConnectUI вызвана, но используется облачный режим');
-            return;
+            // Диагностика структуры XML документа
+            console.log('🔍 XML документ:', xmlDoc);
+            console.log('🔍 Root element:', xmlDoc.documentElement);
+            
+            const deviceStreams = xmlDoc.getElementsByTagName('DeviceStream');
+            console.log(`🔍 Найдено DeviceStream элементов: ${deviceStreams.length}`);
             
             // Показываем все элементы верхнего уровня
             if (xmlDoc.documentElement) {
@@ -928,10 +996,152 @@
         }
 
         function updateAdamUI(data) {
-            // Устаревшая функция - теперь используется updateCloudUI
-            console.log('⚠️ updateAdamUI вызвана, но используется облачный режим');
-            return;
+            // Удаляем предыдущие Adam карточки
+            const existingAdamCards = grid.querySelectorAll('[id^="adam-"]');
+            existingAdamCards.forEach(card => card.remove());
 
+            if (data.error) {
+                const errorCard = document.createElement('div');
+                errorCard.className = 'machine-card status-offline';
+                errorCard.innerHTML = `
+                    <div class="adam-indicator">📊</div>
+                    <div class="machine-header">Ошибка Adam-6050</div>
+                    <div class="machine-info">
+                        <div class="info-item">
+                            <div class="info-emoji">⚙️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">🔢</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">⏱️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                    </div>
+                    <div class="timeline-area">
+                        🔴 Проблема
+                    </div>
+                `;
+                grid.appendChild(errorCard);
+                return;
+            }
+
+            if (data.counters && data.counters.length > 0) {
+                data.counters.forEach(counter => {
+                    const card = document.createElement('div');
+                    card.id = `adam-${counter.machineId}`;
+                    
+                    // Улучшенная логика определения статуса Adam
+                    let statusClass = 'status-offline'; // Красный - проблема
+                    
+                    if (counter.cycleTimeMs && counter.cycleTimeMs > 0) {
+                        const currentCycleTime = counter.cycleTimeMs / 1000; // в секундах
+                        const machineId = counter.machineId;
+                        
+                        // Проверяем историю времени цикла
+                        if (!adamCycleHistory[machineId]) {
+                            adamCycleHistory[machineId] = [];
+                        }
+                        
+                        const history = adamCycleHistory[machineId];
+                        history.push(currentCycleTime);
+                        
+                        // Храним только последние 3 значения
+                        if (history.length > 3) {
+                            history.shift();
+                        }
+                        
+                        if (history.length >= 2) {
+                            // Вычисляем среднее и отклонение
+                            const avg = history.reduce((sum, time) => sum + time, 0) / history.length;
+                            const maxDeviation = Math.max(...history.map(time => Math.abs(time - avg) / avg));
+                            
+                            if (maxDeviation <= 0.1) {
+                                // Время цикла стабильное (отклонение не более 10%)
+                                statusClass = 'status-executing'; // Зеленый - в работе
+                            } else {
+                                // Время цикла нестабильное (возможно остановился)
+                                statusClass = 'status-idle'; // Желтый - простой
+                            }
+                        } else {
+                            // Недостаточно данных для анализа
+                            statusClass = 'status-idle'; // Желтый - простой
+                        }
+                    } else if (counter.count > 0) {
+                        // Есть счетчик, но нет времени цикла
+                        statusClass = 'status-idle'; // Желтый - простой
+                    }
+                    
+                    // Применяем классы
+                    card.className = `machine-card ${statusClass}`;
+                    
+                    // Определяем текст для timeline в зависимости от статуса Adam
+                    let timelineText = '📊 Timeline данные (Railway)';
+                    if (statusClass === 'status-executing') {
+                        timelineText = '🟢 В работе';
+                    } else if (statusClass === 'status-idle') {
+                        timelineText = '🟡 Простой';
+                    } else if (statusClass === 'status-setup') {
+                        timelineText = '🟣 Наладка';
+                    } else if (statusClass === 'status-offline') {
+                        timelineText = '🔴 Проблема';
+                    }
+
+                    card.innerHTML = `
+                        <div class="adam-indicator">📊</div>
+                        <div class="machine-header">${counter.machineId}</div>
+                        <div class="machine-info">
+                            <div class="info-item">
+                                <div class="info-emoji">⚙️</div>
+                                <div class="info-value">O1001</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-emoji">🔢</div>
+                                <div class="info-value">${counter.count.toLocaleString()}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-emoji">⏱️</div>
+                                <div class="info-value">${counter.cycleTimeMs ? (counter.cycleTimeMs / 1000).toFixed(1) + 's' : '---'}</div>
+                            </div>
+                        </div>
+                        <div class="timeline-area">
+                            ${timelineText}
+                        </div>
+                    `;
+                    
+                    grid.appendChild(card);
+                });
+            } else {
+                const noDataCard = document.createElement('div');
+                noDataCard.className = 'machine-card status-offline';
+                noDataCard.innerHTML = `
+                    <div class="adam-indicator">📊</div>
+                    <div class="machine-header">Adam-6050</div>
+                    <div class="machine-info">
+                        <div class="info-item">
+                            <div class="info-emoji">⚙️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">🔢</div>
+                            <div class="info-value">---</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-emoji">⏱️</div>
+                            <div class="info-value">---</div>
+                        </div>
+                    </div>
+                    <div class="timeline-area">
+                        🔴 Проблема
+                    </div>
+                `;
+                grid.appendChild(noDataCard);
+            }
+
+            // Обновляем количество колонок после изменения Adam карточек
+            updateGridColumns();
         }
 
         

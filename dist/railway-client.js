@@ -96,7 +96,14 @@ class RailwayClient {
             console.error('❌ Ошибка отправки batch данных в Railway:');
             console.error(`🔗 URL: ${this.config.baseUrl}/api/ext/data`);
             console.error(`📝 Статус: ${error.response?.status || 'N/A'}`);
-            console.error(`💬 Сообщение: ${error.response?.data || error.message || error.toString()}`);
+            // Исправляем логирование - правильно сериализуем объект
+            const errorData = error.response?.data;
+            if (errorData && typeof errorData === 'object') {
+                console.error(`💬 Сообщение: ${JSON.stringify(errorData, null, 2)}`);
+            }
+            else {
+                console.error(`💬 Сообщение: ${errorData || error.message || error.toString()}`);
+            }
             this.isOnline = false;
             return false;
         }
@@ -129,7 +136,14 @@ class RailwayClient {
             console.error('❌ Ошибка отправки данных в Railway:');
             console.error(`🔗 URL: ${this.config.baseUrl}/api/ext/data`);
             console.error(`📝 Статус: ${error.response?.status || 'N/A'}`);
-            console.error(`💬 Сообщение: ${error.response?.data || error.message || error.toString()}`);
+            // Исправляем логирование - правильно сериализуем объект
+            const errorData = error.response?.data;
+            if (errorData && typeof errorData === 'object') {
+                console.error(`💬 Сообщение: ${JSON.stringify(errorData, null, 2)}`);
+            }
+            else {
+                console.error(`💬 Сообщение: ${errorData || error.message || error.toString()}`);
+            }
             this.isOnline = false;
             this.dataBuffer.retryCount++;
             // Если превышено количество попыток, удаляем старые данные

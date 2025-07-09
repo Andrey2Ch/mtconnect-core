@@ -75,7 +75,41 @@ export class ExternalApiController {
     
     try {
       this.logger.log(`🔍 Data ingestion from gateway: ${data.edgeGatewayId}`, 'ExternalApiController');
-      this.logger.log(`🔍 Data payload structure: ${JSON.stringify(data, null, 2).substring(0, 500)}...`, 'ExternalApiController');
+      
+      // Логируем только первые 800 символов для избежания переполнения
+      const payloadPreview = JSON.stringify(data, null, 2);
+      this.logger.log(`🔍 Payload preview: ${payloadPreview.substring(0, 800)}...`, 'ExternalApiController');
+
+      // Проверяем дублированные machine ID
+      const machineIds = data.data.map(item => item.machineId);
+      const uniqueMachineIds = [...new Set(machineIds)];
+      
+      if (machineIds.length !== uniqueMachineIds.length) {
+        this.logger.error(`❌ Duplicate machine IDs detected in payload:`, 'ExternalApiController');
+        this.logger.error(`All IDs: ${machineIds.join(', ')}`, 'ExternalApiController');
+        this.logger.error(`Unique IDs: ${uniqueMachineIds.join(', ')}`, 'ExternalApiController');
+        throw new BadRequestException('Duplicate machine IDs detected');
+      }
+
+      // Детальное логирование для Adam данных
+      for (const machine of data.data) {
+        this.logger.log(`🔍 Processing machine: ${machine.machineId}`, 'ExternalApiController');
+        
+        if (machine.data.adamData) {
+          this.logger.log(`📊 Adam data found for ${machine.machineId}:`, 'ExternalApiController');
+          this.logger.log(`📊 Adam analogData: ${JSON.stringify(machine.data.adamData.analogData)}`, 'ExternalApiController');
+          
+          // Валидация analogData
+          if (machine.data.adamData.analogData) {
+            for (const [key, value] of Object.entries(machine.data.adamData.analogData)) {
+              if (typeof value !== 'number') {
+                this.logger.error(`❌ Invalid analogData value for ${machine.machineId}.${key}: ${value} (type: ${typeof value})`, 'ExternalApiController');
+                throw new BadRequestException(`Invalid analogData value for ${machine.machineId}.${key}: expected number, got ${typeof value}`);
+              }
+            }
+          }
+        }
+      }
 
       // Validate timestamp is not in the future
       const now = new Date();
@@ -84,19 +118,20 @@ export class ExternalApiController {
         this.logger.error(`❌ Timestamp validation failed: ${data.timestamp} is in the future`, 'ExternalApiController');
         throw new BadRequestException('Timestamp cannot be in the future');
       }
-
-      // Check for duplicate machine IDs
-      const machineIds = data.data.map(m => m.machineId);
-      const uniqueIds = new Set(machineIds);
-      if (machineIds.length !== uniqueIds.size) {
-        this.logger.error(`❌ Duplicate machine IDs detected: ${JSON.stringify(machineIds)}`, 'ExternalApiController');
-        throw new BadRequestException('Duplicate machine IDs detected');
-      }
-
+      
       this.logger.log(`✅ Basic validation passed for ${data.data.length} machines`, 'ExternalApiController');
-
+      
+      // Attempt to process the data
+      this.logger.log(`🔄 Starting data processing...`, 'ExternalApiController');
+      
       // Sanitize and prepare data for storage
       const sanitizedMachines = data.data.map(machine => {
+        // Логируем ИСХОДНЫЕ данные
+        if (machine.data.adamData) {
+          this.logger.log(`🔍 BEFORE sanitization for ${machine.machineId}:`, 'ExternalApiController');
+          this.logger.log(`📊 Original adamData: ${JSON.stringify(machine.data.adamData)}`, 'ExternalApiController');
+        }
+        
         // Sanitize machine metadata
         const sanitizedMachineId = this.sanitizationService.sanitizeText(machine.machineId, 100);
         const sanitizedMachineName = this.sanitizationService.sanitizeText(machine.machineName, 255);
@@ -107,6 +142,23 @@ export class ExternalApiController {
 
         // Sanitize machine data payload
         const sanitizedData = this.sanitizationService.sanitizeMachineData(machine.data);
+        
+        // Логируем САНИТИЗИРОВАННЫЕ данные  
+        if (sanitizedData.adamData) {
+          this.logger.log(`🔍 AFTER sanitization for ${machine.machineId}:`, 'ExternalApiController');
+          this.logger.log(`📊 Sanitized adamData: ${JSON.stringify(sanitizedData.adamData)}`, 'ExternalApiController');
+          
+          // Проверяем типы данных ПОСЛЕ санитизации
+          if (sanitizedData.adamData.analogData) {
+            this.logger.log(`🔍 Checking data types AFTER sanitization:`, 'ExternalApiController');
+            for (const [key, value] of Object.entries(sanitizedData.adamData.analogData)) {
+              this.logger.log(`📊 ${key}: ${value} (type: ${typeof value})`, 'ExternalApiController');
+              if (typeof value !== 'number') {
+                this.logger.error(`❌ TYPE ERROR after sanitization: ${machine.machineId}.${key} = ${value} (${typeof value})`, 'ExternalApiController');
+              }
+            }
+          }
+        }
 
         return {
           timestamp: dataTime,
@@ -121,25 +173,33 @@ export class ExternalApiController {
       });
 
       // Bulk insert all machine data
+      this.logger.log(`💾 Attempting to save ${sanitizedMachines.length} records to database...`, 'ExternalApiController');
       const result = await this.machineDataModel.insertMany(sanitizedMachines);
       
       const processingTime = Date.now() - startTime;
-      this.logger.log(`Ingested ${result.length} machine records in ${processingTime}ms`, 'ExternalApiController');
+      this.logger.log(`✅ Data processing completed in ${processingTime}ms`, 'ExternalApiController');
       
-      return { 
-        status: 'success', 
-        message: `Stored data for ${result.length} machines`,
-        recordsProcessed: result.length,
-        processingTimeMs: processingTime
+      return {
+        success: true,
+        message: 'Data ingested successfully',
+        processedCount: result.length,
+        processingTime: processingTime
       };
+      
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      this.logger.error(`Data ingestion failed after ${processingTime}ms: ${error.message}`, error.stack, 'ExternalApiController');
+      this.logger.error(`❌ Data ingestion failed after ${processingTime}ms:`, error.stack, 'ExternalApiController');
       
-      if (error instanceof BadRequestException) {
-        throw error;
+      // Логируем детали ошибки
+      if (error.message) {
+        this.logger.error(`💬 Error message: ${error.message}`, 'ExternalApiController');
       }
-      throw new InternalServerErrorException('Failed to process machine data');
+      
+      if (error.name) {
+        this.logger.error(`🏷️ Error name: ${error.name}`, 'ExternalApiController');
+      }
+      
+      throw error;
     }
   }
 

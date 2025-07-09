@@ -778,7 +778,11 @@ app.get('/api/adam/counters', async (req, res) => {
     }
 });
 
-// Добавляем функцию для чтения данных Adam-6050
+// Переменная для контроля частоты отправки Adam данных
+let lastAdamSendTime = 0;
+const ADAM_SEND_COOLDOWN = 5000; // 5 секунд между отправками Adam данных
+
+// Функция для получения Adam счётчиков
 async function getAdamCounters() {
     try {
         const counters = await adamReader.readCounters();
@@ -786,9 +790,28 @@ async function getAdamCounters() {
         
         // Подготавливаем данные Adam для отправки БАТЧЕМ (не поштучно!)
         if (counters.length > 0) {
+            const now = Date.now();
+            
+            // Проверяем cooldown
+            if (now - lastAdamSendTime < ADAM_SEND_COOLDOWN) {
+                console.log(`⏳ Пропуск отправки Adam данных (cooldown: ${Math.round((ADAM_SEND_COOLDOWN - (now - lastAdamSendTime)) / 1000)}с)`);
+                return counters;
+            }
+            
             const adamDataBatch = [];
             
             for (const counter of counters) {
+                // Валидация данных перед обработкой
+                if (!counter.machineId || counter.machineId.trim() === '') {
+                    console.warn(`⚠️ Пропуск Adam данных: пустой machineId для канала ${counter.channel}`);
+                    continue;
+                }
+                
+                if (typeof counter.count !== 'number' || counter.count < 0) {
+                    console.warn(`⚠️ Пропуск Adam данных: неправильный count ${counter.count} для ${counter.machineId}`);
+                    continue;
+                }
+                
                 // Преобразуем строковое значение confidence в число
                 let confidenceValue: number = 1.0;
                 if (typeof counter.confidence === 'string') {
@@ -846,8 +869,42 @@ async function getAdamCounters() {
                     }))
                 };
                 
+                // Логируем детали batch перед отправкой
+                const machineIds = batchData.data.map(item => item.machineId);
+                const uniqueMachineIds = [...new Set(machineIds)];
+                
+                console.log(`📦 Adam batch данные:`, {
+                    totalMachines: batchData.data.length,
+                    machineIds: machineIds,
+                    uniqueMachineIds: uniqueMachineIds,
+                    hasDuplicates: machineIds.length !== uniqueMachineIds.length
+                });
+                
+                if (machineIds.length !== uniqueMachineIds.length) {
+                    console.error(`❌ ОБНАРУЖЕНЫ ДУБЛИКАТЫ в Adam batch!`);
+                    console.error(`Все ID: ${machineIds.join(', ')}`);
+                    console.error(`Уникальные ID: ${uniqueMachineIds.join(', ')}`);
+                    
+                    // Удаляем дубликаты
+                    const uniqueData = [];
+                    const seenIds = new Set();
+                    
+                    for (const item of batchData.data) {
+                        if (!seenIds.has(item.machineId)) {
+                            uniqueData.push(item);
+                            seenIds.add(item.machineId);
+                        } else {
+                            console.log(`🗑️ Удаляем дубликат: ${item.machineId}`);
+                        }
+                    }
+                    
+                    batchData.data = uniqueData;
+                    console.log(`✅ Дубликаты удалены, итого машин: ${batchData.data.length}`);
+                }
+                
+                lastAdamSendTime = now; // Обновляем время последней отправки
                 railwayClient.sendDataBatch(batchData);
-                console.log(`📊 Adam данные подготовлены и отправлены в Railway как batch (${counters.length} машин)`);
+                console.log(`📊 Adam данные подготовлены и отправлены в Railway как batch (${batchData.data.length} машин)`);
             }
         }
         
