@@ -61,7 +61,8 @@ export class DashboardController {
             totalRecords: { $sum: 1 },
             lastStatus: { $last: '$data.executionStatus' },
             lastPartCount: { $last: '$data.partCount' },
-            lastCycleTime: { $last: '$data.cycleTime' }
+            lastCycleTime: { $last: '$data.cycleTime' },
+            lastProgram: { $last: '$data.program' }
           }
         },
         {
@@ -73,6 +74,7 @@ export class DashboardController {
             lastStatus: 1,
             lastPartCount: 1,
             lastCycleTime: 1,
+            lastProgram: 1,
             _id: 0
           }
         },

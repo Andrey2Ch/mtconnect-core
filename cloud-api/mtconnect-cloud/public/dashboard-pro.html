@@ -578,6 +578,7 @@
             
             machines.forEach(machine => {
                 console.log(`🔍 Обрабатываем машину: ${machine.machineId} (${machine.machineName})`);
+                console.log(`🔍 Данные машины:`, machine);
                 
                 const card = document.createElement('div');
                 card.id = `machine-${machine.machineId}`;
@@ -590,18 +591,29 @@
                 const now = new Date();
                 const minutesAgo = (now - lastSeen) / (1000 * 60);
                 
+                console.log(`🔍 ${machine.machineId}: lastSeen=${machine.lastSeen}, minutesAgo=${minutesAgo.toFixed(1)}, lastStatus=${machine.lastStatus}`);
+                
                 if (minutesAgo > 10) {
                     statusClass = 'status-offline'; // Красный - данные устарели
-                } else if (machine.lastStatus) {
-                    const status = machine.lastStatus.toUpperCase();
-                    if (status === 'ACTIVE' || status === 'EXECUTING') {
-                        statusClass = 'status-executing'; // Зеленый - в работе
-                    } else if (status === 'READY' || status === 'IDLE') {
-                        statusClass = 'status-idle'; // Желтый - простой
-                    } else if (status === 'STOPPED' || status === 'FEED_HOLD') {
-                        statusClass = 'status-setup'; // Фиолетовый - наладка
+                    console.log(`🔍 ${machine.machineId}: Данные устарели (${minutesAgo.toFixed(1)} мин)`);
+                } else {
+                    // Если данные свежие, определяем статус по данным
+                    if (machine.lastStatus) {
+                        const status = machine.lastStatus.toUpperCase();
+                        if (status === 'ACTIVE' || status === 'EXECUTING') {
+                            statusClass = 'status-executing'; // Зеленый - в работе
+                        } else if (status === 'READY' || status === 'IDLE') {
+                            statusClass = 'status-idle'; // Желтый - простой
+                        } else if (status === 'STOPPED' || status === 'FEED_HOLD') {
+                            statusClass = 'status-setup'; // Фиолетовый - наладка
+                        } else {
+                            statusClass = 'status-offline'; // Красный - неизвестный статус
+                        }
+                        console.log(`🔍 ${machine.machineId}: Статус '${status}' -> ${statusClass}`);
                     } else {
-                        statusClass = 'status-offline'; // Красный - неизвестный статус
+                        // Если нет статуса, но данные свежие - предполагаем работу
+                        statusClass = 'status-executing';
+                        console.log(`🔍 ${machine.machineId}: Нет статуса, но данные свежие -> ${statusClass}`);
                     }
                 }
                 
