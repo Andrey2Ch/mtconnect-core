@@ -3,13 +3,13 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Копируем package.json и package-lock.json из cloud-api
-COPY cloud-api/mtconnect-cloud/package*.json ./
+COPY apps/cloud-api/package*.json ./
 
 # Устанавливаем ВСЕ зависимости (включая dev для build)
 RUN npm install
 
 # Копируем исходный код cloud API в корень
-COPY cloud-api/mtconnect-cloud/ ./
+COPY apps/cloud-api/ ./
 
 # Собираем проект
 RUN npm run build
