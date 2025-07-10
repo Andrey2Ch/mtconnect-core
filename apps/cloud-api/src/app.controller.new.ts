@@ -71,7 +71,7 @@ export class AppController {
         }
       ]);
 
-      console.log( Найдено  машин в базе данных);
+      console.log(`Найдено ${latestData.length} машин в базе данных`);
 
       // Читаем конфигурацию для получения полной информации о машинах
       const configPaths = [
@@ -93,7 +93,7 @@ export class AppController {
         throw new Error('Конфигурационный файл не найден');
       }
 
-      console.log( Используем config.json из: );
+      console.log(`Используем config.json из: ${configPath}`);
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
       // Создаем Map для быстрого поиска конфигурации
@@ -118,7 +118,7 @@ export class AppController {
         const timeDiff = now.getTime() - lastUpdate.getTime();
         const isOnline = timeDiff < onlineThreshold;
 
-        console.log( : последнее обновление , разница с, статус: );
+        console.log(`${machineId}: последнее обновление ${lastUpdate.toISOString()}, разница ${timeDiff}мс, статус: ${isOnline ? 'online' : 'offline'}`);
 
         // Проверяем, это MTConnect или ADAM машина
         if (record.data.adamData) {
@@ -181,7 +181,7 @@ export class AppController {
         }
       };
 
-      console.log( Возвращаю данные:  машин ( online));
+      console.log(`Возвращаю данные: ${result.summary.total} машин (${result.summary.mtconnect.online + result.summary.adam.online} online)`);
       return result;
 
     } catch (error) {
