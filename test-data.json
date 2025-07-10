@@ -1,0 +1,16 @@
+﻿{
+  "edgeGatewayId": "MTConnect-Edge-1",
+  "timestamp": "2025-07-10T13:07:00.000Z",
+  "data": [
+    {
+      "machineId": "TEST-MACHINE",
+      "machineName": "Test Machine",
+      "timestamp": "2025-07-10T13:07:00.000Z",
+      "data": {
+        "partCount": 100,
+        "executionStatus": "ACTIVE",
+        "cycleTime": 30000
+      }
+    }
+  ]
+}

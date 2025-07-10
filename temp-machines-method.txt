@@ -1,0 +1,39 @@
+﻿  @Get('/machines')
+  async getMachines() {
+    try {
+      console.log(' [NEW CODE] Получаю данные машин из MongoDB...');
+      
+      // Временная заглушка - возвращаем пустой список
+      const result = {
+        timestamp: new Date().toISOString(),
+        summary: {
+          total: 0,
+          mtconnect: { total: 0, online: 0, offline: 0 },
+          adam: { total: 0, online: 0, offline: 0 }
+        },
+        machines: {
+          mtconnect: [],
+          adam: []
+        }
+      };
+
+      console.log(' [NEW CODE] Возвращаю пустой список для проверки');
+      return result;
+
+    } catch (error) {
+      console.error(' [NEW CODE] Ошибка:', error);
+      return {
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        summary: {
+          total: 0,
+          mtconnect: { total: 0, online: 0, offline: 0 },
+          adam: { total: 0, online: 0, offline: 0 }
+        },
+        machines: {
+          mtconnect: [],
+          adam: []
+        }
+      };
+    }
+  }
