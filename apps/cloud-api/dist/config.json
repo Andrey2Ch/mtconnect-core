@@ -8,8 +8,8 @@
       "type": "FANUC",
       "mtconnectAgentUrl": "http://192.168.1.101:5000",
       "uuid": "M_1_XD-20",
-      "spindles": 1,
-      "axes": 3
+      "spindles": ["S1"],
+      "axes": ["X", "Y", "Z"]
     },
     {
       "id": "M_2_SR_26",
@@ -19,8 +19,8 @@
       "type": "FANUC",
       "mtconnectAgentUrl": "http://192.168.1.102:5000",
       "uuid": "M_2_SR_26",
-      "spindles": 1,
-      "axes": 3
+      "spindles": ["S1"],
+      "axes": ["X", "Y", "Z"]
     },
     {
       "id": "M_3_XD_38",
@@ -30,8 +30,8 @@
       "type": "FANUC",
       "mtconnectAgentUrl": "http://192.168.1.103:5000",
       "uuid": "M_3_XD_38",
-      "spindles": 1,
-      "axes": 3
+      "spindles": ["S1"],
+      "axes": ["X", "Y", "Z"]
     },
     {
       "id": "M_4_SR_10",
@@ -41,8 +41,8 @@
       "type": "FANUC",
       "mtconnectAgentUrl": "http://192.168.1.104:5000",
       "uuid": "M_4_SR_10",
-      "spindles": 1,
-      "axes": 3
+      "spindles": ["S1"],
+      "axes": ["X", "Y", "Z"]
     },
     {
       "id": "M_5_DT_26",
@@ -52,8 +52,8 @@
       "type": "FANUC",
       "mtconnectAgentUrl": "http://192.168.1.105:5000",
       "uuid": "M_5_DT_26",
-      "spindles": 1,
-      "axes": 3
+      "spindles": ["S1"],
+      "axes": ["X", "Y", "Z"]
     },
     {
       "id": "M_6_SR_21",
@@ -63,8 +63,8 @@
       "type": "FANUC",
       "mtconnectAgentUrl": "http://192.168.1.106:5000",
       "uuid": "M_6_SR_21",
-      "spindles": 1,
-      "axes": 3
+      "spindles": ["S1"],
+      "axes": ["X", "Y", "Z"]
     },
     {
       "id": "M_7_SR_23",
@@ -74,8 +74,8 @@
       "type": "FANUC",
       "mtconnectAgentUrl": "http://192.168.1.107:5000",
       "uuid": "M_7_SR_23",
-      "spindles": 1,
-      "axes": 3
+      "spindles": ["S1"],
+      "axes": ["X", "Y", "Z"]
     },
     {
       "id": "M_8_SR_25",
@@ -85,8 +85,8 @@
       "type": "FANUC",
       "mtconnectAgentUrl": "http://192.168.1.108:5000",
       "uuid": "M_8_SR_25",
-      "spindles": 1,
-      "axes": 3
+      "spindles": ["S1"],
+      "axes": ["X", "Y", "Z"]
     }
   ]
 } 
