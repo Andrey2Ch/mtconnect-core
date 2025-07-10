@@ -15,6 +15,7 @@ const external_api_controller_1 = require("./controllers/external-api.controller
 const machine_data_schema_1 = require("./schemas/machine-data.schema");
 const sanitization_service_1 = require("./services/sanitization.service");
 const winston_logger_service_1 = require("./services/winston-logger.service");
+const metrics_service_1 = require("./services/metrics.service");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -25,7 +26,7 @@ exports.AppModule = AppModule = __decorate([
             mongoose_1.MongooseModule.forFeature([{ name: machine_data_schema_1.MachineData.name, schema: machine_data_schema_1.MachineDataSchema }])
         ],
         controllers: [app_controller_1.AppController, external_api_controller_1.ExternalApiController],
-        providers: [app_service_1.AppService, sanitization_service_1.SanitizationService, winston_logger_service_1.WinstonLoggerService],
+        providers: [app_service_1.AppService, sanitization_service_1.SanitizationService, winston_logger_service_1.WinstonLoggerService, metrics_service_1.MetricsService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

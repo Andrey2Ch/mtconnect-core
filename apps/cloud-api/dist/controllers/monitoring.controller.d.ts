@@ -119,10 +119,12 @@ export declare class MonitoringController {
         metrics_summary: {
             timestamp: string;
             metrics: {
-                http_requests_total: string;
-                active_connections: string;
-                data_ingestion_rate: string;
-                error_rate: string;
+                httpRequests: number;
+                dataIngestionCount: number;
+                activeConnections: number;
+                activeMachines: number;
+                apiErrors: number;
+                databaseOperations: number;
             };
         };
         errors: any;
@@ -208,10 +210,12 @@ export declare class MonitoringController {
         note: string;
         timestamp: string;
         metrics: {
-            http_requests_total: string;
-            active_connections: string;
-            data_ingestion_rate: string;
-            error_rate: string;
+            httpRequests: number;
+            dataIngestionCount: number;
+            activeConnections: number;
+            activeMachines: number;
+            apiErrors: number;
+            databaseOperations: number;
         };
     }>;
 }

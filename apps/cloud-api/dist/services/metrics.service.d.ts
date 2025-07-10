@@ -1,15 +1,5 @@
-import { Counter, Histogram, Gauge } from 'prom-client';
 export declare class MetricsService {
-    httpRequestsTotal: Counter<string>;
-    httpRequestDuration: Histogram<string>;
-    activeConnections: Gauge<string>;
-    dataIngestionTotal: Counter<string>;
-    dataIngestionVolume: Counter<string>;
-    activeMachines: Gauge<string>;
-    apiErrorsTotal: Counter<string>;
-    databaseOperationsTotal: Counter<string>;
-    databaseOperationDuration: Histogram<string>;
-    constructor(httpRequestsTotal: Counter<string>, httpRequestDuration: Histogram<string>, activeConnections: Gauge<string>, dataIngestionTotal: Counter<string>, dataIngestionVolume: Counter<string>, activeMachines: Gauge<string>, apiErrorsTotal: Counter<string>, databaseOperationsTotal: Counter<string>, databaseOperationDuration: Histogram<string>);
+    private metrics;
     recordHttpRequest(method: string, endpoint: string, statusCode: number, duration: number): void;
     recordApiError(endpoint: string, errorType: string, statusCode: number): void;
     recordDataIngestion(machineId: string, dataSize: number, successful: boolean): void;
@@ -27,11 +17,12 @@ export declare class MetricsService {
     getMetricsSnapshot(): Promise<{
         timestamp: string;
         metrics: {
-            http_requests_total: string;
-            active_connections: string;
-            data_ingestion_rate: string;
-            error_rate: string;
+            httpRequests: number;
+            dataIngestionCount: number;
+            activeConnections: number;
+            activeMachines: number;
+            apiErrors: number;
+            databaseOperations: number;
         };
     }>;
 }
-export declare const metricsProviders: import("@nestjs/common").Provider[];
