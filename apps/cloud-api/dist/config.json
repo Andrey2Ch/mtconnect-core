@@ -1,0 +1,92 @@
+{
+  "machines": [
+    {
+      "id": "M_1_XD-20",
+      "name": "XD-20",
+      "ip": "192.168.1.101",
+      "port": 5000,
+      "type": "FANUC",
+      "mtconnectAgentUrl": "http://192.168.1.101:5000",
+      "uuid": "M_1_XD-20",
+      "spindles": 1,
+      "axes": 3
+    },
+    {
+      "id": "M_2_SR_26",
+      "name": "SR-26",
+      "ip": "192.168.1.102",
+      "port": 5000,
+      "type": "FANUC",
+      "mtconnectAgentUrl": "http://192.168.1.102:5000",
+      "uuid": "M_2_SR_26",
+      "spindles": 1,
+      "axes": 3
+    },
+    {
+      "id": "M_3_XD_38",
+      "name": "XD-38",
+      "ip": "192.168.1.103",
+      "port": 5000,
+      "type": "FANUC",
+      "mtconnectAgentUrl": "http://192.168.1.103:5000",
+      "uuid": "M_3_XD_38",
+      "spindles": 1,
+      "axes": 3
+    },
+    {
+      "id": "M_4_SR_10",
+      "name": "SR-10",
+      "ip": "192.168.1.104",
+      "port": 5000,
+      "type": "FANUC",
+      "mtconnectAgentUrl": "http://192.168.1.104:5000",
+      "uuid": "M_4_SR_10",
+      "spindles": 1,
+      "axes": 3
+    },
+    {
+      "id": "M_5_DT_26",
+      "name": "DT-26",
+      "ip": "192.168.1.105",
+      "port": 5000,
+      "type": "FANUC",
+      "mtconnectAgentUrl": "http://192.168.1.105:5000",
+      "uuid": "M_5_DT_26",
+      "spindles": 1,
+      "axes": 3
+    },
+    {
+      "id": "M_6_SR_21",
+      "name": "SR-21",
+      "ip": "192.168.1.106",
+      "port": 5000,
+      "type": "FANUC",
+      "mtconnectAgentUrl": "http://192.168.1.106:5000",
+      "uuid": "M_6_SR_21",
+      "spindles": 1,
+      "axes": 3
+    },
+    {
+      "id": "M_7_SR_23",
+      "name": "SR-23",
+      "ip": "192.168.1.107",
+      "port": 5000,
+      "type": "FANUC",
+      "mtconnectAgentUrl": "http://192.168.1.107:5000",
+      "uuid": "M_7_SR_23",
+      "spindles": 1,
+      "axes": 3
+    },
+    {
+      "id": "M_8_SR_25",
+      "name": "SR-25",
+      "ip": "192.168.1.108",
+      "port": 5000,
+      "type": "FANUC",
+      "mtconnectAgentUrl": "http://192.168.1.108:5000",
+      "uuid": "M_8_SR_25",
+      "spindles": 1,
+      "axes": 3
+    }
+  ]
+} 
