@@ -1,0 +1,1 @@
+console.log('Checking Railway API...'); fetch('https://mtconnect-core-production.up.railway.app/machines').then(r => r.json()).then(data => { console.log('Machines:', data.length); data.forEach(m => console.log(m.name + ': ' + m.status)); }).catch(e => console.error('Error:', e));
