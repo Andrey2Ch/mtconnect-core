@@ -8,17 +8,24 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
+const mongoose_1 = require("@nestjs/mongoose");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
-const edge_data_controller_1 = require("./edge-data/edge-data.controller");
+const external_api_controller_1 = require("./controllers/external-api.controller");
+const machine_data_schema_1 = require("./schemas/machine-data.schema");
+const sanitization_service_1 = require("./services/sanitization.service");
+const winston_logger_service_1 = require("./services/winston-logger.service");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [],
-        controllers: [app_controller_1.AppController, edge_data_controller_1.EdgeDataController],
-        providers: [app_service_1.AppService],
+        imports: [
+            mongoose_1.MongooseModule.forRoot(process.env.MONGODB_URI || "mongodb://localhost:27017/mtconnect"),
+            mongoose_1.MongooseModule.forFeature([{ name: machine_data_schema_1.MachineData.name, schema: machine_data_schema_1.MachineDataSchema }])
+        ],
+        controllers: [app_controller_1.AppController, external_api_controller_1.ExternalApiController],
+        providers: [app_service_1.AppService, sanitization_service_1.SanitizationService, winston_logger_service_1.WinstonLoggerService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map
