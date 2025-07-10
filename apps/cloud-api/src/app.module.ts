@@ -8,7 +8,6 @@ import { ExternalApiController } from './controllers/external-api.controller';
 import { MachineData, MachineDataSchema } from './schemas/machine-data.schema';
 import { SanitizationService } from './services/sanitization.service';
 import { WinstonLoggerService } from './services/winston-logger.service';
-import { MetricsService } from './services/metrics.service';
 
 @Module({
   imports: [
@@ -20,6 +19,6 @@ import { MetricsService } from './services/metrics.service';
     }]),
   ],
   controllers: [AppController, EdgeDataController, ExternalApiController],
-  providers: [AppService, SanitizationService, WinstonLoggerService, MetricsService],
+  providers: [AppService, SanitizationService, WinstonLoggerService],
 })
 export class AppModule {}
