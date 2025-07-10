@@ -56,7 +56,7 @@ export class AppController {
   @Get('/machines')
   async getMachines() {
     try {
-      console.log(' Получаю данные машин из MongoDB...');
+      console.log('📊 Получаю данные машин из MongoDB...');
       
       // Получаем последние данные для каждой машины
       const latestData = await this.machineDataModel.aggregate([
@@ -71,7 +71,7 @@ export class AppController {
         }
       ]);
 
-      console.log(`Найдено ${latestData.length} машин в базе данных`);
+      console.log(`📊 Найдено ${latestData.length} машин в базе данных`);
 
       // Читаем конфигурацию для получения полной информации о машинах
       const configPaths = [
@@ -93,7 +93,7 @@ export class AppController {
         throw new Error('Конфигурационный файл не найден');
       }
 
-      console.log(`Используем config.json из: ${configPath}`);
+      console.log(`⚙️ Используем config.json из: ${configPath}`);
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
       // Создаем Map для быстрого поиска конфигурации
@@ -118,7 +118,7 @@ export class AppController {
         const timeDiff = now.getTime() - lastUpdate.getTime();
         const isOnline = timeDiff < onlineThreshold;
 
-        console.log(`${machineId}: последнее обновление ${lastUpdate.toISOString()}, разница ${timeDiff}мс, статус: ${isOnline ? 'online' : 'offline'}`);
+        console.log(`🔍 ${machineId}: последнее обновление ${lastUpdate.toISOString()}, разница ${timeDiff}мс, статус: ${isOnline ? 'online' : 'offline'}`);
 
         // Проверяем, это MTConnect или ADAM машина
         if (record.data.adamData) {
@@ -181,11 +181,11 @@ export class AppController {
         }
       };
 
-      console.log(`Возвращаю данные: ${result.summary.total} машин (${result.summary.mtconnect.online + result.summary.adam.online} online)`);
+      console.log(`✅ Возвращаю данные: ${result.summary.total} машин (${result.summary.mtconnect.online + result.summary.adam.online} online)`);
       return result;
 
     } catch (error) {
-      console.error(' Ошибка получения данных машин:', error);
+      console.error('❌ Ошибка получения данных машин:', error);
       return {
         timestamp: new Date().toISOString(),
         error: error.message,
