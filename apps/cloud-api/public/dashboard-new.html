@@ -246,7 +246,7 @@
         </div>
 
         <div class="api-info">
-            <strong>🔗 API URL:</strong> http://localhost:3001/machines
+            <strong>🔗 API URL:</strong> https://mtconnect-core-production.up.railway.app/machines
         </div>
 
         <div class="summary">
@@ -442,7 +442,7 @@
                 console.log('📡 Отправляем запрос к API...');
                 
                 // Используем абсолютный URL для API
-                const apiUrl = 'http://localhost:3001/machines';
+                const apiUrl = 'https://mtconnect-core-production.up.railway.app/machines';
                 const timestamp = new Date().getTime();
                 
                 const response = await fetch(`${apiUrl}?cache=${timestamp}`, {
