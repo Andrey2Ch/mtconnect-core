@@ -781,6 +781,7 @@ app.get('/api/adam/counters', async (req, res) => {
 // Переменная для контроля частоты отправки Adam данных
 let lastAdamSendTime = 0;
 const ADAM_SEND_COOLDOWN = 5000; // 5 секунд между отправками Adam данных
+let firstAdamSendDone = false; // Флаг для принудительной первой отправки
 
 // Функция для получения Adam счётчиков
 async function getAdamCounters() {
@@ -792,10 +793,14 @@ async function getAdamCounters() {
         if (counters.length > 0) {
             const now = Date.now();
             
-            // Проверяем cooldown
-            if (now - lastAdamSendTime < ADAM_SEND_COOLDOWN) {
+            // Проверяем cooldown (НО ТОЛЬКО ПОСЛЕ ПЕРВОЙ ОТПРАВКИ!)
+            if (firstAdamSendDone && now - lastAdamSendTime < ADAM_SEND_COOLDOWN) {
                 console.log(`⏳ Пропуск отправки Adam данных (cooldown: ${Math.round((ADAM_SEND_COOLDOWN - (now - lastAdamSendTime)) / 1000)}с)`);
                 return counters;
+            }
+            
+            if (!firstAdamSendDone) {
+                console.log(`🚀 ПЕРВАЯ ОТПРАВКА ADAM ДАННЫХ - пропускаем cooldown!`);
             }
             
             const adamDataBatch = [];
@@ -903,6 +908,7 @@ async function getAdamCounters() {
                 }
                 
                 lastAdamSendTime = now; // Обновляем время последней отправки
+                firstAdamSendDone = true; // Отмечаем что первая отправка выполнена
                 railwayClient.sendDataBatch(batchData);
                 console.log(`📊 Adam данные подготовлены и отправлены в Railway как batch (${batchData.data.length} машин)`);
             }

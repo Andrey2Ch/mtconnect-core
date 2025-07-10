@@ -131,7 +131,7 @@ export class AppController {
             port: 502,
             type: 'ADAM-6050 Counter',
             status: isOnline ? 'online' : 'offline',
-            count: record.data.adamData.analogData?.['Counter (32-bit)'] || 0,
+            count: record.data.adamData.analogData?.['count'] || 0,
             lastUpdate: lastUpdate.toISOString(),
             confidence: record.data.adamData.confidence || 'unknown'
           });
