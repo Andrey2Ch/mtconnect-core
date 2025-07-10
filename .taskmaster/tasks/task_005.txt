@@ -1,0 +1,50 @@
+# Task ID: 5
+# Title: Implement MTConnect XML Parser Service
+# Status: done
+# Dependencies: 3, 4
+# Priority: high
+# Description: Create a service to parse MTConnect XML data into structured JavaScript objects.
+# Details:
+1. Create src/services/mtconnect-parser.ts
+2. Implement a class that uses xml2js to parse MTConnect XML data:
+```typescript
+export class MTConnectParser {
+  private parser: xml2js.Parser;
+  private logger: Logger;
+
+  constructor(logger: Logger) {
+    this.parser = new xml2js.Parser({ explicitArray: true });
+    this.logger = logger;
+  }
+
+  async parseCurrentData(xmlData: string): Promise<MTConnectStreams | null> {
+    if (!xmlData) return null;
+    
+    try {
+      const result = await this.parser.parseStringPromise(xmlData);
+      return result as MTConnectStreams;
+    } catch (error) {
+      this.logger.error(`Error parsing MTConnect data: ${error.message}`);
+      return null;
+    }
+  }
+
+  async parseProbeData(xmlData: string): Promise<any | null> {
+    // Similar to parseCurrentData but for probe data
+    if (!xmlData) return null;
+    
+    try {
+      const result = await this.parser.parseStringPromise(xmlData);
+      return result; // Define appropriate interface for probe data
+    } catch (error) {
+      this.logger.error(`Error parsing MTConnect probe data: ${error.message}`);
+      return null;
+    }
+  }
+}
+```
+3. Add helper methods to extract specific data items (Execution, PartCount, Program, Block)
+4. Implement error handling for malformed XML
+
+# Test Strategy:
+Test parsing with sample MTConnect XML data. Verify the parser can handle different XML structures. Test error handling with malformed XML data.

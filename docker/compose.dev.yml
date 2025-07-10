@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # MQTT Broker
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: mtconnect-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+    networks:
+      - mtconnect-network
+
+  # MongoDB (если нужен отдельный контейнер)
+  mongodb:
+    image: mongo:7.0
+    container_name: mtconnect-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: mtconnect
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    networks:
+      - mtconnect-network
+
+  # Edge Gateway
+  edge-gateway:
+    build:
+      context: ../
+      dockerfile: apps/edge-gateway/Dockerfile
+    container_name: mtconnect-edge-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - MQTT_BROKER_URL=mqtt://mosquitto:1883
+      - EDGE_GATEWAY_ID=MTConnect-Edge-1
+    volumes:
+      - ../apps/edge-gateway/src:/app/src
+      - ../packages/common-dto/src:/app/packages/common-dto/src
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+    networks:
+      - mtconnect-network
+
+  # Cloud Consumer
+  cloud-consumer:
+    build:
+      context: ../
+      dockerfile: apps/cloud-consumer/Dockerfile
+    container_name: mtconnect-cloud-consumer
+    environment:
+      - NODE_ENV=development
+      - MQTT_BROKER_URL=mqtt://mosquitto:1883
+      - MONGODB_URL=mongodb://admin:password@mongodb:27017/mtconnect?authSource=admin
+    volumes:
+      - ../apps/cloud-consumer/src:/app/src
+      - ../packages/common-dto/src:/app/packages/common-dto/src
+    depends_on:
+      - mosquitto
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - mtconnect-network
+
+  # Cloud API
+  cloud-api:
+    build:
+      context: ../
+      dockerfile: apps/cloud-api/Dockerfile
+    container_name: mtconnect-cloud-api
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URL=mongodb://admin:password@mongodb:27017/mtconnect?authSource=admin
+      - API_KEY=edge-gateway-api-key
+    volumes:
+      - ../apps/cloud-api/src:/app/src
+      - ../packages/common-dto/src:/app/packages/common-dto/src
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+    networks:
+      - mtconnect-network
+
+  # Dashboard
+  dashboard:
+    build:
+      context: ../
+      dockerfile: apps/dashboard/Dockerfile
+    container_name: mtconnect-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:3001
+      - VITE_WS_URL=ws://localhost:3001
+    volumes:
+      - ../apps/dashboard/src:/app/src
+    depends_on:
+      - cloud-api
+    restart: unless-stopped
+    networks:
+      - mtconnect-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  mtconnect-network:
+    driver: bridge 

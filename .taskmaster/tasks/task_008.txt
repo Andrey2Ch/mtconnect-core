@@ -1,0 +1,42 @@
+# Task ID: 8
+# Title: Implement Program Name Extractor
+# Status: done
+# Dependencies: 5, 6
+# Priority: medium
+# Description: Create functionality to extract program names from Block or Program data items, prioritizing Block.
+# Details:
+1. Create src/services/program-name-extractor.ts
+2. Implement a class to extract program names:
+```typescript
+export class ProgramNameExtractor {
+  private logger: Logger;
+
+  constructor(logger: Logger) {
+    this.logger = logger;
+  }
+
+  extractProgramName(blockValue: string | null, programValue: string | null): string {
+    // Try to extract from Block first
+    if (blockValue) {
+      const blockMatch = blockValue.match(/O\d+\(([^)]+)\)/);
+      if (blockMatch && blockMatch[1]) {
+        return blockMatch[1]; // Return the content inside parentheses
+      }
+    }
+    
+    // Fallback to Program value
+    if (programValue) {
+      // Remove file path if present, keep only filename
+      const programName = programValue.split(/[\\\/]/).pop() || programValue;
+      return programName;
+    }
+    
+    return ''; // No program name found
+  }
+}
+```
+3. Add methods to extract Block and Program values from MTConnect data
+4. Integrate with the data processing pipeline
+
+# Test Strategy:
+Test extraction with various Block formats (e.g., 'O0044(125-325)', 'O1234(PART-XYZ)'). Test fallback to Program value when Block is not informative. Test handling of edge cases like empty or malformed values.

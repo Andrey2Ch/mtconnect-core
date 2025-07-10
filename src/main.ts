@@ -937,12 +937,28 @@ process.on('SIGTERM', gracefulShutdown);
 
 // Main async function
 async function main() {
-    try {
-        await startServer();
-    } catch (error) {
-        console.error("❌ Критическая ошибка при запуске приложения:", error);
-        process.exit(1);
-    }
+    console.log('🚀 Запуск основного цикла сбора данных...');
+    
+    // Запускаем веб-сервер
+    await startServer();
+    
+    // Периодический сбор данных каждые 5 секунд
+    setInterval(async () => {
+        try {
+            console.log('🔄 Периодический сбор данных с машин...');
+            
+            // Читаем MTConnect данные
+            await generateMTConnectXML();
+            
+            // Читаем Adam данные
+            await getAdamCounters();
+            
+        } catch (error: any) {
+            console.error('❌ Ошибка при периодическом сборе данных:', error.message);
+        }
+    }, 5000); // 5 секунд
+    
+    console.log('✅ Основной цикл запущен');
 }
 
 function findExecutionStatusRecursive(components: any[] | undefined): string | null {

@@ -1,0 +1,102 @@
+# Task ID: 3
+# Title: Create JSON Mapper for ADAM-6050 Data Transformation
+# Status: pending
+# Dependencies: 1, 2
+# Priority: medium
+# Description: Develop a JSON mapper to transform ADAM-6050 data from 16-bit digital inputs/outputs into a structured format with TypeScript interfaces.
+# Details:
+1. Create a new file `src/AdamDataMapper.ts` to implement the JSON mapper:
+
+```typescript
+interface AdamData {
+  timestamp: number;
+  moduleId: string;
+  machineId: string;
+  digitalInputs: number[];
+  digitalOutputs: number[];
+  status: 'online' | 'offline';
+}
+
+class AdamDataMapper {
+  static mapData(rawData: number[], moduleId: string, machineId: string): AdamData {
+    const digitalInputs = this.extractBits(rawData[0]);
+    const digitalOutputs = this.extractBits(rawData[1]);
+
+    return {
+      timestamp: Date.now(),
+      moduleId,
+      machineId,
+      digitalInputs,
+      digitalOutputs,
+      status: 'online'
+    };
+  }
+
+  private static extractBits(value: number): number[] {
+    return Array.from({length: 16}, (_, i) => (value >> i) & 1);
+  }
+}
+
+export { AdamData, AdamDataMapper };
+```
+
+2. Update `src/AdamClient.ts` to use the new mapper:
+
+```typescript
+import { AdamDataMapper, AdamData } from './AdamDataMapper';
+
+class AdamClient {
+  // ... existing code ...
+
+  async readData(): Promise<AdamData> {
+    const inputs = await this.readDigitalInputs();
+    const outputs = await this.readDigitalOutputs();
+    return AdamDataMapper.mapData([inputs, outputs], this.moduleId, this.machineId);
+  }
+
+  // ... existing code ...
+}
+```
+
+3. Create a new file `src/types.ts` for additional TypeScript interfaces:
+
+```typescript
+export interface RawAdamData {
+  digitalInputs: number;
+  digitalOutputs: number;
+}
+
+export interface AdamConfig {
+  ip: string;
+  port: number;
+  moduleId: string;
+  machineId: string;
+}
+```
+
+4. Update other parts of the application to use these new interfaces and the mapper where appropriate.
+
+# Test Strategy:
+1. Unit Testing:
+   - Create unit tests for the AdamDataMapper class in `tests/AdamDataMapper.test.ts`:
+     - Test the mapData method with various input combinations
+     - Verify correct extraction of bits from 16-bit integers
+     - Ensure timestamp, moduleId, machineId, and status are set correctly
+   - Use Jest for running tests: `npm test`
+
+2. Integration Testing:
+   - Update the AdamClient tests to include the new readData method
+   - Verify that the AdamClient correctly uses the AdamDataMapper
+
+3. End-to-End Testing:
+   - Create a test script that connects to a real or simulated ADAM-6050 device
+   - Read data and verify the output matches the expected JSON structure
+   - Test with different input/output combinations to ensure correct mapping
+
+4. Type Checking:
+   - Run TypeScript compiler in strict mode to ensure type safety
+   - Verify no type errors are present in the codebase
+
+5. Code Review:
+   - Conduct a thorough code review to ensure the mapper adheres to project coding standards
+   - Check for proper error handling and edge cases

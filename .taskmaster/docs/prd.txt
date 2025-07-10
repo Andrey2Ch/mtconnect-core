@@ -1,87 +1,91 @@
-# MTConnect Data Aggregation and Monitoring System - Product Requirements Document
+# MTConnect System Refactoring PRD
 
-## 1. Project Overview
-This project aims to develop a system for monitoring FANUC CNC machines by aggregating data from existing external MTConnect agents. The system will feature a Node.js backend for data collection, processing (including cycle time calculation and status tracking), and a web-based dashboard for real-time visualization.
+## Цель проекта
+Рефакторинг существующей MTConnect системы из двух независимых проектов (локальный Express сборщик + облачный NestJS API) в единую monorepo архитектуру с MQTT message bus.
 
-## 2. Business Goals
-- Monitor multiple FANUC CNC machines (starting with XD-20, extendable to others).
-- Utilize existing external MTConnect C++ agents (`fanuc_0id.exe` adapter and `agent.exe` server per machine).
-- Develop a Node.js backend to:
-    - Aggregate data from individual MTConnect agent instances.
-    - Calculate and log cycle times based on `PartCount`.
-    - Track and log machine `Execution` status changes.
-    - Correctly identify and display the active program name (prioritizing `Block` over `Program` data item).
-- Provide a simple web dashboard for real-time operational overview.
-- Achieve a robust and maintainable solution for machine data monitoring.
+## Текущие проблемы
+1. **Два параллельных Dashboard**: локальный (порт 5000) и облачный (порт 3001) с разными источниками данных
+2. **Разные контракты данных**: Express отправляет минимальный JSON, NestJS ожидает богатый вложенный формат
+3. **Нет единого процесса разработки**: DEV ≠ PROD окружения
+4. **Захламлённый репозиторий**: тестовые файлы, бинарники, дубликаты кода
+5. **Процессы node.js висят**: нет процесс-менеджера, порты заняты
 
-## 3. Technical Requirements
+## Целевая архитектура
+- **Edge Gateway** (NestJS): сбор данных с MTConnect + Adam-6050, публикация в MQTT
+- **Message Bus** (MQTT/Mosquitto): буферизация и доставка сообщений
+- **Cloud Consumer** (NestJS): подписка на MQTT, валидация, запись в MongoDB
+- **Cloud API** (NestJS): REST/GraphQL endpoints, MTConnect XML export
+- **Dashboard** (SPA): единый фронтенд, читает только Cloud API
+- **Common DTO**: общий пакет с TypeScript моделями и валидацией
 
-### 3.1. Core Components
-1.  **Node.js Data Aggregator & Processor (Backend)**
-    *   HTTP client to periodically fetch XML data from multiple MTConnect agent URLs (e.g., `http://localhost:5001/current`).
-    *   Efficient XML parsing (`xml2js`) for MTConnectStreams data.
-    *   Logic to combine/process data streams from configured machines.
-    *   State management for `PartCount` (for cycle time calculation) and `Execution` status (for change logging) per machine.
-    *   Cycle time calculation:
-        - Detect `PartCount` increments.
-        - Calculate duration between increments.
-        - Log cycle time information, including parts produced and average time.
-    *   Program name identification:
-        - Extract program name from `Block` (e.g., "125-325" from "O0044(125-325)").
-        - Fallback to `Program` data item if `Block` is not informative.
-    *   REST API endpoint (e.g., `/current`) to serve aggregated and processed data to the frontend.
-    *   REST API endpoint (e.g., `/probe`) to serve aggregated device information.
-    *   Robust error handling for agent unavailability or invalid data, providing "UNAVAILABLE" status.
-    *   Clear console logging for machine status changes, cycle completions, and errors.
+## Технический стек
+- **Monorepo**: pnpm workspaces или Nx
+- **Backend**: NestJS microservices
+- **Message Bus**: Eclipse Mosquitto (MQTT v5)
+- **Database**: MongoDB (уже запущен в Docker)
+- **Frontend**: React/Vue SPA
+- **DevOps**: Docker Compose, GitHub Actions
+- **Observability**: Prometheus + Grafana
 
-2.  **Web Dashboard (Frontend)**
-    *   Client-side JavaScript to fetch data from the Node.js backend's `/current` and `/probe` endpoints.
-    *   Dynamic HTML table to display data for each configured machine:
-        - Machine Name, Manufacturer, Model, IP Address (from config).
-        - Execution Status (e.g., ACTIVE, STOPPED, READY).
-        - Current Program Name (formatted as per backend logic).
-        - Part Count.
-        - (Future) Last cycle time, average cycle time.
-    *   Regular data refresh to provide a near real-time view.
-    *   Clear indication of offline/unavailable machines.
+## Этапы выполнения
 
-3.  **Configuration**
-    *   Server-side configuration (`src/main.ts` or separate config file) for `FANUC_MACHINES` array:
-        - `id` (matching agent `uuid`), `name`, `ip`, `mtconnectAgentUrl`.
+### Этап 1: Подготовка (День 1)
+- Аудит и чистка кодовой базы
+- Создание monorepo структуры
+- Миграция существующих проектов
+- Docker Compose для разработки
 
-### 3.2. Target Machines & Agent Setup
--   Initial focus: XD-20 (ID: `002`)
-    -   `fanuc_0id.exe` listens on a unique port (e.g., `7701`) connecting to XD-20 (e.g., `192.168.1.105`).
-    -   `agent.exe` (MTConnect server) listens on a unique port (e.g., `5001`), configured to use the above `fanuc_0id.exe` instance.
-    -   Node.js backend connects to `http://localhost:5001/current`.
--   Extendable to other machines (SR-10, SR-21, etc.) by replicating the agent setup on unique ports and adding corresponding entries to the Node.js backend configuration.
+### Этап 2: Общие компоненты (День 2-3)
+- Создание packages/common-dto
+- Настройка MQTT брокера
+- Базовые Dockerfile для сервисов
 
-### 3.3. Technology Stack
--   **Backend:** Node.js, TypeScript, Express.js
--   **Frontend:** HTML, JavaScript (vanilla), CSS
--   **Data Format:** XML (MTConnect), JSON (for internal API)
--   **Development Environment:** Windows
+### Этап 3: Edge Gateway рефакторинг (День 4-5)
+- Переписать Express на NestJS microservice
+- Интеграция с MQTT publisher
+- Миграция логики сбора данных
 
-## 4. Success Criteria
-1.  Node.js server successfully fetches and parses data from the XD-20's external MTConnect agent.
-2.  Cycle time for XD-20 is correctly calculated and logged upon `PartCount` increase.
-3.  Changes in XD-20's `Execution` status are correctly logged with timestamps.
-4.  Program name for XD-20 is displayed as extracted from `Block` (e.g., "125-325") if available, otherwise from `Program`.
-5.  Web dashboard accurately displays real-time data (status, program, part count) for XD-20.
-6.  System gracefully handles unavailability of the MTConnect agent for XD-20.
-7.  The setup is documented sufficiently to allow adding and monitoring additional machines.
+### Этап 4: Cloud Consumer (День 6-7)
+- Создание MQTT subscriber сервиса
+- Валидация и обработка сообщений
+- Запись в MongoDB
 
-## 5. Project Phases (Reflecting Current State)
-1.  **Phase 1 (Completed):** Initial setup of Node.js server and basic dashboard.
-2.  **Phase 2 (Completed):** Integration with external MTConnect agent for one machine (XD-20).
-3.  **Phase 3 (Completed):** Implementation of `PartCount`-based cycle time calculation and logging.
-4.  **Phase 4 (In Progress):** Refinement of `Execution` status logging and program name display logic.
-5.  **Phase 5 (Current/Next):** Enhancement of web dashboard for clarity and to display all key processed data.
-6.  **Phase 6 (Future):** Documentation and rollout for monitoring additional machines.
-7.  **Phase 7 (Future):** Long-term data storage and historical analysis (optional).
+### Этап 5: Cloud API обновление (День 8-9)
+- Удаление ingestion логики
+- Оптимизация read-only endpoints
+- MTConnect XML exporter как отдельный сервис
 
-## 6. Constraints & Assumptions
--   Reliable network connectivity to CNC machines and the machine hosting the MTConnect agents.
--   `fanuc_0id.exe` and `agent.exe` are pre-existing, functional, and can be configured per machine.
--   The Node.js application and MTConnect agents run on the same local network or have L2/L3 connectivity.
--   Sufficient performance of the Node.js application to handle data from all configured machines (currently 8 planned). 
+### Этап 6: Dashboard унификация (День 10-11)
+- Единый SPA фронтенд
+- WebSocket для real-time данных
+- Удаление дублирующих dashboard
+
+### Этап 7: DevOps и мониторинг (День 12-13)
+- CI/CD pipeline
+- Prometheus метрики
+- Grafana дашборды
+- Health checks
+
+### Этап 8: Финализация (День 14)
+- Документация
+- Канареечное тестирование
+- Удаление legacy кода
+
+## Критерии успеха
+1. **Единый источник истины**: все данные идут через MQTT → MongoDB
+2. **Воспроизводимое окружение**: `npm run start:dev` запускает полный стек
+3. **Чистый репозиторий**: только необходимый код, без дубликатов
+4. **Масштабируемость**: легко добавить новые Edge станции
+5. **Observability**: метрики, логи, health checks
+
+## Технические требования
+- Node.js 18+ 
+- Docker и Docker Compose
+- MongoDB (уже настроен)
+- Windows PowerShell совместимость
+- Backward compatibility во время миграции
+
+## Риски и митигация
+- **Потеря данных**: канареечный период с дублированием
+- **Downtime**: поэтапная миграция без остановки production
+- **Сложность**: начинаем с простых компонентов, постепенно усложняем 

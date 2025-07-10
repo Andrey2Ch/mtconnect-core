@@ -1,0 +1,74 @@
+# Task ID: 6
+# Title: Implement Machine State Manager Service
+# Status: done
+# Dependencies: 3, 5
+# Priority: high
+# Description: Create a service to track and manage machine state, including execution status and part count.
+# Details:
+1. Create src/services/machine-state-manager.ts
+2. Implement a class to track machine state:
+```typescript
+export class MachineStateManager {
+  private machineStates: Map<string, MachineStatus>;
+  private logger: Logger;
+
+  constructor(machines: MachineConfig[], logger: Logger) {
+    this.machineStates = new Map();
+    this.logger = logger;
+    
+    // Initialize machine states
+    machines.forEach(machine => {
+      this.machineStates.set(machine.id, {
+        id: machine.id,
+        name: machine.name,
+        ip: machine.ip,
+        manufacturer: machine.manufacturer,
+        model: machine.model,
+        status: 'UNAVAILABLE',
+        programName: '',
+        partCount: 0,
+        lastUpdated: new Date()
+      });
+    });
+  }
+
+  getMachineState(machineId: string): MachineStatus | undefined {
+    return this.machineStates.get(machineId);
+  }
+
+  getAllMachineStates(): MachineStatus[] {
+    return Array.from(this.machineStates.values());
+  }
+
+  updateMachineState(machineId: string, updates: Partial<MachineStatus>): void {
+    const currentState = this.machineStates.get(machineId);
+    if (!currentState) return;
+
+    // Check for status change
+    if (updates.status && updates.status !== currentState.status) {
+      this.logger.info(`Machine ${currentState.name} status changed from ${currentState.status} to ${updates.status}`);
+    }
+
+    // Check for part count change
+    if (updates.partCount && updates.partCount > currentState.partCount) {
+      this.handlePartCountIncrement(machineId, currentState.partCount, updates.partCount);
+    }
+
+    // Update state
+    this.machineStates.set(machineId, {
+      ...currentState,
+      ...updates,
+      lastUpdated: new Date()
+    });
+  }
+
+  private handlePartCountIncrement(machineId: string, oldCount: number, newCount: number): void {
+    // Implementation for cycle time calculation will be added in Task 7
+  }
+}
+```
+3. Add methods to update machine state based on parsed MTConnect data
+4. Implement logging for state changes
+
+# Test Strategy:
+Test state initialization with sample machine configurations. Verify state updates work correctly. Test state retrieval methods.

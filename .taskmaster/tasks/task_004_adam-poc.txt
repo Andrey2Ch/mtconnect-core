@@ -1,0 +1,160 @@
+# Task ID: 4
+# Title: Create HTTP Client with Outbox Pattern for Cloud API Communication
+# Status: pending
+# Dependencies: 1, 2, 3
+# Priority: medium
+# Description: Develop an HTTP client to send data packets to the Cloud API, implementing the Outbox pattern with message buffering, batch sending, and retry logic.
+# Details:
+1. Create a new file `src/CloudApiClient.ts` and implement the CloudApiClient class:
+
+```typescript
+import axios, { AxiosInstance } from 'axios';
+
+interface QueueItem {
+  data: any;
+  timestamp: number;
+}
+
+class CloudApiClient {
+  private axios: AxiosInstance;
+  private queue: QueueItem[] = [];
+  private sendInterval: NodeJS.Timeout | null = null;
+  private offlineQueue: QueueItem[] = [];
+
+  constructor(private endpoint: string, private batchSize: number = 50, private intervalMs: number = 5000) {
+    this.axios = axios.create({
+      baseURL: this.endpoint,
+      timeout: 10000,
+    });
+  }
+
+  public addToQueue(data: any): void {
+    this.queue.push({ data, timestamp: Date.now() });
+  }
+
+  public startSending(): void {
+    this.sendInterval = setInterval(() => this.sendBatch(), this.intervalMs);
+  }
+
+  public stopSending(): void {
+    if (this.sendInterval) {
+      clearInterval(this.sendInterval);
+    }
+  }
+
+  private async sendBatch(): Promise<void> {
+    const batch = this.queue.splice(0, this.batchSize);
+    if (batch.length === 0) return;
+
+    try {
+      await this.axios.post('/data', batch);
+    } catch (error) {
+      console.error('Error sending batch:', error);
+      await this.handleSendError(batch);
+    }
+  }
+
+  private async handleSendError(batch: QueueItem[]): Promise<void> {
+    // Implement exponential backoff retry logic
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+        await this.axios.post('/data', batch);
+        return;
+      } catch (error) {
+        console.error(`Retry attempt ${attempt} failed:`, error);
+      }
+    }
+    // If all retries fail, add to offline queue
+    this.offlineQueue.push(...batch);
+  }
+
+  public async sendOfflineQueue(): Promise<void> {
+    while (this.offlineQueue.length > 0) {
+      const batch = this.offlineQueue.splice(0, this.batchSize);
+      try {
+        await this.axios.post('/data', batch);
+      } catch (error) {
+        console.error('Error sending offline queue:', error);
+        this.offlineQueue.unshift(...batch);
+        break;
+      }
+    }
+  }
+}
+
+export default CloudApiClient;
+```
+
+2. Update `src/index.ts` to use the CloudApiClient:
+
+```typescript
+import CloudApiClient from './CloudApiClient';
+import AdamClient from './AdamClient';
+import AdamDataMapper from './AdamDataMapper';
+
+const cloudApiClient = new CloudApiClient('https://railway-api.up.railway.app/api/ext');
+const adamClient = new AdamClient('192.168.1.100', 502);
+
+cloudApiClient.startSending();
+
+setInterval(async () => {
+  try {
+    const rawData = await adamClient.readDigitalInputs();
+    const mappedData = AdamDataMapper.mapData(rawData, 'ADAM-6050-1', 'MACHINE-001');
+    cloudApiClient.addToQueue(mappedData);
+  } catch (error) {
+    console.error('Error reading ADAM-6050 data:', error);
+  }
+}, 1000);
+
+// Handle application shutdown
+process.on('SIGINT', () => {
+  cloudApiClient.stopSending();
+  cloudApiClient.sendOfflineQueue().then(() => process.exit(0));
+});
+```
+
+3. Install required dependencies:
+```
+npm install axios
+```
+
+4. Update `tsconfig.json` to include:
+```json
+{
+  "compilerOptions": {
+    // ... other options ...
+    "esModuleInterop": true
+  }
+}
+```
+
+# Test Strategy:
+1. Unit Testing:
+   - Create a new file `tests/CloudApiClient.test.ts` for unit tests.
+   - Test the `addToQueue` method to ensure it correctly adds items to the queue.
+   - Mock axios and test the `sendBatch` method to verify correct batch sending.
+   - Test the retry logic in `handleSendError` by mocking failed requests.
+   - Verify that the offline queue is used when all retries fail.
+
+2. Integration Testing:
+   - Set up a mock server to simulate the Cloud API endpoint.
+   - Test the complete flow from adding items to the queue to successful batch sending.
+   - Simulate network errors and verify the retry and offline queue mechanisms.
+
+3. Performance Testing:
+   - Test the client with a high volume of data to ensure it can handle the load.
+   - Verify that batches are sent every 5 seconds and contain no more than 50 items.
+
+4. Error Handling and Recovery Testing:
+   - Simulate various network conditions (disconnections, timeouts) to test the robustness of the client.
+   - Verify that the offline queue can be successfully sent when the connection is restored.
+
+5. End-to-End Testing:
+   - Integrate the CloudApiClient with the AdamClient and AdamDataMapper.
+   - Verify that data flows correctly from the ADAM-6050 device through to the Cloud API.
+
+6. Code Review:
+   - Ensure the implementation follows TypeScript best practices and coding standards.
+   - Verify error handling, logging, and overall code structure.

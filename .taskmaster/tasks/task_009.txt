@@ -1,0 +1,100 @@
+# Task ID: 9
+# Title: Implement Data Processor Service
+# Status: done
+# Dependencies: 5, 6, 7, 8
+# Priority: high
+# Description: Create a service to process MTConnect data, update machine states, and calculate derived values.
+# Details:
+1. Create src/services/data-processor.ts
+2. Implement a class to process MTConnect data:
+```typescript
+export class DataProcessor {
+  private parser: MTConnectParser;
+  private stateManager: MachineStateManager;
+  private programExtractor: ProgramNameExtractor;
+  private logger: Logger;
+
+  constructor(
+    parser: MTConnectParser,
+    stateManager: MachineStateManager,
+    programExtractor: ProgramNameExtractor,
+    logger: Logger
+  ) {
+    this.parser = parser;
+    this.stateManager = stateManager;
+    this.programExtractor = programExtractor;
+    this.logger = logger;
+  }
+
+  async processCurrentData(machineConfig: MachineConfig, xmlData: string | null): Promise<void> {
+    if (!xmlData) {
+      this.stateManager.updateMachineState(machineConfig.id, { status: 'UNAVAILABLE' });
+      return;
+    }
+
+    try {
+      const parsedData = await this.parser.parseCurrentData(xmlData);
+      if (!parsedData) {
+        this.stateManager.updateMachineState(machineConfig.id, { status: 'UNAVAILABLE' });
+        return;
+      }
+
+      // Find the device stream for this machine
+      const deviceStream = parsedData.MTConnectStreams.Streams.DeviceStream.find(
+        stream => stream.$.uuid === machineConfig.id
+      );
+
+      if (!deviceStream) {
+        this.logger.warn(`No device stream found for machine ${machineConfig.name}`);
+        this.stateManager.updateMachineState(machineConfig.id, { status: 'UNAVAILABLE' });
+        return;
+      }
+
+      // Extract relevant data items
+      const executionValue = this.extractDataItemValue(deviceStream, 'execution');
+      const partCountValue = this.extractDataItemValue(deviceStream, 'part_count');
+      const blockValue = this.extractDataItemValue(deviceStream, 'block');
+      const programValue = this.extractDataItemValue(deviceStream, 'program');
+
+      // Process execution status
+      let status = 'UNAVAILABLE';
+      if (executionValue) {
+        switch (executionValue.toLowerCase()) {
+          case 'active': status = 'ACTIVE'; break;
+          case 'ready': status = 'READY'; break;
+          case 'stopped': status = 'STOPPED'; break;
+          default: status = executionValue.toUpperCase();
+        }
+      }
+
+      // Extract program name
+      const programName = this.programExtractor.extractProgramName(blockValue, programValue);
+
+      // Parse part count
+      const partCount = partCountValue ? parseInt(partCountValue, 10) : 0;
+
+      // Update machine state
+      this.stateManager.updateMachineState(machineConfig.id, {
+        status,
+        programName,
+        partCount: isNaN(partCount) ? 0 : partCount
+      });
+
+    } catch (error) {
+      this.logger.error(`Error processing data for ${machineConfig.name}: ${error.message}`);
+      this.stateManager.updateMachineState(machineConfig.id, { status: 'UNAVAILABLE' });
+    }
+  }
+
+  private extractDataItemValue(deviceStream: DeviceStream, dataItemId: string): string | null {
+    // Implementation to extract a specific data item value from the device stream
+    // This will search through component streams, events, and samples
+    // ...
+  }
+}
+```
+3. Implement the extractDataItemValue method to find specific data items in the MTConnect structure
+4. Add error handling for unexpected data formats
+
+# Test Strategy:
+Test processing with sample MTConnect data. Verify correct extraction of execution status, part count, and program name. Test handling of missing or malformed data items.

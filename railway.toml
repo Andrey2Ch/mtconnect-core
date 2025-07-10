@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-workingDirectory = "cloud-api/mtconnect-cloud"
+workingDirectory = "apps/cloud-api"
 
 [build.nixpacksConfig]
 install = "npm install"

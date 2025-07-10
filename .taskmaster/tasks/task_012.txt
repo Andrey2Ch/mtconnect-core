@@ -1,0 +1,63 @@
+# Task ID: 12
+# Title: Implement Frontend HTML Structure
+# Status: done
+# Dependencies: None
+# Priority: medium
+# Description: Create the HTML structure for the web dashboard.
+# Details:
+1. Create public/index.html
+2. Implement the basic HTML structure:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTConnect Data Aggregation and Monitoring System</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>MTConnect Machine Monitoring</h1>
+  </header>
+  
+  <main>
+    <section class="dashboard">
+      <h2>Machine Status Dashboard</h2>
+      <div class="refresh-info">
+        <span>Last updated: <span id="last-updated">Never</span></span>
+        <button id="refresh-button">Refresh Now</button>
+      </div>
+      <div class="table-container">
+        <table id="machine-table">
+          <thead>
+            <tr>
+              <th>Machine</th>
+              <th>Status</th>
+              <th>Program</th>
+              <th>Part Count</th>
+              <th>Last Cycle Time</th>
+              <th>Avg Cycle Time</th>
+            </tr>
+          </thead>
+          <tbody id="machine-data">
+            <!-- Machine data will be inserted here by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  
+  <footer>
+    <p>MTConnect Data Aggregation and Monitoring System</p>
+  </footer>
+  
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
+```
+3. Create public/css/styles.css for basic styling
+4. Add responsive design for different screen sizes
+
+# Test Strategy:
+Verify HTML structure renders correctly in different browsers. Test responsive design on different screen sizes. Ensure all elements have proper IDs for JavaScript interaction.

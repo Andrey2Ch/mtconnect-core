@@ -1,0 +1,70 @@
+# Task ID: 11
+# Title: Implement Main Application
+# Status: done
+# Dependencies: 4, 5, 6, 7, 8, 9, 10
+# Priority: high
+# Description: Create the main application file to initialize and connect all components.
+# Details:
+1. Create src/main.ts
+2. Implement the main application:
+```typescript
+import express from 'express';
+import path from 'path';
+import winston from 'winston';
+import { FANUC_MACHINES } from './config/machines';
+import { MTConnectFetcher } from './services/mtconnect-fetcher';
+import { MTConnectParser } from './services/mtconnect-parser';
+import { MachineStateManager } from './services/machine-state-manager';
+import { ProgramNameExtractor } from './services/program-name-extractor';
+import { DataProcessor } from './services/data-processor';
+import { ApiController } from './controllers/api-controller';
+
+// Configure logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ level, message, timestamp }) => {
+      return `${timestamp} ${level}: ${message}`;
+    })
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'app.log' })
+  ]
+});
+
+// Create application
+const app = express();
+const port = process.env.PORT || 3000;
+const pollingInterval = 5000; // 5 seconds
+
+// Initialize services
+const stateManager = new MachineStateManager(FANUC_MACHINES, logger);
+const fetcher = new MTConnectFetcher(FANUC_MACHINES, pollingInterval, logger);
+const parser = new MTConnectParser(logger);
+const programExtractor = new ProgramNameExtractor(logger);
+const dataProcessor = new DataProcessor(parser, stateManager, programExtractor, logger);
+
+// Set up API routes
+const apiController = new ApiController(stateManager);
+app.use('/api', apiController.getRouter());
+
+// Serve static files
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Start server
+app.listen(port, () => {
+  logger.info(`Server started on port ${port}`);
+});
+
+// Start data polling
+fetcher.startPolling(async (machine, data) => {
+  await dataProcessor.processCurrentData(machine, data);
+});
+```
+3. Add graceful shutdown handling
+4. Implement environment-specific configuration loading
+
+# Test Strategy:
+Test application startup and shutdown. Verify all components are correctly initialized and connected. Test with mock services to ensure proper integration.

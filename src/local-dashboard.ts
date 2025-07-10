@@ -107,7 +107,7 @@ async function sendToRailway(data: any[]) {
 
   try {
     const railwayData = {
-      edgeGatewayId: 'edge-gateway-local',
+      edgeGatewayId: localConfig.railway.edgeGatewayId || 'MTConnect-Edge-1',
       timestamp: new Date().toISOString(),
       data: data
     };
@@ -118,7 +118,7 @@ async function sendToRailway(data: any[]) {
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localConfig.railway.apiKey}`
+          'X-API-Key': localConfig.railway.apiKey
         },
         timeout: 5000
       }

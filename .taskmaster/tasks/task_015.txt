@@ -1,0 +1,31 @@
+# Task ID: 15
+# Title: Create Documentation and Deployment Guide
+# Status: pending
+# Dependencies: 11, 14
+# Priority: medium
+# Description: Create comprehensive documentation for the system, including setup, configuration, and extension for additional machines.
+# Details:
+1. Create README.md in the project root
+2. Document system architecture and components
+3. Provide installation instructions:
+   - Prerequisites (Node.js, npm)
+   - Installation steps
+   - Configuration options
+4. Document how to add additional machines:
+   - MTConnect agent setup (fanuc_0id.exe and agent.exe configuration)
+   - Node.js backend configuration
+5. Create a troubleshooting guide:
+   - Common issues and solutions
+   - Logging and debugging
+6. Document API endpoints and data formats
+7. Create a deployment guide:
+   - Development environment setup
+   - Production deployment options
+   - Security considerations
+8. Include a maintenance guide:
+   - Log rotation
+   - Backup procedures
+   - Monitoring recommendations
+
+# Test Strategy:
+Verify documentation accuracy by following the instructions on a clean system. Have a colleague review the documentation for clarity and completeness. Test the troubleshooting guide against common issues.

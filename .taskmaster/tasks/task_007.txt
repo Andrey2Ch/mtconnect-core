@@ -1,0 +1,74 @@
+# Task ID: 7
+# Title: Implement Cycle Time Calculator
+# Status: done
+# Dependencies: 6
+# Priority: medium
+# Description: Create functionality to calculate and log cycle times based on PartCount increments.
+# Details:
+1. Extend the MachineStateManager class in src/services/machine-state-manager.ts
+2. Add cycle time tracking properties to the class:
+```typescript
+private cycleTimes: Map<string, {
+  lastPartTime: Date;
+  cycleHistory: { timestamp: Date; duration: number }[];
+  totalCycleTime: number;
+  cycleCount: number;
+}>;
+```
+3. Initialize cycle time tracking in the constructor:
+```typescript
+this.cycleTimes = new Map();
+machines.forEach(machine => {
+  this.cycleTimes.set(machine.id, {
+    lastPartTime: new Date(),
+    cycleHistory: [],
+    totalCycleTime: 0,
+    cycleCount: 0
+  });
+});
+```
+4. Implement the handlePartCountIncrement method:
+```typescript
+private handlePartCountIncrement(machineId: string, oldCount: number, newCount: number): void {
+  const cycleData = this.cycleTimes.get(machineId);
+  const machineState = this.machineStates.get(machineId);
+  if (!cycleData || !machineState) return;
+
+  const now = new Date();
+  const cycleTime = (now.getTime() - cycleData.lastPartTime.getTime()) / 1000; // in seconds
+  
+  // Only consider reasonable cycle times (e.g., between 10 seconds and 2 hours)
+  if (cycleTime >= 10 && cycleTime <= 7200) {
+    cycleData.cycleHistory.push({ timestamp: now, duration: cycleTime });
+    cycleData.totalCycleTime += cycleTime;
+    cycleData.cycleCount++;
+    
+    // Keep only the last 100 cycle times
+    if (cycleData.cycleHistory.length > 100) {
+      const removed = cycleData.cycleHistory.shift();
+      if (removed) {
+        cycleData.totalCycleTime -= removed.duration;
+        cycleData.cycleCount--;
+      }
+    }
+    
+    const avgCycleTime = cycleData.totalCycleTime / cycleData.cycleCount;
+    
+    // Update machine state with cycle time information
+    this.machineStates.set(machineId, {
+      ...machineState,
+      lastCycleTime: cycleTime,
+      avgCycleTime: avgCycleTime
+    });
+    
+    this.logger.info(`Machine ${machineState.name} completed a cycle. Parts: ${oldCount} -> ${newCount}, Cycle time: ${cycleTime.toFixed(2)}s, Avg: ${avgCycleTime.toFixed(2)}s`);
+  }
+  
+  // Update last part time for next cycle calculation
+  cycleData.lastPartTime = now;
+}
+```
+5. Add methods to retrieve cycle time statistics
+
+# Test Strategy:
+Test cycle time calculation with simulated part count increments. Verify average cycle time calculation is correct. Test edge cases like very short or very long cycle times.

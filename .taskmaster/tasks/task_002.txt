@@ -1,0 +1,37 @@
+# Task ID: 2
+# Title: Implement Configuration Module
+# Status: done
+# Dependencies: 1
+# Priority: high
+# Description: Create a configuration module to store machine details and MTConnect agent URLs.
+# Details:
+1. Create a configuration file (src/config/machines.ts) to store the FANUC_MACHINES array
+2. Define the machine configuration interface:
+```typescript
+interface MachineConfig {
+  id: string;        // Matching agent uuid
+  name: string;      // Human-readable machine name
+  ip: string;        // IP address of the machine
+  mtconnectAgentUrl: string; // URL to the MTConnect agent
+  manufacturer?: string; // Optional manufacturer info
+  model?: string;    // Optional model info
+}
+```
+3. Initialize with XD-20 configuration:
+```typescript
+export const FANUC_MACHINES: MachineConfig[] = [
+  {
+    id: '002',
+    name: 'XD-20',
+    ip: '192.168.1.105',
+    mtconnectAgentUrl: 'http://localhost:5001/current',
+    manufacturer: 'FANUC',
+    model: 'XD-20'
+  }
+];
+```
+4. Create a server configuration file (src/config/server.ts) for port, polling interval, etc.
+5. Implement a configuration loader that can be imported by other modules
+
+# Test Strategy:
+Verify configuration can be loaded correctly. Test with both valid and invalid configuration formats. Ensure configuration values are accessible throughout the application.

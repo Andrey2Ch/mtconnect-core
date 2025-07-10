@@ -1,0 +1,59 @@
+# Task ID: 3
+# Title: Create MTConnect Data Models
+# Status: done
+# Dependencies: 1
+# Priority: medium
+# Description: Define TypeScript interfaces for MTConnect data structures to ensure type safety throughout the application.
+# Details:
+1. Create model files in src/models/ directory
+2. Define interfaces for MTConnect data structures:
+```typescript
+// Basic MTConnect interfaces
+interface MTConnectStreams {
+  MTConnectStreams: {
+    Streams: {
+      DeviceStream: DeviceStream[];
+    };
+  };
+}
+
+interface DeviceStream {
+  $: { name: string; uuid: string; };
+  ComponentStream: ComponentStream[];
+}
+
+interface ComponentStream {
+  $: { component: string; componentId: string; name?: string; };
+  Events?: { Event: Event[] };
+  Samples?: { Sample: Sample[] };
+}
+
+interface Event {
+  $: { dataItemId: string; timestamp: string; sequence: string; };
+  _: string; // The value
+}
+
+interface Sample {
+  $: { dataItemId: string; timestamp: string; sequence: string; };
+  _: string; // The value
+}
+
+// Application-specific interfaces
+interface MachineStatus {
+  id: string;
+  name: string;
+  ip: string;
+  manufacturer?: string;
+  model?: string;
+  status: string; // ACTIVE, STOPPED, READY, UNAVAILABLE
+  programName: string;
+  partCount: number;
+  lastCycleTime?: number;
+  avgCycleTime?: number;
+  lastUpdated: Date;
+}
+```
+3. Create utility functions for type checking and conversion
+
+# Test Strategy:
+Verify interfaces correctly match the structure of actual MTConnect data. Test parsing sample MTConnect XML data into these interfaces.

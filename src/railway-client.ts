@@ -5,6 +5,7 @@ import * as path from 'path';
 interface RailwayConfig {
     baseUrl: string;
     apiKey: string;
+    edgeGatewayId: string;
     retryAttempts: number;
     retryDelay: number;
     enabled: boolean;
@@ -55,7 +56,7 @@ export class RailwayClient {
             timeout: 10000,
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.config.apiKey}`
+                'X-API-Key': this.config.apiKey
             }
         });
 
@@ -90,7 +91,21 @@ export class RailwayClient {
         try {
             console.log(`📤 Отправка batch данных в Railway (${batchData.data.length} машин)...`);
             
-            const response = await this.httpClient.post('/api/ext/data', batchData);
+            // Форматируем данные в правильный формат для API
+            const formattedData = batchData.data.map((item: any) => ({
+                machineId: item.machineId,
+                machineName: item.machineName,
+                timestamp: item.timestamp,
+                data: item.data
+            }));
+            
+            const payload = {
+                edgeGatewayId: this.config.edgeGatewayId,
+                timestamp: new Date().toISOString(),
+                data: formattedData
+            };
+            
+            const response = await this.httpClient.post('/api/ext/data', payload);
             
             if (response.status === 200 || response.status === 201) {
                 console.log(`✅ Batch данные успешно отправлены в Railway (${batchData.data.length} машин)`);
@@ -122,10 +137,18 @@ export class RailwayClient {
         }
 
         try {
+            // Форматируем данные в правильный формат для API
+            const formattedData = this.dataBuffer.data.map((item: any) => ({
+                machineId: item.machineId,
+                machineName: item.machineName,
+                timestamp: item.timestamp,
+                data: item.data
+            }));
+            
             const payload = {
-                edgeGatewayId: 'edge-gateway-01',
+                edgeGatewayId: this.config.edgeGatewayId,
                 timestamp: new Date().toISOString(),
-                data: this.dataBuffer.data
+                data: formattedData
             };
 
             console.log(`📤 Отправка ${this.dataBuffer.data.length} записей в Railway...`);
@@ -214,6 +237,7 @@ export function loadRailwayConfig(configPath: string): RailwayConfig {
     return {
         baseUrl: config.railway?.baseUrl || 'https://mtconnect-core-production.up.railway.app',
         apiKey: config.railway?.apiKey || 'edge-gateway-api-key',
+        edgeGatewayId: config.railway?.edgeGatewayId || 'edge-gateway-01',
         retryAttempts: config.railway?.retryAttempts || 3,
         retryDelay: config.railway?.retryDelay || 5000,
         enabled: config.railway?.enabled || true

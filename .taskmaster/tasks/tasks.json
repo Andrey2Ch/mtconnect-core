@@ -1,0 +1,698 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Project Structure and Dependencies",
+        "description": "Initialize the Node.js project with TypeScript, set up the directory structure, and install required dependencies.",
+        "details": "1. Initialize a new Node.js project with npm init\n2. Install TypeScript and configure tsconfig.json\n3. Install required dependencies:\n   - express (for REST API)\n   - axios (for HTTP requests to MTConnect agents)\n   - xml2js (for XML parsing)\n   - winston (for logging)\n4. Set up directory structure:\n   - src/ (for TypeScript source files)\n   - src/models/ (for data models)\n   - src/services/ (for business logic)\n   - src/controllers/ (for API endpoints)\n   - src/config/ (for configuration)\n   - public/ (for frontend assets)\n5. Create basic .gitignore file\n6. Set up npm scripts for development, building, and running the application",
+        "testStrategy": "Verify project structure is correctly set up. Ensure all dependencies can be installed without errors. Confirm TypeScript compilation works correctly.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Implement Configuration Module",
+        "description": "Create a configuration module to store machine details and MTConnect agent URLs.",
+        "details": "1. Create a configuration file (src/config/machines.ts) to store the FANUC_MACHINES array\n2. Define the machine configuration interface:\n```typescript\ninterface MachineConfig {\n  id: string;        // Matching agent uuid\n  name: string;      // Human-readable machine name\n  ip: string;        // IP address of the machine\n  mtconnectAgentUrl: string; // URL to the MTConnect agent\n  manufacturer?: string; // Optional manufacturer info\n  model?: string;    // Optional model info\n}\n```\n3. Initialize with XD-20 configuration:\n```typescript\nexport const FANUC_MACHINES: MachineConfig[] = [\n  {\n    id: '002',\n    name: 'XD-20',\n    ip: '192.168.1.105',\n    mtconnectAgentUrl: 'http://localhost:5001/current',\n    manufacturer: 'FANUC',\n    model: 'XD-20'\n  }\n];\n```\n4. Create a server configuration file (src/config/server.ts) for port, polling interval, etc.\n5. Implement a configuration loader that can be imported by other modules",
+        "testStrategy": "Verify configuration can be loaded correctly. Test with both valid and invalid configuration formats. Ensure configuration values are accessible throughout the application.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Create MTConnect Data Models",
+        "description": "Define TypeScript interfaces for MTConnect data structures to ensure type safety throughout the application.",
+        "details": "1. Create model files in src/models/ directory\n2. Define interfaces for MTConnect data structures:\n```typescript\n// Basic MTConnect interfaces\ninterface MTConnectStreams {\n  MTConnectStreams: {\n    Streams: {\n      DeviceStream: DeviceStream[];\n    };\n  };\n}\n\ninterface DeviceStream {\n  $: { name: string; uuid: string; };\n  ComponentStream: ComponentStream[];\n}\n\ninterface ComponentStream {\n  $: { component: string; componentId: string; name?: string; };\n  Events?: { Event: Event[] };\n  Samples?: { Sample: Sample[] };\n}\n\ninterface Event {\n  $: { dataItemId: string; timestamp: string; sequence: string; };\n  _: string; // The value\n}\n\ninterface Sample {\n  $: { dataItemId: string; timestamp: string; sequence: string; };\n  _: string; // The value\n}\n\n// Application-specific interfaces\ninterface MachineStatus {\n  id: string;\n  name: string;\n  ip: string;\n  manufacturer?: string;\n  model?: string;\n  status: string; // ACTIVE, STOPPED, READY, UNAVAILABLE\n  programName: string;\n  partCount: number;\n  lastCycleTime?: number;\n  avgCycleTime?: number;\n  lastUpdated: Date;\n}\n```\n3. Create utility functions for type checking and conversion",
+        "testStrategy": "Verify interfaces correctly match the structure of actual MTConnect data. Test parsing sample MTConnect XML data into these interfaces.",
+        "priority": "medium",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Implement MTConnect Data Fetcher Service",
+        "description": "Create a service to fetch XML data from MTConnect agents at regular intervals.",
+        "details": "1. Create src/services/mtconnect-fetcher.ts\n2. Implement a class that uses axios to fetch data from MTConnect agents:\n```typescript\nexport class MTConnectFetcher {\n  private machines: MachineConfig[];\n  private pollingInterval: number;\n  private logger: Logger;\n\n  constructor(machines: MachineConfig[], pollingInterval = 5000, logger: Logger) {\n    this.machines = machines;\n    this.pollingInterval = pollingInterval;\n    this.logger = logger;\n  }\n\n  async fetchCurrentData(machineConfig: MachineConfig): Promise<string | null> {\n    try {\n      const response = await axios.get(machineConfig.mtconnectAgentUrl, {\n        timeout: 5000,\n        responseType: 'text'\n      });\n      return response.data;\n    } catch (error) {\n      this.logger.error(`Error fetching data from ${machineConfig.name}: ${error.message}`);\n      return null;\n    }\n  }\n\n  async fetchProbeData(machineConfig: MachineConfig): Promise<string | null> {\n    // Similar to fetchCurrentData but use the /probe endpoint\n    // Replace 'current' with 'probe' in the URL\n    const probeUrl = machineConfig.mtconnectAgentUrl.replace('/current', '/probe');\n    try {\n      const response = await axios.get(probeUrl, {\n        timeout: 5000,\n        responseType: 'text'\n      });\n      return response.data;\n    } catch (error) {\n      this.logger.error(`Error fetching probe data from ${machineConfig.name}: ${error.message}`);\n      return null;\n    }\n  }\n\n  startPolling(callback: (machine: MachineConfig, data: string | null) => void): void {\n    // Set up polling for each machine\n    this.machines.forEach(machine => {\n      setInterval(async () => {\n        const data = await this.fetchCurrentData(machine);\n        callback(machine, data);\n      }, this.pollingInterval);\n    });\n  }\n}\n```\n3. Implement error handling for network issues and timeouts\n4. Add logging for connection attempts and failures",
+        "testStrategy": "Test fetching data from a mock MTConnect agent. Verify error handling works correctly when an agent is unavailable. Test the polling mechanism with different intervals.",
+        "priority": "high",
+        "dependencies": [
+          2,
+          3
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Implement MTConnect XML Parser Service",
+        "description": "Create a service to parse MTConnect XML data into structured JavaScript objects.",
+        "details": "1. Create src/services/mtconnect-parser.ts\n2. Implement a class that uses xml2js to parse MTConnect XML data:\n```typescript\nexport class MTConnectParser {\n  private parser: xml2js.Parser;\n  private logger: Logger;\n\n  constructor(logger: Logger) {\n    this.parser = new xml2js.Parser({ explicitArray: true });\n    this.logger = logger;\n  }\n\n  async parseCurrentData(xmlData: string): Promise<MTConnectStreams | null> {\n    if (!xmlData) return null;\n    \n    try {\n      const result = await this.parser.parseStringPromise(xmlData);\n      return result as MTConnectStreams;\n    } catch (error) {\n      this.logger.error(`Error parsing MTConnect data: ${error.message}`);\n      return null;\n    }\n  }\n\n  async parseProbeData(xmlData: string): Promise<any | null> {\n    // Similar to parseCurrentData but for probe data\n    if (!xmlData) return null;\n    \n    try {\n      const result = await this.parser.parseStringPromise(xmlData);\n      return result; // Define appropriate interface for probe data\n    } catch (error) {\n      this.logger.error(`Error parsing MTConnect probe data: ${error.message}`);\n      return null;\n    }\n  }\n}\n```\n3. Add helper methods to extract specific data items (Execution, PartCount, Program, Block)\n4. Implement error handling for malformed XML",
+        "testStrategy": "Test parsing with sample MTConnect XML data. Verify the parser can handle different XML structures. Test error handling with malformed XML data.",
+        "priority": "high",
+        "dependencies": [
+          3,
+          4
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Implement Machine State Manager Service",
+        "description": "Create a service to track and manage machine state, including execution status and part count.",
+        "details": "1. Create src/services/machine-state-manager.ts\n2. Implement a class to track machine state:\n```typescript\nexport class MachineStateManager {\n  private machineStates: Map<string, MachineStatus>;\n  private logger: Logger;\n\n  constructor(machines: MachineConfig[], logger: Logger) {\n    this.machineStates = new Map();\n    this.logger = logger;\n    \n    // Initialize machine states\n    machines.forEach(machine => {\n      this.machineStates.set(machine.id, {\n        id: machine.id,\n        name: machine.name,\n        ip: machine.ip,\n        manufacturer: machine.manufacturer,\n        model: machine.model,\n        status: 'UNAVAILABLE',\n        programName: '',\n        partCount: 0,\n        lastUpdated: new Date()\n      });\n    });\n  }\n\n  getMachineState(machineId: string): MachineStatus | undefined {\n    return this.machineStates.get(machineId);\n  }\n\n  getAllMachineStates(): MachineStatus[] {\n    return Array.from(this.machineStates.values());\n  }\n\n  updateMachineState(machineId: string, updates: Partial<MachineStatus>): void {\n    const currentState = this.machineStates.get(machineId);\n    if (!currentState) return;\n\n    // Check for status change\n    if (updates.status && updates.status !== currentState.status) {\n      this.logger.info(`Machine ${currentState.name} status changed from ${currentState.status} to ${updates.status}`);\n    }\n\n    // Check for part count change\n    if (updates.partCount && updates.partCount > currentState.partCount) {\n      this.handlePartCountIncrement(machineId, currentState.partCount, updates.partCount);\n    }\n\n    // Update state\n    this.machineStates.set(machineId, {\n      ...currentState,\n      ...updates,\n      lastUpdated: new Date()\n    });\n  }\n\n  private handlePartCountIncrement(machineId: string, oldCount: number, newCount: number): void {\n    // Implementation for cycle time calculation will be added in Task 7\n  }\n}\n```\n3. Add methods to update machine state based on parsed MTConnect data\n4. Implement logging for state changes",
+        "testStrategy": "Test state initialization with sample machine configurations. Verify state updates work correctly. Test state retrieval methods.",
+        "priority": "high",
+        "dependencies": [
+          3,
+          5
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Implement Cycle Time Calculator",
+        "description": "Create functionality to calculate and log cycle times based on PartCount increments.",
+        "details": "1. Extend the MachineStateManager class in src/services/machine-state-manager.ts\n2. Add cycle time tracking properties to the class:\n```typescript\nprivate cycleTimes: Map<string, {\n  lastPartTime: Date;\n  cycleHistory: { timestamp: Date; duration: number }[];\n  totalCycleTime: number;\n  cycleCount: number;\n}>;\n```\n3. Initialize cycle time tracking in the constructor:\n```typescript\nthis.cycleTimes = new Map();\nmachines.forEach(machine => {\n  this.cycleTimes.set(machine.id, {\n    lastPartTime: new Date(),\n    cycleHistory: [],\n    totalCycleTime: 0,\n    cycleCount: 0\n  });\n});\n```\n4. Implement the handlePartCountIncrement method:\n```typescript\nprivate handlePartCountIncrement(machineId: string, oldCount: number, newCount: number): void {\n  const cycleData = this.cycleTimes.get(machineId);\n  const machineState = this.machineStates.get(machineId);\n  if (!cycleData || !machineState) return;\n\n  const now = new Date();\n  const cycleTime = (now.getTime() - cycleData.lastPartTime.getTime()) / 1000; // in seconds\n  \n  // Only consider reasonable cycle times (e.g., between 10 seconds and 2 hours)\n  if (cycleTime >= 10 && cycleTime <= 7200) {\n    cycleData.cycleHistory.push({ timestamp: now, duration: cycleTime });\n    cycleData.totalCycleTime += cycleTime;\n    cycleData.cycleCount++;\n    \n    // Keep only the last 100 cycle times\n    if (cycleData.cycleHistory.length > 100) {\n      const removed = cycleData.cycleHistory.shift();\n      if (removed) {\n        cycleData.totalCycleTime -= removed.duration;\n        cycleData.cycleCount--;\n      }\n    }\n    \n    const avgCycleTime = cycleData.totalCycleTime / cycleData.cycleCount;\n    \n    // Update machine state with cycle time information\n    this.machineStates.set(machineId, {\n      ...machineState,\n      lastCycleTime: cycleTime,\n      avgCycleTime: avgCycleTime\n    });\n    \n    this.logger.info(`Machine ${machineState.name} completed a cycle. Parts: ${oldCount} -> ${newCount}, Cycle time: ${cycleTime.toFixed(2)}s, Avg: ${avgCycleTime.toFixed(2)}s`);\n  }\n  \n  // Update last part time for next cycle calculation\n  cycleData.lastPartTime = now;\n}\n```\n5. Add methods to retrieve cycle time statistics",
+        "testStrategy": "Test cycle time calculation with simulated part count increments. Verify average cycle time calculation is correct. Test edge cases like very short or very long cycle times.",
+        "priority": "medium",
+        "dependencies": [
+          6
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement Program Name Extractor",
+        "description": "Create functionality to extract program names from Block or Program data items, prioritizing Block.",
+        "details": "1. Create src/services/program-name-extractor.ts\n2. Implement a class to extract program names:\n```typescript\nexport class ProgramNameExtractor {\n  private logger: Logger;\n\n  constructor(logger: Logger) {\n    this.logger = logger;\n  }\n\n  extractProgramName(blockValue: string | null, programValue: string | null): string {\n    // Try to extract from Block first\n    if (blockValue) {\n      const blockMatch = blockValue.match(/O\\d+\\(([^)]+)\\)/);\n      if (blockMatch && blockMatch[1]) {\n        return blockMatch[1]; // Return the content inside parentheses\n      }\n    }\n    \n    // Fallback to Program value\n    if (programValue) {\n      // Remove file path if present, keep only filename\n      const programName = programValue.split(/[\\\\\\/]/).pop() || programValue;\n      return programName;\n    }\n    \n    return ''; // No program name found\n  }\n}\n```\n3. Add methods to extract Block and Program values from MTConnect data\n4. Integrate with the data processing pipeline",
+        "testStrategy": "Test extraction with various Block formats (e.g., 'O0044(125-325)', 'O1234(PART-XYZ)'). Test fallback to Program value when Block is not informative. Test handling of edge cases like empty or malformed values.",
+        "priority": "medium",
+        "dependencies": [
+          5,
+          6
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Implement Data Processor Service",
+        "description": "Create a service to process MTConnect data, update machine states, and calculate derived values.",
+        "details": "1. Create src/services/data-processor.ts\n2. Implement a class to process MTConnect data:\n```typescript\nexport class DataProcessor {\n  private parser: MTConnectParser;\n  private stateManager: MachineStateManager;\n  private programExtractor: ProgramNameExtractor;\n  private logger: Logger;\n\n  constructor(\n    parser: MTConnectParser,\n    stateManager: MachineStateManager,\n    programExtractor: ProgramNameExtractor,\n    logger: Logger\n  ) {\n    this.parser = parser;\n    this.stateManager = stateManager;\n    this.programExtractor = programExtractor;\n    this.logger = logger;\n  }\n\n  async processCurrentData(machineConfig: MachineConfig, xmlData: string | null): Promise<void> {\n    if (!xmlData) {\n      this.stateManager.updateMachineState(machineConfig.id, { status: 'UNAVAILABLE' });\n      return;\n    }\n\n    try {\n      const parsedData = await this.parser.parseCurrentData(xmlData);\n      if (!parsedData) {\n        this.stateManager.updateMachineState(machineConfig.id, { status: 'UNAVAILABLE' });\n        return;\n      }\n\n      // Find the device stream for this machine\n      const deviceStream = parsedData.MTConnectStreams.Streams.DeviceStream.find(\n        stream => stream.$.uuid === machineConfig.id\n      );\n\n      if (!deviceStream) {\n        this.logger.warn(`No device stream found for machine ${machineConfig.name}`);\n        this.stateManager.updateMachineState(machineConfig.id, { status: 'UNAVAILABLE' });\n        return;\n      }\n\n      // Extract relevant data items\n      const executionValue = this.extractDataItemValue(deviceStream, 'execution');\n      const partCountValue = this.extractDataItemValue(deviceStream, 'part_count');\n      const blockValue = this.extractDataItemValue(deviceStream, 'block');\n      const programValue = this.extractDataItemValue(deviceStream, 'program');\n\n      // Process execution status\n      let status = 'UNAVAILABLE';\n      if (executionValue) {\n        switch (executionValue.toLowerCase()) {\n          case 'active': status = 'ACTIVE'; break;\n          case 'ready': status = 'READY'; break;\n          case 'stopped': status = 'STOPPED'; break;\n          default: status = executionValue.toUpperCase();\n        }\n      }\n\n      // Extract program name\n      const programName = this.programExtractor.extractProgramName(blockValue, programValue);\n\n      // Parse part count\n      const partCount = partCountValue ? parseInt(partCountValue, 10) : 0;\n\n      // Update machine state\n      this.stateManager.updateMachineState(machineConfig.id, {\n        status,\n        programName,\n        partCount: isNaN(partCount) ? 0 : partCount\n      });\n\n    } catch (error) {\n      this.logger.error(`Error processing data for ${machineConfig.name}: ${error.message}`);\n      this.stateManager.updateMachineState(machineConfig.id, { status: 'UNAVAILABLE' });\n    }\n  }\n\n  private extractDataItemValue(deviceStream: DeviceStream, dataItemId: string): string | null {\n    // Implementation to extract a specific data item value from the device stream\n    // This will search through component streams, events, and samples\n    // ...\n  }\n}\n```\n3. Implement the extractDataItemValue method to find specific data items in the MTConnect structure\n4. Add error handling for unexpected data formats",
+        "testStrategy": "Test processing with sample MTConnect data. Verify correct extraction of execution status, part count, and program name. Test handling of missing or malformed data items.",
+        "priority": "high",
+        "dependencies": [
+          5,
+          6,
+          7,
+          8
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement REST API Controller",
+        "description": "Create REST API endpoints to serve aggregated machine data to the frontend.",
+        "details": "1. Create src/controllers/api-controller.ts\n2. Implement a class to handle API requests:\n```typescript\nexport class ApiController {\n  private stateManager: MachineStateManager;\n  private router: express.Router;\n\n  constructor(stateManager: MachineStateManager) {\n    this.stateManager = stateManager;\n    this.router = express.Router();\n    this.setupRoutes();\n  }\n\n  getRouter(): express.Router {\n    return this.router;\n  }\n\n  private setupRoutes(): void {\n    // Get current data for all machines\n    this.router.get('/current', (req, res) => {\n      const machineStates = this.stateManager.getAllMachineStates();\n      res.json(machineStates);\n    });\n\n    // Get current data for a specific machine\n    this.router.get('/current/:machineId', (req, res) => {\n      const machineState = this.stateManager.getMachineState(req.params.machineId);\n      if (machineState) {\n        res.json(machineState);\n      } else {\n        res.status(404).json({ error: 'Machine not found' });\n      }\n    });\n\n    // Get probe data (machine information)\n    this.router.get('/probe', (req, res) => {\n      const machineStates = this.stateManager.getAllMachineStates();\n      // For now, just return basic machine info\n      const probeData = machineStates.map(machine => ({\n        id: machine.id,\n        name: machine.name,\n        ip: machine.ip,\n        manufacturer: machine.manufacturer,\n        model: machine.model\n      }));\n      res.json(probeData);\n    });\n  }\n}\n```\n3. Add CORS support for cross-origin requests\n4. Implement error handling for API requests\n5. Add rate limiting to prevent abuse",
+        "testStrategy": "Test API endpoints with HTTP requests. Verify correct JSON responses. Test error handling with invalid requests. Test rate limiting.",
+        "priority": "high",
+        "dependencies": [
+          6,
+          9
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Implement Main Application",
+        "description": "Create the main application file to initialize and connect all components.",
+        "details": "1. Create src/main.ts\n2. Implement the main application:\n```typescript\nimport express from 'express';\nimport path from 'path';\nimport winston from 'winston';\nimport { FANUC_MACHINES } from './config/machines';\nimport { MTConnectFetcher } from './services/mtconnect-fetcher';\nimport { MTConnectParser } from './services/mtconnect-parser';\nimport { MachineStateManager } from './services/machine-state-manager';\nimport { ProgramNameExtractor } from './services/program-name-extractor';\nimport { DataProcessor } from './services/data-processor';\nimport { ApiController } from './controllers/api-controller';\n\n// Configure logger\nconst logger = winston.createLogger({\n  level: 'info',\n  format: winston.format.combine(\n    winston.format.timestamp(),\n    winston.format.printf(({ level, message, timestamp }) => {\n      return `${timestamp} ${level}: ${message}`;\n    })\n  ),\n  transports: [\n    new winston.transports.Console(),\n    new winston.transports.File({ filename: 'app.log' })\n  ]\n});\n\n// Create application\nconst app = express();\nconst port = process.env.PORT || 3000;\nconst pollingInterval = 5000; // 5 seconds\n\n// Initialize services\nconst stateManager = new MachineStateManager(FANUC_MACHINES, logger);\nconst fetcher = new MTConnectFetcher(FANUC_MACHINES, pollingInterval, logger);\nconst parser = new MTConnectParser(logger);\nconst programExtractor = new ProgramNameExtractor(logger);\nconst dataProcessor = new DataProcessor(parser, stateManager, programExtractor, logger);\n\n// Set up API routes\nconst apiController = new ApiController(stateManager);\napp.use('/api', apiController.getRouter());\n\n// Serve static files\napp.use(express.static(path.join(__dirname, '../public')));\n\n// Start server\napp.listen(port, () => {\n  logger.info(`Server started on port ${port}`);\n});\n\n// Start data polling\nfetcher.startPolling(async (machine, data) => {\n  await dataProcessor.processCurrentData(machine, data);\n});\n```\n3. Add graceful shutdown handling\n4. Implement environment-specific configuration loading",
+        "testStrategy": "Test application startup and shutdown. Verify all components are correctly initialized and connected. Test with mock services to ensure proper integration.",
+        "priority": "high",
+        "dependencies": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Implement Frontend HTML Structure",
+        "description": "Create the HTML structure for the web dashboard.",
+        "details": "1. Create public/index.html\n2. Implement the basic HTML structure:\n```html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>MTConnect Data Aggregation and Monitoring System</title>\n  <link rel=\"stylesheet\" href=\"css/styles.css\">\n</head>\n<body>\n  <header>\n    <h1>MTConnect Machine Monitoring</h1>\n  </header>\n  \n  <main>\n    <section class=\"dashboard\">\n      <h2>Machine Status Dashboard</h2>\n      <div class=\"refresh-info\">\n        <span>Last updated: <span id=\"last-updated\">Never</span></span>\n        <button id=\"refresh-button\">Refresh Now</button>\n      </div>\n      <div class=\"table-container\">\n        <table id=\"machine-table\">\n          <thead>\n            <tr>\n              <th>Machine</th>\n              <th>Status</th>\n              <th>Program</th>\n              <th>Part Count</th>\n              <th>Last Cycle Time</th>\n              <th>Avg Cycle Time</th>\n            </tr>\n          </thead>\n          <tbody id=\"machine-data\">\n            <!-- Machine data will be inserted here by JavaScript -->\n          </tbody>\n        </table>\n      </div>\n    </section>\n  </main>\n  \n  <footer>\n    <p>MTConnect Data Aggregation and Monitoring System</p>\n  </footer>\n  \n  <script src=\"js/dashboard.js\"></script>\n</body>\n</html>\n```\n3. Create public/css/styles.css for basic styling\n4. Add responsive design for different screen sizes",
+        "testStrategy": "Verify HTML structure renders correctly in different browsers. Test responsive design on different screen sizes. Ensure all elements have proper IDs for JavaScript interaction.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Implement Frontend CSS Styling",
+        "description": "Create CSS styles for the web dashboard to provide a clean and user-friendly interface.",
+        "details": "1. Create public/css/styles.css\n2. Implement the CSS styles:\n```css\n* {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\n\nbody {\n  font-family: Arial, sans-serif;\n  line-height: 1.6;\n  color: #333;\n  background-color: #f4f4f4;\n}\n\nheader {\n  background-color: #35424a;\n  color: white;\n  padding: 1rem;\n  text-align: center;\n}\n\nmain {\n  padding: 1rem;\n  max-width: 1200px;\n  margin: 0 auto;\n}\n\n.dashboard {\n  background-color: white;\n  border-radius: 5px;\n  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);\n  padding: 1rem;\n  margin-bottom: 1rem;\n}\n\n.refresh-info {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  margin-bottom: 1rem;\n}\n\n#refresh-button {\n  padding: 0.5rem 1rem;\n  background-color: #35424a;\n  color: white;\n  border: none;\n  border-radius: 3px;\n  cursor: pointer;\n}\n\n#refresh-button:hover {\n  background-color: #2a343a;\n}\n\n.table-container {\n  overflow-x: auto;\n}\n\ntable {\n  width: 100%;\n  border-collapse: collapse;\n}\n\ntable th, table td {\n  padding: 0.75rem;\n  text-align: left;\n  border-bottom: 1px solid #ddd;\n}\n\ntable th {\n  background-color: #f2f2f2;\n  font-weight: bold;\n}\n\n/* Status colors */\n.status-active {\n  color: green;\n  font-weight: bold;\n}\n\n.status-ready {\n  color: blue;\n}\n\n.status-stopped {\n  color: orange;\n}\n\n.status-unavailable {\n  color: red;\n}\n\nfooter {\n  background-color: #35424a;\n  color: white;\n  text-align: center;\n  padding: 1rem;\n  position: fixed;\n  bottom: 0;\n  width: 100%;\n}\n\n/* Responsive design */\n@media (max-width: 768px) {\n  .refresh-info {\n    flex-direction: column;\n    gap: 0.5rem;\n  }\n  \n  table th, table td {\n    padding: 0.5rem;\n  }\n}\n```\n3. Add animations for status changes\n4. Implement print-friendly styles",
+        "testStrategy": "Verify styles render correctly in different browsers. Test responsive design on different screen sizes. Ensure status colors are distinguishable and accessible.",
+        "priority": "low",
+        "dependencies": [
+          12
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Implement Frontend JavaScript",
+        "description": "Create JavaScript code to fetch and display machine data in the web dashboard.",
+        "details": "1. Create public/js/dashboard.js\n2. Implement the JavaScript code:\n```javascript\n// DOM elements\nconst machineTableBody = document.getElementById('machine-data');\nconst lastUpdatedSpan = document.getElementById('last-updated');\nconst refreshButton = document.getElementById('refresh-button');\n\n// Configuration\nconst API_URL = '/api';\nconst REFRESH_INTERVAL = 10000; // 10 seconds\n\n// State\nlet refreshTimer;\n\n// Functions\nasync function fetchMachineData() {\n  try {\n    const response = await fetch(`${API_URL}/current`);\n    if (!response.ok) {\n      throw new Error(`HTTP error! Status: ${response.status}`);\n    }\n    return await response.json();\n  } catch (error) {\n    console.error('Error fetching machine data:', error);\n    return [];\n  }\n}\n\nfunction formatDateTime(dateString) {\n  const date = new Date(dateString);\n  return date.toLocaleString();\n}\n\nfunction formatDuration(seconds) {\n  if (!seconds) return '-';\n  \n  const minutes = Math.floor(seconds / 60);\n  const remainingSeconds = Math.floor(seconds % 60);\n  \n  if (minutes === 0) {\n    return `${remainingSeconds}s`;\n  } else {\n    return `${minutes}m ${remainingSeconds}s`;\n  }\n}\n\nfunction getStatusClass(status) {\n  switch (status.toLowerCase()) {\n    case 'active': return 'status-active';\n    case 'ready': return 'status-ready';\n    case 'stopped': return 'status-stopped';\n    default: return 'status-unavailable';\n  }\n}\n\nfunction renderMachineData(machines) {\n  // Clear existing rows\n  machineTableBody.innerHTML = '';\n  \n  if (machines.length === 0) {\n    const row = document.createElement('tr');\n    row.innerHTML = '<td colspan=\"6\">No machine data available</td>';\n    machineTableBody.appendChild(row);\n    return;\n  }\n  \n  // Sort machines by name\n  machines.sort((a, b) => a.name.localeCompare(b.name));\n  \n  // Create rows for each machine\n  machines.forEach(machine => {\n    const row = document.createElement('tr');\n    \n    const statusClass = getStatusClass(machine.status);\n    \n    row.innerHTML = `\n      <td>${machine.name}</td>\n      <td class=\"${statusClass}\">${machine.status}</td>\n      <td>${machine.programName || '-'}</td>\n      <td>${machine.partCount}</td>\n      <td>${formatDuration(machine.lastCycleTime)}</td>\n      <td>${formatDuration(machine.avgCycleTime)}</td>\n    `;\n    \n    machineTableBody.appendChild(row);\n  });\n  \n  // Update last updated time\n  lastUpdatedSpan.textContent = formatDateTime(new Date());\n}\n\nasync function refreshData() {\n  const machines = await fetchMachineData();\n  renderMachineData(machines);\n}\n\n// Event listeners\nrefreshButton.addEventListener('click', () => {\n  refreshData();\n});\n\n// Initial load and auto-refresh\ndocument.addEventListener('DOMContentLoaded', () => {\n  refreshData();\n  \n  // Set up auto-refresh\n  refreshTimer = setInterval(refreshData, REFRESH_INTERVAL);\n});\n\n// Clean up on page unload\nwindow.addEventListener('beforeunload', () => {\n  if (refreshTimer) {\n    clearInterval(refreshTimer);\n  }\n});\n```\n3. Add error handling for API requests\n4. Implement visual feedback for data loading and errors",
+        "testStrategy": "Test data fetching and rendering with mock API responses. Verify auto-refresh functionality works correctly. Test error handling with simulated network failures.",
+        "priority": "high",
+        "dependencies": [
+          10,
+          12,
+          13
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Create Documentation and Deployment Guide",
+        "description": "Create comprehensive documentation for the system, including setup, configuration, and extension for additional machines.",
+        "details": "1. Create README.md in the project root\n2. Document system architecture and components\n3. Provide installation instructions:\n   - Prerequisites (Node.js, npm)\n   - Installation steps\n   - Configuration options\n4. Document how to add additional machines:\n   - MTConnect agent setup (fanuc_0id.exe and agent.exe configuration)\n   - Node.js backend configuration\n5. Create a troubleshooting guide:\n   - Common issues and solutions\n   - Logging and debugging\n6. Document API endpoints and data formats\n7. Create a deployment guide:\n   - Development environment setup\n   - Production deployment options\n   - Security considerations\n8. Include a maintenance guide:\n   - Log rotation\n   - Backup procedures\n   - Monitoring recommendations",
+        "testStrategy": "Verify documentation accuracy by following the instructions on a clean system. Have a colleague review the documentation for clarity and completeness. Test the troubleshooting guide against common issues.",
+        "priority": "medium",
+        "dependencies": [
+          11,
+          14
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Centralize Machine Configuration and Fix IP Address Discrepancies",
+        "description": "Update the machine configuration to add the missing DT-26 machine (192.168.1.90) and resolve IP address discrepancies between files. Create a centralized configuration system instead of hardcoded values in main.ts.",
+        "details": "1. Create a dedicated configuration file for machines:\n```typescript\n// src/config/machines.config.ts\nexport interface MachineConfig {\n  id: string;\n  name: string;\n  ip: string;\n  port: number;\n  type: 'FANUC' | 'OTHER';\n}\n\nexport const MACHINES: MachineConfig[] = [\n  {\n    id: 'DT-22',\n    name: 'FANUC DT-22',\n    ip: '192.168.1.22',\n    port: 5000,\n    type: 'FANUC'\n  },\n  // Add all existing machines with correct IPs\n  // ...\n  {\n    id: 'DT-26',\n    name: 'FANUC DT-26',\n    ip: '192.168.1.90',\n    port: 5000,\n    type: 'FANUC'\n  }\n];\n```\n\n2. Audit all files that reference machine IPs and update them to use the centralized configuration:\n   - Check main.ts for hardcoded machine configurations\n   - Review any API endpoints that might reference machines directly\n   - Update MTConnectFetcher to use the new configuration\n\n3. Modify main.ts to use the centralized configuration:\n```typescript\nimport { MACHINES } from './config/machines.config';\n\n// Replace hardcoded FANUC_MACHINES with:\nconst fanucMachines = MACHINES.filter(machine => machine.type === 'FANUC');\n\n// Use the filtered machines in the MTConnectFetcher initialization\nconst mtconnectFetcher = new MTConnectFetcher(fanucMachines);\n```\n\n4. Update any other services or components that might be using machine configurations:\n   - Update API endpoints to use the centralized configuration\n   - Ensure the dashboard correctly displays all machines including the new DT-26\n\n5. Create a utility function to get machine by ID:\n```typescript\n// src/utils/machine-utils.ts\nimport { MACHINES, MachineConfig } from '../config/machines.config';\n\nexport function getMachineById(id: string): MachineConfig | undefined {\n  return MACHINES.find(machine => machine.id === id);\n}\n```",
+        "testStrategy": "1. Verify the centralized configuration file contains all machines with correct IP addresses:\n   - Check that DT-26 is properly added with IP 192.168.1.90\n   - Ensure all other machines have consistent IP addresses\n\n2. Test the application startup to confirm it correctly loads the machine configurations:\n   - Start the application and check logs for any configuration errors\n   - Verify all machines are properly initialized\n\n3. Test the MTConnect data fetching for the new DT-26 machine:\n   - Confirm the application can connect to the DT-26 machine at 192.168.1.90\n   - Verify data is being fetched and parsed correctly\n\n4. Test the web dashboard:\n   - Ensure the DT-26 machine appears in the dashboard\n   - Verify the machine status is correctly displayed\n\n5. Perform regression testing:\n   - Confirm all previously working machines still function correctly\n   - Check that no IP address discrepancies remain in the codebase\n\n6. Code review:\n   - Ensure no hardcoded machine configurations remain in main.ts\n   - Verify the centralized configuration is used consistently throughout the application",
+        "status": "done",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Implement Scalable Machine Discovery Architecture",
+        "description": "Create a scalable architecture for easy addition of new machines with auto-discovery capabilities, JSON/YAML configuration files, and connection validation.",
+        "details": "1. Create a machine discovery service:\n```typescript\n// src/services/machineDiscovery.service.ts\nimport { MachineConfig } from '../config/machines.config';\nimport * as fs from 'fs';\nimport * as yaml from 'js-yaml';\nimport * as path from 'path';\nimport { validateMachineConnection } from './machineConnection.service';\n\nexport class MachineDiscoveryService {\n  private configPath: string;\n  private machines: MachineConfig[] = [];\n  \n  constructor(configPath = path.join(process.cwd(), 'config/machines.yaml')) {\n    this.configPath = configPath;\n  }\n  \n  // Load machines from configuration file\n  public loadMachinesFromConfig(): MachineConfig[] {\n    try {\n      const fileExt = path.extname(this.configPath).toLowerCase();\n      const fileContent = fs.readFileSync(this.configPath, 'utf8');\n      \n      if (fileExt === '.json') {\n        this.machines = JSON.parse(fileContent);\n      } else if (fileExt === '.yaml' || fileExt === '.yml') {\n        this.machines = yaml.load(fileContent) as MachineConfig[];\n      } else {\n        throw new Error('Unsupported configuration file format');\n      }\n      \n      return this.machines;\n    } catch (error) {\n      console.error('Failed to load machine configuration:', error);\n      return [];\n    }\n  }\n  \n  // Auto-discover machines on the network\n  public async discoverMachines(networkRange: string = '192.168.1'): Promise<MachineConfig[]> {\n    // Implement network scanning logic to find MTConnect agents\n    // This could use tools like ping, nmap, or custom TCP connection attempts\n    console.log(`Scanning network range: ${networkRange}.*`);\n    \n    // Example implementation (placeholder)\n    const discoveredMachines: MachineConfig[] = [];\n    // Actual implementation would scan network and identify MTConnect agents\n    \n    return discoveredMachines;\n  }\n  \n  // Validate all machine connections\n  public async validateMachines(machines: MachineConfig[] = this.machines): Promise<{machine: MachineConfig, valid: boolean}[]> {\n    const validationResults = [];\n    \n    for (const machine of machines) {\n      const isValid = await validateMachineConnection(machine);\n      validationResults.push({\n        machine,\n        valid: isValid\n      });\n    }\n    \n    return validationResults;\n  }\n  \n  // Save discovered machines to config file\n  public saveMachinesToConfig(machines: MachineConfig[] = this.machines): void {\n    try {\n      const fileExt = path.extname(this.configPath).toLowerCase();\n      let fileContent: string;\n      \n      if (fileExt === '.json') {\n        fileContent = JSON.stringify(machines, null, 2);\n      } else if (fileExt === '.yaml' || fileExt === '.yml') {\n        fileContent = yaml.dump(machines);\n      } else {\n        throw new Error('Unsupported configuration file format');\n      }\n      \n      fs.writeFileSync(this.configPath, fileContent, 'utf8');\n      console.log(`Machine configuration saved to ${this.configPath}`);\n    } catch (error) {\n      console.error('Failed to save machine configuration:', error);\n    }\n  }\n}\n```\n\n2. Create a machine connection validation service:\n```typescript\n// src/services/machineConnection.service.ts\nimport { MachineConfig } from '../config/machines.config';\nimport * as net from 'net';\n\nexport async function validateMachineConnection(machine: MachineConfig): Promise<boolean> {\n  return new Promise((resolve) => {\n    const socket = new net.Socket();\n    const timeout = 3000; // 3 seconds timeout\n    \n    socket.setTimeout(timeout);\n    \n    socket.on('connect', () => {\n      socket.end();\n      resolve(true);\n    });\n    \n    socket.on('timeout', () => {\n      socket.destroy();\n      resolve(false);\n    });\n    \n    socket.on('error', () => {\n      resolve(false);\n    });\n    \n    socket.connect(machine.port, machine.ip);\n  });\n}\n```\n\n3. Create YAML/JSON schema for machine configuration:\n```typescript\n// src/schemas/machine.schema.ts\nexport const machineConfigSchema = {\n  type: 'object',\n  required: ['id', 'name', 'ip', 'port', 'type'],\n  properties: {\n    id: { type: 'string' },\n    name: { type: 'string' },\n    ip: { \n      type: 'string',\n      pattern: '^(?:[0-9]{1,3}\\\\.){3}[0-9]{1,3}$' \n    },\n    port: { \n      type: 'number',\n      minimum: 1,\n      maximum: 65535\n    },\n    type: { \n      type: 'string',\n      enum: ['FANUC', 'OTHER']\n    },\n    enabled: {\n      type: 'boolean',\n      default: true\n    },\n    pollingInterval: {\n      type: 'number',\n      default: 5000\n    }\n  }\n};\n```\n\n4. Create example configuration files:\n```yaml\n# config/machines.yaml\n- id: DT-22\n  name: FANUC DT-22\n  ip: 192.168.1.22\n  port: 5000\n  type: FANUC\n  enabled: true\n  pollingInterval: 5000\n- id: DT-26\n  name: FANUC DT-26\n  ip: 192.168.1.90\n  port: 5000\n  type: FANUC\n  enabled: true\n  pollingInterval: 5000\n```\n\n5. Update the main application to use the discovery service:\n```typescript\n// src/main.ts\nimport { MachineDiscoveryService } from './services/machineDiscovery.service';\nimport { startServer } from './server';\n\nasync function bootstrap() {\n  // Initialize machine discovery\n  const discoveryService = new MachineDiscoveryService();\n  \n  // Load machines from config\n  const configuredMachines = discoveryService.loadMachinesFromConfig();\n  console.log(`Loaded ${configuredMachines.length} machines from configuration`);\n  \n  // Optionally discover new machines\n  const discoveredMachines = await discoveryService.discoverMachines();\n  console.log(`Discovered ${discoveredMachines.length} new machines on network`);\n  \n  // Validate all machine connections\n  const validationResults = await discoveryService.validateMachines();\n  const validMachines = validationResults.filter(r => r.valid).map(r => r.machine);\n  console.log(`${validMachines.length} machines have valid connections`);\n  \n  // Start the server with validated machines\n  startServer(validMachines);\n}\n\nbootstrap().catch(console.error);\n```\n\n6. Add CLI commands for machine discovery and management:\n```typescript\n// src/cli.ts\nimport { Command } from 'commander';\nimport { MachineDiscoveryService } from './services/machineDiscovery.service';\n\nconst program = new Command();\nconst discoveryService = new MachineDiscoveryService();\n\nprogram\n  .name('mtconnect-manager')\n  .description('MTConnect machine management CLI')\n  .version('1.0.0');\n\nprogram\n  .command('discover')\n  .description('Discover machines on the network')\n  .option('-r, --range <range>', 'Network range to scan', '192.168.1')\n  .action(async (options) => {\n    console.log(`Discovering machines on ${options.range}.*...`);\n    const machines = await discoveryService.discoverMachines(options.range);\n    console.log(`Discovered ${machines.length} machines`);\n    machines.forEach(m => console.log(`- ${m.id}: ${m.ip}:${m.port} (${m.type})`));\n  });\n\nprogram\n  .command('validate')\n  .description('Validate machine connections')\n  .action(async () => {\n    const machines = discoveryService.loadMachinesFromConfig();\n    console.log(`Validating ${machines.length} machines...`);\n    const results = await discoveryService.validateMachines(machines);\n    \n    console.log('Validation results:');\n    results.forEach(r => {\n      console.log(`- ${r.machine.id}: ${r.valid ? 'VALID' : 'INVALID'}`);\n    });\n  });\n\nprogram.parse(process.argv);\n```",
+        "testStrategy": "1. Test configuration file loading:\n   - Create test YAML and JSON configuration files with sample machine data\n   - Verify the system correctly loads both file formats\n   - Test error handling with malformed configuration files\n\n2. Test machine connection validation:\n   - Create mock machines with valid and invalid connection details\n   - Verify the validation service correctly identifies reachable machines\n   - Test timeout handling for unreachable machines\n   - Measure performance with a large number of machines\n\n3. Test auto-discovery functionality:\n   - Set up a controlled network environment with MTConnect agents\n   - Verify the discovery service can find machines on the network\n   - Test with different network ranges and configurations\n   - Verify discovered machines are correctly added to the configuration\n\n4. Test configuration schema validation:\n   - Create test cases with valid and invalid machine configurations\n   - Verify schema validation correctly identifies issues\n   - Test with missing required fields, invalid IP addresses, and out-of-range ports\n\n5. Integration testing:\n   - Verify the system starts correctly with the discovery service\n   - Test the complete workflow: load config → discover → validate → start server\n   - Verify machine data is correctly passed to the server\n\n6. CLI testing:\n   - Test each CLI command with various parameters\n   - Verify command output is correct and helpful\n   - Test error handling and edge cases\n\n7. Performance testing:\n   - Measure startup time with different numbers of configured machines\n   - Test network scanning performance on different network sizes\n   - Verify the system remains responsive during discovery operations",
+        "status": "done",
+        "dependencies": [
+          16
+        ],
+        "priority": "high",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-06-29T11:31:56.465Z",
+      "updated": "2025-07-08T04:38:24.061Z",
+      "description": "Tasks for master context"
+    }
+  },
+  "adam-poc": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Set up project structure and configuration for adam-poc",
+        "description": "Create the initial repository structure for the adam-poc project, including Dockerfile, TypeScript configuration, and essential directories. Set up package.json with required dependencies.",
+        "details": "1. Create a new Git repository named 'adam-poc'\n2. Set up the following directory structure:\n   ```\n   adam-poc/\n   ├── src/\n   ├── tests/\n   ├── docker/\n   ├── Dockerfile\n   ├── package.json\n   ├── tsconfig.json\n   └── .gitignore\n   ```\n3. Create a Dockerfile in the root directory with the following content:\n   ```dockerfile\n   FROM node:18-alpine\n   WORKDIR /app\n   COPY package*.json ./\n   RUN npm install\n   COPY . .\n   RUN npm run build\n   CMD [\"npm\", \"start\"]\n   ```\n4. Create a package.json file with the following content:\n   ```json\n   {\n     \"name\": \"adam-poc\",\n     \"version\": \"1.0.0\",\n     \"description\": \"Adam POC project\",\n     \"main\": \"dist/index.js\",\n     \"scripts\": {\n       \"build\": \"tsc\",\n       \"start\": \"node dist/index.js\",\n       \"test\": \"jest\"\n     },\n     \"dependencies\": {\n       \"jsmodbus\": \"^4.0.6\",\n       \"axios\": \"^0.27.2\",\n       \"rxjs\": \"^7.5.5\"\n     },\n     \"devDependencies\": {\n       \"typescript\": \"^4.7.4\",\n       \"@types/node\": \"^18.0.0\",\n       \"jest\": \"^28.1.1\",\n       \"@types/jest\": \"^28.1.3\"\n     }\n   }\n   ```\n5. Set up tsconfig.json with the following configuration:\n   ```json\n   {\n     \"compilerOptions\": {\n       \"target\": \"es2018\",\n       \"module\": \"commonjs\",\n       \"outDir\": \"./dist\",\n       \"rootDir\": \"./src\",\n       \"strict\": true,\n       \"esModuleInterop\": true,\n       \"skipLibCheck\": true,\n       \"forceConsistentCasingInFileNames\": true\n     },\n     \"include\": [\"src/**/*\"],\n     \"exclude\": [\"node_modules\", \"**/*.spec.ts\"]\n   }\n   ```\n6. Create a .gitignore file to exclude unnecessary files:\n   ```\n   node_modules/\n   dist/\n   .env\n   *.log\n   ```\n7. Initialize the Git repository and make the initial commit.",
+        "testStrategy": "1. Verify the correct directory structure:\n   - Check that src/, tests/, and docker/ directories exist\n   - Confirm presence of Dockerfile, package.json, tsconfig.json, and .gitignore in the root directory\n\n2. Validate Dockerfile:\n   - Ensure it uses Node.js 18 Alpine as the base image\n   - Verify correct WORKDIR, COPY, RUN, and CMD instructions\n\n3. Test package.json:\n   - Run `npm install` and verify all dependencies (jsmodbus, axios, rxjs) are installed correctly\n   - Check that devDependencies include TypeScript and Jest\n\n4. Verify tsconfig.json:\n   - Ensure correct compiler options (target, module, outDir, rootDir, etc.)\n   - Validate include and exclude patterns\n\n5. Test TypeScript compilation:\n   - Create a sample TypeScript file in src/\n   - Run `npm run build` and verify successful compilation to dist/\n\n6. Verify Git repository:\n   - Run `git status` to ensure the repository is initialized\n   - Check that node_modules/ and dist/ are ignored by Git\n\n7. Test Docker build:\n   - Run `docker build -t adam-poc .`\n   - Verify successful build without errors",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Create Modbus TCP Client for ADAM-6050 Connection",
+        "description": "Develop a Modbus TCP client using the jsmodbus library to connect to an ADAM-6050 device, implementing digital I/O reading and Keep-Alive functionality.",
+        "details": "1. Install the jsmodbus library:\n   ```\n   npm install jsmodbus\n   ```\n\n2. Create a new file `src/AdamClient.ts` and implement the AdamClient class:\n   ```typescript\n   import * as ModbusRTU from 'jsmodbus'\n   import { Socket } from 'net'\n\n   class AdamClient {\n     private client: ModbusRTU.ModbusTCPClient\n     private socket: Socket\n     private keepAliveInterval: NodeJS.Timeout | null = null\n\n     constructor(private ip: string, private port: number) {\n       this.socket = new Socket()\n       this.client = new ModbusRTU.client.TCP(this.socket, 1)\n     }\n\n     async connect(): Promise<void> {\n       return new Promise((resolve, reject) => {\n         this.socket.connect({ host: this.ip, port: this.port }, () => {\n           console.log('Connected to ADAM-6050')\n           this.setupKeepAlive()\n           resolve()\n         })\n         this.socket.on('error', (err) => {\n           console.error('Connection error:', err)\n           reject(err)\n         })\n       })\n     }\n\n     async readDigitalInputs(): Promise<boolean[]> {\n       const response = await this.client.readCoils(0, 16)\n       return response.response.coils\n     }\n\n     async readDigitalOutputs(): Promise<boolean[]> {\n       const response = await this.client.readCoils(16, 16)\n       return response.response.coils\n     }\n\n     private setupKeepAlive(interval: number = 100): void {\n       this.keepAliveInterval = setInterval(async () => {\n         try {\n           await this.readDigitalInputs()\n         } catch (error) {\n           console.error('Keep-Alive failed:', error)\n           this.reconnect()\n         }\n       }, interval)\n     }\n\n     private async reconnect(): Promise<void> {\n       console.log('Attempting to reconnect...')\n       this.socket.destroy()\n       await this.connect()\n     }\n\n     disconnect(): void {\n       if (this.keepAliveInterval) {\n         clearInterval(this.keepAliveInterval)\n       }\n       this.socket.end()\n     }\n   }\n\n   export default AdamClient\n   ```\n\n3. Create a simple test script in `src/index.ts`:\n   ```typescript\n   import AdamClient from './AdamClient'\n\n   async function main() {\n     const client = new AdamClient('192.168.1.100', 502)\n     \n     try {\n       await client.connect()\n       \n       setInterval(async () => {\n         const inputs = await client.readDigitalInputs()\n         const outputs = await client.readDigitalOutputs()\n         console.log('Digital Inputs:', inputs)\n         console.log('Digital Outputs:', outputs)\n       }, 1000)\n     } catch (error) {\n       console.error('Error:', error)\n     }\n   }\n\n   main()\n   ```\n\n4. Update `package.json` to include start and build scripts:\n   ```json\n   {\n     \"scripts\": {\n       \"start\": \"node dist/index.js\",\n       \"build\": \"tsc\",\n       \"dev\": \"ts-node src/index.ts\"\n     }\n   }\n   ```\n\n5. Ensure proper error handling and logging throughout the implementation.\n\n6. Implement reconnection logic in case of connection loss.\n\n7. Consider implementing a method for writing to digital outputs if required in the future.\n<info added on 2025-07-08T06:22:22.361Z>\n# Research Findings: Using jsmodbus Library with ADAM-6050\n\n## ADAM-6050 Modbus Register Map\n\nThe ADAM-6050 uses the following Modbus register mapping:\n- Digital Inputs (DI): Use register addresses 0-11 (12 inputs total)\n- Digital Outputs (DO): Use register addresses 0-5 (6 outputs total)\n\n## Correct Implementation Notes\n\n1. For reading digital inputs, use `readDiscreteInputs()` instead of `readCoils()`:\n   ```typescript\n   async readDigitalInputs(): Promise<boolean[]> {\n     const response = await this.client.readDiscreteInputs(0, 12)\n     return response.response.body.valuesAsArray\n   }\n   ```\n\n2. For reading digital outputs, use `readCoils()`:\n   ```typescript\n   async readDigitalOutputs(): Promise<boolean[]> {\n     const response = await this.client.readCoils(0, 6)\n     return response.response.body.valuesAsArray\n   }\n   ```\n\n3. For writing to digital outputs, implement:\n   ```typescript\n   async writeDigitalOutput(output: number, value: boolean): Promise<void> {\n     await this.client.writeSingleCoil(output, value)\n   }\n   \n   async writeMultipleDigitalOutputs(values: boolean[]): Promise<void> {\n     await this.client.writeMultipleCoils(0, values)\n   }\n   ```\n\n## Error Handling Best Practices\n\nImplement a more robust error handling system with:\n- Connection timeout settings\n- Automatic reconnection with exponential backoff\n- Event listeners for socket errors and disconnections\n\n## Keep-Alive Implementation\n\nFor optimal Keep-Alive functionality:\n- Use a 30-second interval (industry standard for Modbus devices)\n- Monitor response times to detect degrading connections\n- Log connection quality metrics for diagnostics\n</info added on 2025-07-08T06:22:22.361Z>\n<info added on 2025-07-08T06:32:33.516Z>\n✅ Implementation Completed\n\nA fully functional AdamClient has been created with the following capabilities:\n\n🔧 Core Functionality:\n- Connection to ADAM-6050 via Modbus TCP (192.168.1.100:502)\n- Reading 16 Digital Inputs using readDiscreteInputs()\n- Reading 16 Digital Outputs using readCoils()\n- Writing to Digital Outputs using writeSingleCoil()\n\n🛡️ Resilience:\n- Automatic reconnection (5 attempts with 5-second intervals)\n- Retry logic for operations (3 attempts with 1-second pauses)\n- Keep-Alive mechanism (every 30 seconds)\n- Handling of timeouts and network errors\n\n📁 Files Created:\n- src/AdamClient.ts - main class\n- src/test-adam.ts - test file with cyclic reading\n- src/index.ts - updated for running tests\n\n🧪 Testing:\n- Created test-adam.ts with cyclic reading every 2 seconds\n- Graceful shutdown on Ctrl+C\n- Detailed logging of all operations\n- Display of DI0-DI15 and DO0-DO15 status\n\n⚡ Next Step: Test with a real ADAM-6050 or create a Mock server\n</info added on 2025-07-08T06:32:33.516Z>",
+        "testStrategy": "1. Unit Testing:\n   - Create unit tests for the AdamClient class methods using a testing framework like Jest.\n   - Mock the ModbusTCPClient to test readDigitalInputs and readDigitalOutputs methods.\n   - Test error handling and reconnection logic.\n\n2. Integration Testing:\n   - Set up a test environment with a real or simulated ADAM-6050 device.\n   - Test the connection process and verify successful communication.\n   - Verify reading of digital inputs and outputs with known states.\n   - Test the Keep-Alive functionality by running the client for an extended period.\n   - Simulate network interruptions to test the reconnection logic.\n\n3. Performance Testing:\n   - Measure the response time for reading inputs and outputs.\n   - Verify that the 100ms polling interval is maintained consistently.\n   - Test the system under high load conditions to ensure stability.\n\n4. Error Handling:\n   - Test various error scenarios such as wrong IP, port, or device offline.\n   - Verify that appropriate error messages are logged.\n\n5. Long-running Test:\n   - Run the client for an extended period (e.g., 24 hours) to ensure stability and memory management.\n\n6. Code Review:\n   - Conduct a thorough code review to ensure best practices are followed.\n   - Check for proper TypeScript typing and code documentation.\n\n7. Manual Testing:\n   - Use the test script to manually verify the functionality.\n   - Monitor the console output to ensure correct data is being read and displayed.",
+        "status": "done",
+        "dependencies": [
+          1
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Create JSON Mapper for ADAM-6050 Data Transformation",
+        "description": "Develop a JSON mapper to transform ADAM-6050 data from 16-bit digital inputs/outputs into a structured format with TypeScript interfaces.",
+        "details": "1. Create a new file `src/AdamDataMapper.ts` to implement the JSON mapper:\n\n```typescript\ninterface AdamData {\n  timestamp: number;\n  moduleId: string;\n  machineId: string;\n  digitalInputs: number[];\n  digitalOutputs: number[];\n  status: 'online' | 'offline';\n}\n\nclass AdamDataMapper {\n  static mapData(rawData: number[], moduleId: string, machineId: string): AdamData {\n    const digitalInputs = this.extractBits(rawData[0]);\n    const digitalOutputs = this.extractBits(rawData[1]);\n\n    return {\n      timestamp: Date.now(),\n      moduleId,\n      machineId,\n      digitalInputs,\n      digitalOutputs,\n      status: 'online'\n    };\n  }\n\n  private static extractBits(value: number): number[] {\n    return Array.from({length: 16}, (_, i) => (value >> i) & 1);\n  }\n}\n\nexport { AdamData, AdamDataMapper };\n```\n\n2. Update `src/AdamClient.ts` to use the new mapper:\n\n```typescript\nimport { AdamDataMapper, AdamData } from './AdamDataMapper';\n\nclass AdamClient {\n  // ... existing code ...\n\n  async readData(): Promise<AdamData> {\n    const inputs = await this.readDigitalInputs();\n    const outputs = await this.readDigitalOutputs();\n    return AdamDataMapper.mapData([inputs, outputs], this.moduleId, this.machineId);\n  }\n\n  // ... existing code ...\n}\n```\n\n3. Create a new file `src/types.ts` for additional TypeScript interfaces:\n\n```typescript\nexport interface RawAdamData {\n  digitalInputs: number;\n  digitalOutputs: number;\n}\n\nexport interface AdamConfig {\n  ip: string;\n  port: number;\n  moduleId: string;\n  machineId: string;\n}\n```\n\n4. Update other parts of the application to use these new interfaces and the mapper where appropriate.",
+        "testStrategy": "1. Unit Testing:\n   - Create unit tests for the AdamDataMapper class in `tests/AdamDataMapper.test.ts`:\n     - Test the mapData method with various input combinations\n     - Verify correct extraction of bits from 16-bit integers\n     - Ensure timestamp, moduleId, machineId, and status are set correctly\n   - Use Jest for running tests: `npm test`\n\n2. Integration Testing:\n   - Update the AdamClient tests to include the new readData method\n   - Verify that the AdamClient correctly uses the AdamDataMapper\n\n3. End-to-End Testing:\n   - Create a test script that connects to a real or simulated ADAM-6050 device\n   - Read data and verify the output matches the expected JSON structure\n   - Test with different input/output combinations to ensure correct mapping\n\n4. Type Checking:\n   - Run TypeScript compiler in strict mode to ensure type safety\n   - Verify no type errors are present in the codebase\n\n5. Code Review:\n   - Conduct a thorough code review to ensure the mapper adheres to project coding standards\n   - Check for proper error handling and edge cases",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Create HTTP Client with Outbox Pattern for Cloud API Communication",
+        "description": "Develop an HTTP client to send data packets to the Cloud API, implementing the Outbox pattern with message buffering, batch sending, and retry logic.",
+        "details": "1. Create a new file `src/CloudApiClient.ts` and implement the CloudApiClient class:\n\n```typescript\nimport axios, { AxiosInstance } from 'axios';\n\ninterface QueueItem {\n  data: any;\n  timestamp: number;\n}\n\nclass CloudApiClient {\n  private axios: AxiosInstance;\n  private queue: QueueItem[] = [];\n  private sendInterval: NodeJS.Timeout | null = null;\n  private offlineQueue: QueueItem[] = [];\n\n  constructor(private endpoint: string, private batchSize: number = 50, private intervalMs: number = 5000) {\n    this.axios = axios.create({\n      baseURL: this.endpoint,\n      timeout: 10000,\n    });\n  }\n\n  public addToQueue(data: any): void {\n    this.queue.push({ data, timestamp: Date.now() });\n  }\n\n  public startSending(): void {\n    this.sendInterval = setInterval(() => this.sendBatch(), this.intervalMs);\n  }\n\n  public stopSending(): void {\n    if (this.sendInterval) {\n      clearInterval(this.sendInterval);\n    }\n  }\n\n  private async sendBatch(): Promise<void> {\n    const batch = this.queue.splice(0, this.batchSize);\n    if (batch.length === 0) return;\n\n    try {\n      await this.axios.post('/data', batch);\n    } catch (error) {\n      console.error('Error sending batch:', error);\n      await this.handleSendError(batch);\n    }\n  }\n\n  private async handleSendError(batch: QueueItem[]): Promise<void> {\n    // Implement exponential backoff retry logic\n    for (let attempt = 1; attempt <= 3; attempt++) {\n      try {\n        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));\n        await this.axios.post('/data', batch);\n        return;\n      } catch (error) {\n        console.error(`Retry attempt ${attempt} failed:`, error);\n      }\n    }\n    // If all retries fail, add to offline queue\n    this.offlineQueue.push(...batch);\n  }\n\n  public async sendOfflineQueue(): Promise<void> {\n    while (this.offlineQueue.length > 0) {\n      const batch = this.offlineQueue.splice(0, this.batchSize);\n      try {\n        await this.axios.post('/data', batch);\n      } catch (error) {\n        console.error('Error sending offline queue:', error);\n        this.offlineQueue.unshift(...batch);\n        break;\n      }\n    }\n  }\n}\n\nexport default CloudApiClient;\n```\n\n2. Update `src/index.ts` to use the CloudApiClient:\n\n```typescript\nimport CloudApiClient from './CloudApiClient';\nimport AdamClient from './AdamClient';\nimport AdamDataMapper from './AdamDataMapper';\n\nconst cloudApiClient = new CloudApiClient('https://railway-api.up.railway.app/api/ext');\nconst adamClient = new AdamClient('192.168.1.100', 502);\n\ncloudApiClient.startSending();\n\nsetInterval(async () => {\n  try {\n    const rawData = await adamClient.readDigitalInputs();\n    const mappedData = AdamDataMapper.mapData(rawData, 'ADAM-6050-1', 'MACHINE-001');\n    cloudApiClient.addToQueue(mappedData);\n  } catch (error) {\n    console.error('Error reading ADAM-6050 data:', error);\n  }\n}, 1000);\n\n// Handle application shutdown\nprocess.on('SIGINT', () => {\n  cloudApiClient.stopSending();\n  cloudApiClient.sendOfflineQueue().then(() => process.exit(0));\n});\n```\n\n3. Install required dependencies:\n```\nnpm install axios\n```\n\n4. Update `tsconfig.json` to include:\n```json\n{\n  \"compilerOptions\": {\n    // ... other options ...\n    \"esModuleInterop\": true\n  }\n}\n```",
+        "testStrategy": "1. Unit Testing:\n   - Create a new file `tests/CloudApiClient.test.ts` for unit tests.\n   - Test the `addToQueue` method to ensure it correctly adds items to the queue.\n   - Mock axios and test the `sendBatch` method to verify correct batch sending.\n   - Test the retry logic in `handleSendError` by mocking failed requests.\n   - Verify that the offline queue is used when all retries fail.\n\n2. Integration Testing:\n   - Set up a mock server to simulate the Cloud API endpoint.\n   - Test the complete flow from adding items to the queue to successful batch sending.\n   - Simulate network errors and verify the retry and offline queue mechanisms.\n\n3. Performance Testing:\n   - Test the client with a high volume of data to ensure it can handle the load.\n   - Verify that batches are sent every 5 seconds and contain no more than 50 items.\n\n4. Error Handling and Recovery Testing:\n   - Simulate various network conditions (disconnections, timeouts) to test the robustness of the client.\n   - Verify that the offline queue can be successfully sent when the connection is restored.\n\n5. End-to-End Testing:\n   - Integrate the CloudApiClient with the AdamClient and AdamDataMapper.\n   - Verify that data flows correctly from the ADAM-6050 device through to the Cloud API.\n\n6. Code Review:\n   - Ensure the implementation follows TypeScript best practices and coding standards.\n   - Verify error handling, logging, and overall code structure.",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2,
+          3
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Create Mock Modbus TCP Server for ADAM-6050 Simulation",
+        "description": "Develop a mock Modbus TCP server to simulate an ADAM-6050 device for testing purposes, emulating 16 Digital Inputs with changing values and 16 Digital Outputs with feedback, including random disconnections and reconnections.",
+        "details": "1. Create a new file `src/MockAdamServer.ts` and implement the MockAdamServer class:\n\n```typescript\nimport * as net from 'net';\nimport { ServerOptions } from 'net';\n\nclass MockAdamServer {\n  private server: net.Server;\n  private digitalInputs: boolean[] = new Array(16).fill(false);\n  private digitalOutputs: boolean[] = new Array(16).fill(false);\n  private isConnected: boolean = true;\n\n  constructor(private port: number = 502, private slaveId: number = 1) {\n    this.server = net.createServer(this.handleConnection.bind(this));\n  }\n\n  public start(): void {\n    this.server.listen(this.port, () => {\n      console.log(`Mock ADAM-6050 server listening on port ${this.port}`);\n    });\n    this.simulateInputChanges();\n    this.simulateDisconnections();\n  }\n\n  private handleConnection(socket: net.Socket): void {\n    socket.on('data', (data) => {\n      if (!this.isConnected) return;\n      const functionCode = data[7];\n      const startAddress = (data[8] << 8) | data[9];\n      const quantity = (data[10] << 8) | data[11];\n\n      switch (functionCode) {\n        case 0x01: // Read Coils (Digital Outputs)\n          this.handleReadCoils(socket, startAddress, quantity);\n          break;\n        case 0x02: // Read Discrete Inputs (Digital Inputs)\n          this.handleReadDiscreteInputs(socket, startAddress, quantity);\n          break;\n        case 0x05: // Write Single Coil\n          this.handleWriteSingleCoil(socket, startAddress, (data[10] === 0xFF));\n          break;\n        default:\n          this.sendExceptionResponse(socket, functionCode, 0x01);\n      }\n    });\n  }\n\n  private handleReadCoils(socket: net.Socket, startAddress: number, quantity: number): void {\n    const response = Buffer.alloc(9 + Math.ceil(quantity / 8));\n    response.writeUInt16BE(0, 0); // Transaction ID\n    response.writeUInt16BE(0, 2); // Protocol ID\n    response.writeUInt16BE(3 + Math.ceil(quantity / 8), 4); // Length\n    response.writeUInt8(this.slaveId, 6); // Unit ID\n    response.writeUInt8(0x01, 7); // Function Code\n    response.writeUInt8(Math.ceil(quantity / 8), 8); // Byte Count\n\n    for (let i = 0; i < quantity; i++) {\n      if (this.digitalOutputs[startAddress + i]) {\n        response[9 + Math.floor(i / 8)] |= (1 << (i % 8));\n      }\n    }\n\n    socket.write(response);\n  }\n\n  private handleReadDiscreteInputs(socket: net.Socket, startAddress: number, quantity: number): void {\n    const response = Buffer.alloc(9 + Math.ceil(quantity / 8));\n    response.writeUInt16BE(0, 0); // Transaction ID\n    response.writeUInt16BE(0, 2); // Protocol ID\n    response.writeUInt16BE(3 + Math.ceil(quantity / 8), 4); // Length\n    response.writeUInt8(this.slaveId, 6); // Unit ID\n    response.writeUInt8(0x02, 7); // Function Code\n    response.writeUInt8(Math.ceil(quantity / 8), 8); // Byte Count\n\n    for (let i = 0; i < quantity; i++) {\n      if (this.digitalInputs[startAddress + i]) {\n        response[9 + Math.floor(i / 8)] |= (1 << (i % 8));\n      }\n    }\n\n    socket.write(response);\n  }\n\n  private handleWriteSingleCoil(socket: net.Socket, address: number, value: boolean): void {\n    this.digitalOutputs[address] = value;\n    const response = Buffer.alloc(12);\n    response.writeUInt16BE(0, 0); // Transaction ID\n    response.writeUInt16BE(0, 2); // Protocol ID\n    response.writeUInt16BE(6, 4); // Length\n    response.writeUInt8(this.slaveId, 6); // Unit ID\n    response.writeUInt8(0x05, 7); // Function Code\n    response.writeUInt16BE(address, 8); // Output Address\n    response.writeUInt16BE(value ? 0xFF00 : 0x0000, 10); // Output Value\n    socket.write(response);\n  }\n\n  private sendExceptionResponse(socket: net.Socket, functionCode: number, exceptionCode: number): void {\n    const response = Buffer.alloc(9);\n    response.writeUInt16BE(0, 0); // Transaction ID\n    response.writeUInt16BE(0, 2); // Protocol ID\n    response.writeUInt16BE(3, 4); // Length\n    response.writeUInt8(this.slaveId, 6); // Unit ID\n    response.writeUInt8(functionCode | 0x80, 7); // Function Code with high bit set\n    response.writeUInt8(exceptionCode, 8); // Exception Code\n    socket.write(response);\n  }\n\n  private simulateInputChanges(): void {\n    setInterval(() => {\n      if (!this.isConnected) return;\n      for (let i = 0; i < 16; i++) {\n        if (Math.random() < 0.1) { // 10% chance to change each input\n          this.digitalInputs[i] = !this.digitalInputs[i];\n        }\n      }\n    }, 1000); // Change inputs every second\n  }\n\n  private simulateDisconnections(): void {\n    setInterval(() => {\n      this.isConnected = Math.random() < 0.9; // 10% chance of disconnection\n      console.log(`Mock ADAM-6050 server is ${this.isConnected ? 'connected' : 'disconnected'}`);\n    }, 10000); // Check connection every 10 seconds\n  }\n}\n\nexport default MockAdamServer;\n```\n\n2. Create a new file `src/mockServerRunner.ts` to run the mock server:\n\n```typescript\nimport MockAdamServer from './MockAdamServer';\n\nconst mockServer = new MockAdamServer();\nmockServer.start();\n```\n\n3. Update `package.json` to include a script for running the mock server:\n\n```json\n{\n  \"scripts\": {\n    \"start:mock\": \"ts-node src/mockServerRunner.ts\"\n  }\n}\n```\n\n4. Implement error handling and logging throughout the MockAdamServer class to capture and report any issues during operation.\n\n5. Consider adding configuration options for the mock server, such as customizable change rates for inputs, disconnection frequency, and response delays to simulate real-world conditions more accurately.",
+        "testStrategy": "1. Unit Testing:\n   - Create a new file `tests/MockAdamServer.test.ts` for unit tests.\n   - Test the constructor and initialization of the MockAdamServer class.\n   - Verify that the server starts and listens on the specified port.\n   - Test each Modbus function handler (readCoils, readDiscreteInputs, writeSingleCoil) with various input parameters.\n   - Ensure proper error handling and exception responses for invalid requests.\n\n2. Integration Testing:\n   - Use a Modbus TCP client library (e.g., jsmodbus) to connect to the mock server and perform read/write operations.\n   - Verify that the client can successfully read digital inputs and outputs.\n   - Test writing to digital outputs and confirm the changes are reflected in subsequent read operations.\n   - Implement a test that runs for an extended period (e.g., 1 hour) to verify the stability of the mock server and its ability to handle continuous requests.\n\n3. Simulation Testing:\n   - Verify that digital inputs change randomly over time as expected.\n   - Test the disconnection/reconnection functionality by monitoring the server's status over an extended period.\n   - Ensure that the server properly handles requests during both connected and disconnected states.\n\n4. Performance Testing:\n   - Simulate multiple concurrent connections to the mock server and verify its ability to handle them correctly.\n   - Measure response times under various load conditions to ensure the mock server performs similarly to a real ADAM-6050 device.\n\n5. Compatibility Testing:\n   - Test the mock server with different Modbus TCP client implementations to ensure broad compatibility.\n   - Verify that the mock server works correctly with the actual ADAM-6050 client implementation developed in Task 2.\n\n6. Error Handling and Edge Case Testing:\n   - Send malformed Modbus requests and verify that the server responds with appropriate exception codes.\n   - Test boundary conditions, such as reading/writing at the edges of the available address range.\n   - Verify proper handling of connection timeouts and unexpected disconnections.",
+        "status": "done",
+        "dependencies": [
+          1,
+          2
+        ],
+        "priority": "low",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Create Integration Tests for ADAM PoC Full Cycle",
+        "description": "Develop comprehensive integration tests for the ADAM PoC full cycle, including connection to the Mock server, data reading, JSON mapping, batch sending to Cloud API, performance testing, connection loss handling, and data validation.",
+        "details": "1. Set up a test environment:\n   - Create a new file `tests/integration/adamPocFullCycle.test.ts`\n   - Import necessary modules and classes (MockAdamServer, AdamClient, AdamDataMapper, CloudApiClient)\n\n2. Implement test cases:\n   a. Mock server connection:\n      - Create an instance of MockAdamServer\n      - Connect AdamClient to the mock server\n      - Verify successful connection\n\n   b. Data reading:\n      - Set up AdamClient to read data every 100ms\n      - Verify that data is being read at the correct interval\n      - Check that the read data matches the expected format\n\n   c. JSON mapping:\n      - Pass the read data through AdamDataMapper\n      - Verify that the mapped data adheres to the defined TypeScript interfaces\n      - Check for correct timestamp, moduleId, machineId, and status\n\n   d. Batch sending to Cloud API:\n      - Set up CloudApiClient with a mock endpoint\n      - Verify that data batches are being sent correctly\n      - Check that the sent data matches the mapped data\n\n   e. Performance testing:\n      - Implement a test case that simulates 1000 operations per second\n      - Measure and assert that the system can handle this load\n      - Monitor memory usage and response times\n\n   f. Connection loss handling:\n      - Simulate connection loss from the mock server\n      - Verify that the system attempts to reconnect\n      - Check that data is buffered during the disconnection\n      - Ensure data integrity after reconnection\n\n   g. Data validation:\n      - Implement comprehensive data validation tests\n      - Check for data consistency across the entire pipeline\n      - Verify that all required fields are present and correctly formatted\n\n3. Set up CI/CD pipeline:\n   - Create a new file `.github/workflows/integration-tests.yml` (assuming GitHub Actions)\n   - Configure the workflow to run on push and pull requests to main branch\n   - Set up the test environment in the CI/CD pipeline\n   - Run the integration tests as part of the pipeline\n   - Report test results and code coverage\n\n4. Implement logging and error handling:\n   - Add detailed logging throughout the test cases\n   - Implement proper error handling and assertions\n   - Ensure all edge cases are covered\n\n5. Create a test report generator:\n   - Implement a mechanism to generate detailed test reports\n   - Include performance metrics, success rates, and any failures",
+        "testStrategy": "1. Manual Testing:\n   - Run the integration tests locally to ensure they work as expected\n   - Verify that all test cases pass and provide meaningful output\n   - Check that the performance tests accurately measure the system's capabilities\n\n2. Automated Testing:\n   - Set up a CI/CD pipeline to run the integration tests automatically\n   - Ensure the pipeline runs on every push and pull request\n   - Verify that the pipeline correctly reports test results and code coverage\n\n3. Code Review:\n   - Conduct a thorough code review of the integration tests\n   - Ensure that all aspects of the ADAM PoC full cycle are covered\n   - Verify that the tests are well-structured and follow best practices\n\n4. Edge Case Testing:\n   - Test with various network conditions (high latency, packet loss)\n   - Verify system behavior under extreme load conditions\n   - Test with malformed or unexpected input data\n\n5. Long-running Tests:\n   - Implement and run long-duration tests (e.g., 24 hours) to catch any memory leaks or degradation over time\n\n6. Report Validation:\n   - Review generated test reports for completeness and accuracy\n   - Ensure that performance metrics are correctly calculated and reported\n\n7. Regression Testing:\n   - Run the integration tests after any significant changes to the system\n   - Verify that new changes haven't broken existing functionality\n\n8. Cross-environment Testing:\n   - Run tests in different environments (development, staging, production-like)\n   - Ensure consistent behavior across all environments",
+        "status": "done",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "priority": "low",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-08T05:21:50.567Z",
+      "updated": "2025-07-08T07:31:39.110Z",
+      "description": "PoC для проверки возможности замены Advantech.Adam.DLL на Node.js jsmodbus библиотеку"
+    }
+  },
+  "edge-to-cloud": {
+    "tasks": [
+      {
+        "id": 13,
+        "title": "Setup Monorepo Structure",
+        "description": "Set up a monorepo structure using pnpm workspaces for the MTConnect system refactoring project.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "details": "1. Initialize a new repository\n2. Set up pnpm workspaces (preferred over Nx for simplicity and performance)\n3. Create the following structure:\n   - apps/edge-gateway\n   - apps/cloud-consumer\n   - apps/cloud-api (moved from existing cloud-api/mtconnect-cloud/)\n   - apps/dashboard\n   - packages/common-dto\n   - docker/\n4. Set up a root package.json with workspace definitions\n5. Configure TypeScript for the monorepo with path mapping\n6. Set up ESLint and Prettier for code consistency\n7. Create a .gitignore file for the monorepo\n8. Create package.json for each app\n9. Configure Docker Compose for development\n\nUse the following versions:\npnpm: 8.6.0\nTypeScript: 5.1.3\nESLint: 8.42.0\nPrettier: 2.8.8",
+        "testStrategy": "1. Verify that pnpm workspaces are correctly set up\n2. Ensure all packages can be built without errors\n3. Test running scripts from the root of the monorepo\n4. Verify that ESLint and Prettier configs are applied across all packages\n5. Verify Docker Compose setup works correctly for local development",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create basic monorepo structure",
+            "description": "Set up the foundational monorepo structure with pnpm workspaces",
+            "status": "done",
+            "dependencies": [],
+            "details": "1. Create folder structure: apps/, packages/, docker/\n2. Configure root package.json with pnpm workspaces\n3. Create pnpm-workspace.yaml\n4. Set up TypeScript config for monorepo with path mapping\n5. Configure ESLint and Prettier for the entire workspace\n6. Move existing cloud-api to apps/cloud-api/\n7. Create packages/common-dto with basic DTOs:\n   - EdgeGatewayDataDto (copied from existing code)\n   - MachineDataDto\n   - AdamDataDto\n   - MqttMessageDto",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Create package.json for each app",
+            "description": "Set up individual package.json files for each application in the monorepo",
+            "status": "done",
+            "dependencies": [],
+            "details": "Create package.json files with appropriate dependencies and scripts for:\n1. apps/edge-gateway\n2. apps/cloud-consumer\n3. apps/cloud-api (update existing if needed)\n4. apps/dashboard",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Configure Docker Compose for development",
+            "description": "Set up Docker Compose configuration for local development environment",
+            "status": "done",
+            "dependencies": [],
+            "details": "1. Create docker-compose.yml in the docker/ directory\n2. Configure services for each application\n3. Set up appropriate networking between services\n4. Configure development-specific volumes and environment variables\n5. Test the complete Docker Compose setup",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Install dependencies",
+            "description": "Install all required dependencies for the monorepo",
+            "status": "done",
+            "dependencies": [],
+            "details": "Run `pnpm install` from the root directory to install all dependencies defined in the workspace packages",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Implement Common DTO Package",
+        "description": "Create a common Data Transfer Object (DTO) package with TypeScript models and validation for use across all services.",
+        "details": "1. Navigate to packages/common-dto\n2. Initialize a new TypeScript project\n3. Install dependencies: class-validator, class-transformer\n4. Create DTOs for:\n   - Machine data\n   - Sensor readings\n   - MQTT messages\n   - API responses\n5. Implement validation using class-validator decorators\n6. Create index.ts to export all DTOs\n7. Set up Jest for unit testing\n\nExample DTO:\n```typescript\nimport { IsString, IsNumber, IsDate, ValidateNested } from 'class-validator';\nimport { Type } from 'class-transformer';\n\nexport class SensorReadingDto {\n  @IsString()\n  sensorId: string;\n\n  @IsNumber()\n  value: number;\n\n  @IsDate()\n  @Type(() => Date)\n  timestamp: Date;\n}\n\nexport class MachineDataDto {\n  @IsString()\n  machineId: string;\n\n  @ValidateNested({ each: true })\n  @Type(() => SensorReadingDto)\n  readings: SensorReadingDto[];\n}\n```",
+        "testStrategy": "1. Write unit tests for each DTO\n2. Test validation rules using class-validator\n3. Ensure all DTOs can be serialized and deserialized correctly\n4. Verify that the package can be imported and used in other workspace packages",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Set Up MQTT Broker",
+        "description": "Configure and deploy an Eclipse Mosquitto MQTT broker using Docker for the message bus.",
+        "details": "1. Create a docker-compose.yml file in the root of the monorepo\n2. Add Mosquitto service configuration:\n```yaml\nversion: '3.8'\nservices:\n  mqtt-broker:\n    image: eclipse-mosquitto:2.0.15\n    ports:\n      - \"1883:1883\"\n      - \"9001:9001\"\n    volumes:\n      - ./mosquitto/config:/mosquitto/config\n      - ./mosquitto/data:/mosquitto/data\n      - ./mosquitto/log:/mosquitto/log\n```\n3. Create Mosquitto configuration file (mosquitto.conf):\n```\nlistener 1883\nprotocol mqtt\n\nlistener 9001\nprotocol websockets\n\npersistence true\npersistence_location /mosquitto/data/\nlog_dest file /mosquitto/log/mosquitto.log\n```\n4. Implement secure authentication (optional):\n   - Generate password file\n   - Update mosquitto.conf with password_file directive\n5. Configure MQTT quality of service (QoS) levels\n6. Set up topic structure for different data types",
+        "testStrategy": "1. Start the MQTT broker using Docker Compose\n2. Use MQTT.js or another MQTT client to test connectivity\n3. Verify that messages can be published and subscribed to\n4. Test persistence by restarting the broker and checking for message retention\n5. Validate WebSocket connectivity on port 9001",
+        "priority": "high",
+        "dependencies": [
+          13
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Develop Edge Gateway Service",
+        "description": "Refactor the existing Express-based local collector into a NestJS microservice for data collection and MQTT publishing.",
+        "status": "done",
+        "dependencies": [
+          14,
+          15
+        ],
+        "priority": "high",
+        "details": "The Edge Gateway service has been created in apps/edge-gateway/ with the following structure:\n\n1. NestJS application with HTTP and MQTT microservice support\n2. AppModule with basic modules and health checks\n3. MqttModule and MqttService for MQTT publishing\n4. DataCollectionModule with collection services\n5. MTConnect and Adam-6050 collectors\n6. Cron job for data collection every 10 seconds\n7. Heartbeat publishing every minute\n\nRemaining tasks:\n1. Add real Modbus TCP support for Adam-6050 devices\n2. Create Dockerfile for containerization\n3. Add configuration through environment variables\n4. Enhance error handling and retry logic\n5. Complete testing suite\n\nExample MQTT publisher (already implemented):\n```typescript\nimport { Injectable } from '@nestjs/common';\nimport { ClientProxy, Transport } from '@nestjs/microservices';\nimport { MachineDataDto } from '@mtconnect/common-dto';\n\n@Injectable()\nexport class MqttPublisherService {\n  constructor(\n    @Inject('MQTT_SERVICE') private client: ClientProxy\n  ) {}\n\n  async publishMachineData(data: MachineDataDto) {\n    return this.client.emit('machine.data', data);\n  }\n}\n```",
+        "testStrategy": "1. Unit test individual components (collectors, publishers)\n2. Integration test MQTT publishing\n3. Mock MTConnect and Adam-6050 endpoints for testing\n4. Verify correct handling of various data formats\n5. Test error scenarios and retry logic\n6. Test cron job scheduling and heartbeat functionality\n7. Verify proper data collection from all configured machines and devices",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create NestJS project structure",
+            "description": "Set up the basic NestJS application structure in apps/edge-gateway/",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Configure HTTP and MQTT support",
+            "description": "Set up main.ts with support for both HTTP endpoints and MQTT microservice",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create core modules and services",
+            "description": "Implement AppModule, MqttModule, DataCollectionModule and related services",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement MTConnect collector",
+            "description": "Create MtconnectCollectorService for collecting data from MTConnect machines",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Adam-6050 collector",
+            "description": "Create AdamCollectorService with simulated data for Adam-6050 devices",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Set up data collection scheduling",
+            "description": "Configure cron job for data collection every 10 seconds and heartbeat every minute",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Implement Modbus TCP for Adam-6050",
+            "description": "Replace simulated data with real Modbus TCP communication for Adam-6050 devices",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Create Dockerfile",
+            "description": "Create Dockerfile for containerizing the Edge Gateway service",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 9,
+            "title": "Implement environment variable configuration",
+            "description": "Add configuration through environment variables for flexible deployment",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 10,
+            "title": "Complete testing suite",
+            "description": "Implement unit and integration tests for all components and services",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "Implement Cloud Consumer Service",
+        "description": "Create a NestJS microservice to consume MQTT messages, validate data, and store it in MongoDB.",
+        "details": "1. Create a new NestJS project in packages/cloud-consumer\n2. Install dependencies: @nestjs/microservices, @nestjs/mongoose, mqtt, mongoose\n3. Configure NestJS to use MQTT transport\n4. Set up MongoDB connection using @nestjs/mongoose\n5. Create Mongoose schemas for machine data\n6. Implement MQTT subscribers for different topics\n7. Use common DTOs for data validation\n8. Implement data processing and storage logic\n9. Add error handling and logging\n\nExample MQTT subscriber:\n```typescript\nimport { Controller } from '@nestjs/common';\nimport { EventPattern } from '@nestjs/microservices';\nimport { MachineDataDto } from '@mtconnect/common-dto';\nimport { MachineDataService } from './machine-data.service';\n\n@Controller()\nexport class MqttSubscriberController {\n  constructor(private readonly machineDataService: MachineDataService) {}\n\n  @EventPattern('machine.data')\n  async handleMachineData(data: MachineDataDto) {\n    await this.machineDataService.processAndStore(data);\n  }\n}\n```",
+        "testStrategy": "1. Unit test individual components (subscribers, data processing)\n2. Integration test with a test MQTT broker\n3. Test data validation using common DTOs\n4. Verify correct storage in MongoDB\n5. Test error handling and recovery scenarios",
+        "priority": "high",
+        "dependencies": [
+          14,
+          15
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Update Cloud API Service",
+        "description": "Refactor the existing NestJS API to remove ingestion logic and optimize for read-only operations.",
+        "details": "1. Update the existing NestJS project in packages/cloud-api\n2. Remove all data ingestion logic\n3. Optimize MongoDB queries for read operations\n4. Implement caching using @nestjs/cache-manager\n5. Update API endpoints to use common DTOs\n6. Implement pagination for list endpoints\n7. Add sorting and filtering options\n8. Implement GraphQL API using @nestjs/graphql (optional)\n9. Update Swagger documentation using @nestjs/swagger\n\nExample optimized query:\n```typescript\nimport { Injectable } from '@nestjs/common';\nimport { InjectModel } from '@nestjs/mongoose';\nimport { Model } from 'mongoose';\nimport { MachineData } from './schemas/machine-data.schema';\n\n@Injectable()\nexport class MachineDataService {\n  constructor(@InjectModel(MachineData.name) private machineDataModel: Model<MachineData>) {}\n\n  async findLatestByMachineId(machineId: string) {\n    return this.machineDataModel\n      .findOne({ machineId })\n      .sort({ timestamp: -1 })\n      .lean()\n      .exec();\n  }\n}\n```",
+        "testStrategy": "1. Unit test individual services and controllers\n2. Integration test API endpoints\n3. Load test to verify performance improvements\n4. Test caching mechanisms\n5. Verify correct use of common DTOs\n6. Test pagination, sorting, and filtering functionality",
+        "priority": "medium",
+        "dependencies": [
+          14,
+          17
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Implement MTConnect XML Exporter",
+        "description": "Create a separate service for exporting data in MTConnect XML format.",
+        "details": "1. Create a new NestJS project in packages/mtconnect-exporter\n2. Install dependencies: @nestjs/mongoose, mongoose, xml2js\n3. Set up MongoDB connection\n4. Implement data retrieval from MongoDB\n5. Create XML generation logic using xml2js\n6. Implement MTConnect XML schema validation\n7. Create API endpoints for XML export\n8. Add caching for generated XML\n9. Implement streaming for large XML responses\n\nExample XML generation:\n```typescript\nimport { Injectable } from '@nestjs/common';\nimport { Builder } from 'xml2js';\n\n@Injectable()\nexport class XmlGeneratorService {\n  private builder = new Builder();\n\n  generateMTConnectXml(data: any) {\n    const mtconnectData = {\n      'MTConnectDevices': {\n        '$': {\n          'xmlns:m': 'urn:mtconnect.org:MTConnectDevices:1.3',\n          'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',\n          'xsi:schemaLocation': 'urn:mtconnect.org:MTConnectDevices:1.3 http://www.mtconnect.org/schemas/MTConnectDevices_1.3.xsd'\n        },\n        'Header': [{ '$': { 'creationTime': new Date().toISOString(), 'sender': 'MTConnect Agent', 'instanceId': '1', 'version': '1.3' } }],\n        'Devices': [{ 'Device': data }]\n      }\n    };\n    return this.builder.buildObject(mtconnectData);\n  }\n}\n```",
+        "testStrategy": "1. Unit test XML generation logic\n2. Test MTConnect XML schema compliance\n3. Integration test with MongoDB data retrieval\n4. Performance test XML generation and caching\n5. Test streaming of large XML responses",
+        "priority": "medium",
+        "dependencies": [
+          18
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Develop Unified Dashboard Frontend",
+        "description": "Create a single-page application (SPA) frontend that interacts with the Cloud API and displays real-time data.",
+        "details": "1. Set up a new React project using Create React App with TypeScript\n2. Install dependencies: axios, react-query, @tanstack/react-query, socket.io-client, recharts\n3. Set up project structure (components, hooks, services)\n4. Implement API service using axios\n5. Set up React Query for data fetching and caching\n6. Create reusable UI components (e.g., charts, tables)\n7. Implement real-time updates using WebSocket\n8. Create main dashboard view with machine status overview\n9. Implement detailed machine view with sensor data\n10. Add error handling and loading states\n11. Optimize performance using React.memo and useMemo\n\nExample API service:\n```typescript\nimport axios from 'axios';\nimport { MachineDataDto } from '@mtconnect/common-dto';\n\nconst api = axios.create({\n  baseURL: process.env.REACT_APP_API_URL\n});\n\nexport const getMachineData = async (machineId: string): Promise<MachineDataDto> => {\n  const response = await api.get(`/machines/${machineId}`);\n  return response.data;\n};\n```",
+        "testStrategy": "1. Unit test individual components\n2. Integration test with mock API\n3. Test real-time update functionality\n4. Perform end-to-end testing using Cypress\n5. Verify responsive design across different screen sizes\n6. Test error handling and loading states",
+        "priority": "medium",
+        "dependencies": [
+          18
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 21,
+        "title": "Implement WebSocket for Real-time Updates",
+        "description": "Add WebSocket support to the Cloud API and Dashboard for real-time data updates.",
+        "details": "1. Install @nestjs/websockets and socket.io in the Cloud API project\n2. Create a WebSocket gateway in the Cloud API:\n```typescript\nimport { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';\nimport { Server } from 'socket.io';\n\n@WebSocketGateway()\nexport class MachineDataGateway {\n  @WebSocketServer()\n  server: Server;\n\n  emitMachineUpdate(machineId: string, data: any) {\n    this.server.emit(`machine_update_${machineId}`, data);\n  }\n}\n```\n3. Integrate WebSocket emits into the Cloud Consumer service\n4. Update the Dashboard to connect to WebSocket:\n```typescript\nimport { useEffect } from 'react';\nimport io from 'socket.io-client';\n\nconst useWebSocket = (machineId: string) => {\n  useEffect(() => {\n    const socket = io(process.env.REACT_APP_WS_URL);\n    socket.on(`machine_update_${machineId}`, (data) => {\n      // Handle real-time update\n    });\n    return () => {\n      socket.disconnect();\n    };\n  }, [machineId]);\n};\n```\n5. Implement reconnection logic for WebSocket\n6. Add error handling for WebSocket connections",
+        "testStrategy": "1. Unit test WebSocket gateway in Cloud API\n2. Integration test WebSocket communication\n3. Test reconnection scenarios\n4. Verify real-time updates in the Dashboard\n5. Load test WebSocket connections\n6. Test error handling and recovery",
+        "priority": "medium",
+        "dependencies": [
+          18,
+          20
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 22,
+        "title": "Set Up Docker Compose for Development",
+        "description": "Create a Docker Compose configuration for local development that includes all services.",
+        "details": "1. Create a docker-compose.yml file in the root of the monorepo\n2. Define services for:\n   - MQTT broker\n   - MongoDB\n   - Edge Gateway\n   - Cloud Consumer\n   - Cloud API\n   - MTConnect XML Exporter\n3. Use multi-stage Dockerfiles for each service\n4. Set up environment variables\n5. Configure service dependencies\n6. Set up volume mounts for local development\n7. Configure network settings\n\nExample docker-compose.yml:\n```yaml\nversion: '3.8'\n\nservices:\n  mqtt-broker:\n    image: eclipse-mosquitto:2.0.15\n    ports:\n      - \"1883:1883\"\n      - \"9001:9001\"\n    volumes:\n      - ./mosquitto/config:/mosquitto/config\n      - ./mosquitto/data:/mosquitto/data\n      - ./mosquitto/log:/mosquitto/log\n\n  mongodb:\n    image: mongo:5.0\n    ports:\n      - \"27017:27017\"\n    volumes:\n      - mongodb_data:/data/db\n\n  edge-gateway:\n    build:\n      context: .\n      dockerfile: packages/edge-gateway/Dockerfile\n    depends_on:\n      - mqtt-broker\n    environment:\n      - MQTT_URL=mqtt://mqtt-broker:1883\n\n  cloud-consumer:\n    build:\n      context: .\n      dockerfile: packages/cloud-consumer/Dockerfile\n    depends_on:\n      - mqtt-broker\n      - mongodb\n    environment:\n      - MQTT_URL=mqtt://mqtt-broker:1883\n      - MONGODB_URI=mongodb://mongodb:27017/mtconnect\n\n  cloud-api:\n    build:\n      context: .\n      dockerfile: packages/cloud-api/Dockerfile\n    ports:\n      - \"3000:3000\"\n    depends_on:\n      - mongodb\n    environment:\n      - MONGODB_URI=mongodb://mongodb:27017/mtconnect\n\n  mtconnect-exporter:\n    build:\n      context: .\n      dockerfile: packages/mtconnect-exporter/Dockerfile\n    depends_on:\n      - mongodb\n    environment:\n      - MONGODB_URI=mongodb://mongodb:27017/mtconnect\n\nvolumes:\n  mongodb_data:\n```",
+        "testStrategy": "1. Verify that all services can be started with 'docker-compose up'\n2. Test inter-service communication\n3. Verify that environment variables are correctly set\n4. Test volume mounts for local development\n5. Verify that services can be rebuilt with code changes",
+        "priority": "medium",
+        "dependencies": [
+          15,
+          16,
+          17,
+          18,
+          19
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 23,
+        "title": "Implement CI/CD Pipeline",
+        "description": "Set up a CI/CD pipeline using GitHub Actions for automated testing, building, and deployment.",
+        "details": "1. Create .github/workflows directory in the root of the monorepo\n2. Create workflow files for CI and CD:\n   - ci.yml for running tests and linting\n   - cd.yml for building and deploying\n3. Set up job steps for each service:\n   - Install dependencies\n   - Run linters\n   - Run unit tests\n   - Build Docker images\n4. Configure caching for node_modules and Docker layers\n5. Set up environment secrets in GitHub\n6. Implement deployment steps (e.g., to a cloud provider)\n7. Add status badges to README.md\n\nExample ci.yml:\n```yaml\nname: CI\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n    - uses: actions/checkout@v3\n    - name: Use Node.js\n      uses: actions/setup-node@v3\n      with:\n        node-version: '18'\n    - name: Install dependencies\n      run: npm ci\n    - name: Run linter\n      run: npm run lint\n    - name: Run tests\n      run: npm test\n```",
+        "testStrategy": "1. Verify that CI workflow runs on push and pull requests\n2. Test CD workflow with a staging environment\n3. Verify that all services are built and tested\n4. Test deployment to the target environment\n5. Verify status badge functionality",
+        "priority": "medium",
+        "dependencies": [
+          22
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 24,
+        "title": "Set Up Monitoring and Observability",
+        "description": "Implement monitoring and observability using Prometheus and Grafana.",
+        "details": "1. Add Prometheus and Grafana services to docker-compose.yml\n2. Install and configure prom-client in each NestJS service\n3. Implement custom metrics for each service\n4. Create a central metrics endpoint in each service\n5. Configure Prometheus to scrape metrics from all services\n6. Set up Grafana dashboards for:\n   - System overview\n   - Service-specific metrics\n   - MQTT broker stats\n   - MongoDB performance\n7. Implement alerting rules in Prometheus\n8. Set up Grafana alerting\n\nExample metric in NestJS service:\n```typescript\nimport { Injectable } from '@nestjs/common';\nimport { Counter, Registry } from 'prom-client';\n\n@Injectable()\nexport class MetricsService {\n  private readonly registry: Registry;\n  private readonly messageCounter: Counter;\n\n  constructor() {\n    this.registry = new Registry();\n    this.messageCounter = new Counter({\n      name: 'messages_processed_total',\n      help: 'Total number of processed messages',\n      labelNames: ['status']\n    });\n    this.registry.registerMetric(this.messageCounter);\n  }\n\n  incrementMessageCounter(status: 'success' | 'error') {\n    this.messageCounter.inc({ status });\n  }\n\n  async getMetrics() {\n    return this.registry.metrics();\n  }\n}\n```",
+        "testStrategy": "1. Verify that all services expose metrics endpoints\n2. Test Prometheus scraping configuration\n3. Verify Grafana dashboard functionality\n4. Test alerting rules\n5. Perform load testing and verify metric accuracy",
+        "priority": "low",
+        "dependencies": [
+          22
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 25,
+        "title": "Implement Canary Deployment Strategy",
+        "description": "Set up a canary deployment process to gradually roll out changes to production.",
+        "details": "1. Update the CI/CD pipeline to support canary deployments\n2. Implement feature flags for new functionality\n3. Create scripts for gradual traffic shifting\n4. Set up monitoring for canary instances\n5. Implement automated rollback triggers\n6. Create a dashboard for canary deployment status\n7. Document the canary deployment process\n\nExample feature flag implementation:\n```typescript\nimport { Injectable } from '@nestjs/common';\n\n@Injectable()\nexport class FeatureFlagService {\n  private flags: Record<string, boolean> = {\n    newDataFormat: false,\n    enhancedAlerts: false,\n  };\n\n  isEnabled(flag: string): boolean {\n    return this.flags[flag] || false;\n  }\n\n  setFlag(flag: string, value: boolean) {\n    this.flags[flag] = value;\n  }\n}\n```",
+        "testStrategy": "1. Test feature flag functionality\n2. Verify gradual traffic shifting\n3. Test automated rollback scenarios\n4. Verify monitoring accuracy for canary instances\n5. Perform end-to-end testing of the canary deployment process",
+        "priority": "low",
+        "dependencies": [
+          23,
+          24
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 26,
+        "title": "Create System Documentation",
+        "description": "Develop comprehensive documentation for the refactored MTConnect system.",
+        "details": "1. Create a documentation structure:\n   - System overview\n   - Architecture diagram\n   - Service descriptions\n   - API documentation\n   - Deployment guide\n   - Monitoring and alerting guide\n   - Troubleshooting guide\n2. Use Markdown for all documentation\n3. Generate API documentation using @nestjs/swagger\n4. Create a README.md for each service\n5. Document environment variables and configuration options\n6. Create a changelog to track version changes\n7. Document the canary deployment process\n8. Create user guides for the Dashboard\n\nExample README.md structure:\n```markdown\n# Service Name\n\n## Description\n\nBrief description of the service's purpose and functionality.\n\n## Installation\n\nSteps to install and run the service locally.\n\n## Configuration\n\nList of environment variables and configuration options.\n\n## API Endpoints\n\nOverview of available API endpoints.\n\n## Metrics\n\nDescription of exposed metrics and their meanings.\n\n## Testing\n\nInstructions for running tests.\n\n## Deployment\n\nSteps for deploying the service.\n\n## Troubleshooting\n\nCommon issues and their solutions.\n```",
+        "testStrategy": "1. Review documentation for completeness and accuracy\n2. Verify that API documentation is up-to-date\n3. Test documentation by having a new team member follow the guides\n4. Verify that all configuration options are documented\n5. Ensure that the troubleshooting guide covers common scenarios",
+        "priority": "low",
+        "dependencies": [
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 27,
+        "title": "Perform Security Audit and Improvements",
+        "description": "Conduct a security audit of the entire system and implement necessary improvements.",
+        "details": "1. Perform a security audit of all services:\n   - Check for outdated dependencies\n   - Review authentication and authorization mechanisms\n   - Analyze data encryption at rest and in transit\n   - Review API security (rate limiting, input validation)\n2. Implement secure communication between services:\n   - Use TLS for MQTT connections\n   - Implement mutual TLS for service-to-service communication\n3. Enhance MongoDB security:\n   - Enable authentication\n   - Use encrypted connections\n   - Implement proper access controls\n4. Improve Docker security:\n   - Use non-root users in Dockerfiles\n   - Implement resource limits\n   - Use Docker secrets for sensitive information\n5. Implement API security best practices:\n   - Use helmet for HTTP header security\n   - Implement rate limiting\n   - Use CORS with specific origins\n6. Enhance logging and auditing:\n   - Implement centralized logging\n   - Ensure no sensitive data is logged\n   - Set up log rotation and retention policies\n7. Conduct penetration testing\n8. Implement security headers in the frontend\n\nExample NestJS security configuration:\n```typescript\nimport { NestFactory } from '@nestjs/core';\nimport { ValidationPipe } from '@nestjs/common';\nimport * as helmet from 'helmet';\nimport * as rateLimit from 'express-rate-limit';\n\nasync function bootstrap() {\n  const app = await NestFactory.create(AppModule);\n  app.use(helmet());\n  app.use(\n    rateLimit({\n      windowMs: 15 * 60 * 1000, // 15 minutes\n      max: 100, // limit each IP to 100 requests per windowMs\n    }),\n  );\n  app.useGlobalPipes(new ValidationPipe());\n  await app.listen(3000);\n}\nbootstrap();\n```",
+        "testStrategy": "1. Perform automated security scans using tools like OWASP ZAP\n2. Conduct manual penetration testing\n3. Verify TLS configuration and certificate validity\n4. Test rate limiting and API security measures\n5. Verify proper implementation of authentication and authorization\n6. Review logs for any security-related issues\n7. Perform dependency vulnerability scans",
+        "priority": "high",
+        "dependencies": [
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-08T07:47:46.567Z",
+      "updated": "2025-07-10T05:34:08.990Z",
+      "description": "Tasks for edge-to-cloud context"
+    }
+  }
+}

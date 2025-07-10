@@ -98,8 +98,9 @@
   },
   "railway": {
     "enabled": true,
-    "baseUrl": "https://mtconnect-core-production.up.railway.app",
+    "baseUrl": "https://mtconnect-production.up.railway.app",
     "apiKey": "edge-gateway-api-key",
+    "edgeGatewayId": "MTConnect-Edge-1",
     "retryAttempts": 3,
     "retryDelay": 5000
   }

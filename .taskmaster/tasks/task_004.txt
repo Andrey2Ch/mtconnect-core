@@ -1,0 +1,66 @@
+# Task ID: 4
+# Title: Implement MTConnect Data Fetcher Service
+# Status: done
+# Dependencies: 2, 3
+# Priority: high
+# Description: Create a service to fetch XML data from MTConnect agents at regular intervals.
+# Details:
+1. Create src/services/mtconnect-fetcher.ts
+2. Implement a class that uses axios to fetch data from MTConnect agents:
+```typescript
+export class MTConnectFetcher {
+  private machines: MachineConfig[];
+  private pollingInterval: number;
+  private logger: Logger;
+
+  constructor(machines: MachineConfig[], pollingInterval = 5000, logger: Logger) {
+    this.machines = machines;
+    this.pollingInterval = pollingInterval;
+    this.logger = logger;
+  }
+
+  async fetchCurrentData(machineConfig: MachineConfig): Promise<string | null> {
+    try {
+      const response = await axios.get(machineConfig.mtconnectAgentUrl, {
+        timeout: 5000,
+        responseType: 'text'
+      });
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Error fetching data from ${machineConfig.name}: ${error.message}`);
+      return null;
+    }
+  }
+
+  async fetchProbeData(machineConfig: MachineConfig): Promise<string | null> {
+    // Similar to fetchCurrentData but use the /probe endpoint
+    // Replace 'current' with 'probe' in the URL
+    const probeUrl = machineConfig.mtconnectAgentUrl.replace('/current', '/probe');
+    try {
+      const response = await axios.get(probeUrl, {
+        timeout: 5000,
+        responseType: 'text'
+      });
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Error fetching probe data from ${machineConfig.name}: ${error.message}`);
+      return null;
+    }
+  }
+
+  startPolling(callback: (machine: MachineConfig, data: string | null) => void): void {
+    // Set up polling for each machine
+    this.machines.forEach(machine => {
+      setInterval(async () => {
+        const data = await this.fetchCurrentData(machine);
+        callback(machine, data);
+      }, this.pollingInterval);
+    });
+  }
+}
+```
+3. Implement error handling for network issues and timeouts
+4. Add logging for connection attempts and failures
+
+# Test Strategy:
+Test fetching data from a mock MTConnect agent. Verify error handling works correctly when an agent is unavailable. Test the polling mechanism with different intervals.

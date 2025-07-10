@@ -1,0 +1,190 @@
+# Task ID: 5
+# Title: Create Mock Modbus TCP Server for ADAM-6050 Simulation
+# Status: pending
+# Dependencies: 1, 2
+# Priority: low
+# Description: Develop a mock Modbus TCP server to simulate an ADAM-6050 device for testing purposes, emulating 16 Digital Inputs with changing values and 16 Digital Outputs with feedback, including random disconnections and reconnections.
+# Details:
+1. Create a new file `src/MockAdamServer.ts` and implement the MockAdamServer class:
+
+```typescript
+import * as net from 'net';
+import { ServerOptions } from 'net';
+
+class MockAdamServer {
+  private server: net.Server;
+  private digitalInputs: boolean[] = new Array(16).fill(false);
+  private digitalOutputs: boolean[] = new Array(16).fill(false);
+  private isConnected: boolean = true;
+
+  constructor(private port: number = 502, private slaveId: number = 1) {
+    this.server = net.createServer(this.handleConnection.bind(this));
+  }
+
+  public start(): void {
+    this.server.listen(this.port, () => {
+      console.log(`Mock ADAM-6050 server listening on port ${this.port}`);
+    });
+    this.simulateInputChanges();
+    this.simulateDisconnections();
+  }
+
+  private handleConnection(socket: net.Socket): void {
+    socket.on('data', (data) => {
+      if (!this.isConnected) return;
+      const functionCode = data[7];
+      const startAddress = (data[8] << 8) | data[9];
+      const quantity = (data[10] << 8) | data[11];
+
+      switch (functionCode) {
+        case 0x01: // Read Coils (Digital Outputs)
+          this.handleReadCoils(socket, startAddress, quantity);
+          break;
+        case 0x02: // Read Discrete Inputs (Digital Inputs)
+          this.handleReadDiscreteInputs(socket, startAddress, quantity);
+          break;
+        case 0x05: // Write Single Coil
+          this.handleWriteSingleCoil(socket, startAddress, (data[10] === 0xFF));
+          break;
+        default:
+          this.sendExceptionResponse(socket, functionCode, 0x01);
+      }
+    });
+  }
+
+  private handleReadCoils(socket: net.Socket, startAddress: number, quantity: number): void {
+    const response = Buffer.alloc(9 + Math.ceil(quantity / 8));
+    response.writeUInt16BE(0, 0); // Transaction ID
+    response.writeUInt16BE(0, 2); // Protocol ID
+    response.writeUInt16BE(3 + Math.ceil(quantity / 8), 4); // Length
+    response.writeUInt8(this.slaveId, 6); // Unit ID
+    response.writeUInt8(0x01, 7); // Function Code
+    response.writeUInt8(Math.ceil(quantity / 8), 8); // Byte Count
+
+    for (let i = 0; i < quantity; i++) {
+      if (this.digitalOutputs[startAddress + i]) {
+        response[9 + Math.floor(i / 8)] |= (1 << (i % 8));
+      }
+    }
+
+    socket.write(response);
+  }
+
+  private handleReadDiscreteInputs(socket: net.Socket, startAddress: number, quantity: number): void {
+    const response = Buffer.alloc(9 + Math.ceil(quantity / 8));
+    response.writeUInt16BE(0, 0); // Transaction ID
+    response.writeUInt16BE(0, 2); // Protocol ID
+    response.writeUInt16BE(3 + Math.ceil(quantity / 8), 4); // Length
+    response.writeUInt8(this.slaveId, 6); // Unit ID
+    response.writeUInt8(0x02, 7); // Function Code
+    response.writeUInt8(Math.ceil(quantity / 8), 8); // Byte Count
+
+    for (let i = 0; i < quantity; i++) {
+      if (this.digitalInputs[startAddress + i]) {
+        response[9 + Math.floor(i / 8)] |= (1 << (i % 8));
+      }
+    }
+
+    socket.write(response);
+  }
+
+  private handleWriteSingleCoil(socket: net.Socket, address: number, value: boolean): void {
+    this.digitalOutputs[address] = value;
+    const response = Buffer.alloc(12);
+    response.writeUInt16BE(0, 0); // Transaction ID
+    response.writeUInt16BE(0, 2); // Protocol ID
+    response.writeUInt16BE(6, 4); // Length
+    response.writeUInt8(this.slaveId, 6); // Unit ID
+    response.writeUInt8(0x05, 7); // Function Code
+    response.writeUInt16BE(address, 8); // Output Address
+    response.writeUInt16BE(value ? 0xFF00 : 0x0000, 10); // Output Value
+    socket.write(response);
+  }
+
+  private sendExceptionResponse(socket: net.Socket, functionCode: number, exceptionCode: number): void {
+    const response = Buffer.alloc(9);
+    response.writeUInt16BE(0, 0); // Transaction ID
+    response.writeUInt16BE(0, 2); // Protocol ID
+    response.writeUInt16BE(3, 4); // Length
+    response.writeUInt8(this.slaveId, 6); // Unit ID
+    response.writeUInt8(functionCode | 0x80, 7); // Function Code with high bit set
+    response.writeUInt8(exceptionCode, 8); // Exception Code
+    socket.write(response);
+  }
+
+  private simulateInputChanges(): void {
+    setInterval(() => {
+      if (!this.isConnected) return;
+      for (let i = 0; i < 16; i++) {
+        if (Math.random() < 0.1) { // 10% chance to change each input
+          this.digitalInputs[i] = !this.digitalInputs[i];
+        }
+      }
+    }, 1000); // Change inputs every second
+  }
+
+  private simulateDisconnections(): void {
+    setInterval(() => {
+      this.isConnected = Math.random() < 0.9; // 10% chance of disconnection
+      console.log(`Mock ADAM-6050 server is ${this.isConnected ? 'connected' : 'disconnected'}`);
+    }, 10000); // Check connection every 10 seconds
+  }
+}
+
+export default MockAdamServer;
+```
+
+2. Create a new file `src/mockServerRunner.ts` to run the mock server:
+
+```typescript
+import MockAdamServer from './MockAdamServer';
+
+const mockServer = new MockAdamServer();
+mockServer.start();
+```
+
+3. Update `package.json` to include a script for running the mock server:
+
+```json
+{
+  "scripts": {
+    "start:mock": "ts-node src/mockServerRunner.ts"
+  }
+}
+```
+
+4. Implement error handling and logging throughout the MockAdamServer class to capture and report any issues during operation.
+
+5. Consider adding configuration options for the mock server, such as customizable change rates for inputs, disconnection frequency, and response delays to simulate real-world conditions more accurately.
+
+# Test Strategy:
+1. Unit Testing:
+   - Create a new file `tests/MockAdamServer.test.ts` for unit tests.
+   - Test the constructor and initialization of the MockAdamServer class.
+   - Verify that the server starts and listens on the specified port.
+   - Test each Modbus function handler (readCoils, readDiscreteInputs, writeSingleCoil) with various input parameters.
+   - Ensure proper error handling and exception responses for invalid requests.
+
+2. Integration Testing:
+   - Use a Modbus TCP client library (e.g., jsmodbus) to connect to the mock server and perform read/write operations.
+   - Verify that the client can successfully read digital inputs and outputs.
+   - Test writing to digital outputs and confirm the changes are reflected in subsequent read operations.
+   - Implement a test that runs for an extended period (e.g., 1 hour) to verify the stability of the mock server and its ability to handle continuous requests.
+
+3. Simulation Testing:
+   - Verify that digital inputs change randomly over time as expected.
+   - Test the disconnection/reconnection functionality by monitoring the server's status over an extended period.
+   - Ensure that the server properly handles requests during both connected and disconnected states.
+
+4. Performance Testing:
+   - Simulate multiple concurrent connections to the mock server and verify its ability to handle them correctly.
+   - Measure response times under various load conditions to ensure the mock server performs similarly to a real ADAM-6050 device.
+
+5. Compatibility Testing:
+   - Test the mock server with different Modbus TCP client implementations to ensure broad compatibility.
+   - Verify that the mock server works correctly with the actual ADAM-6050 client implementation developed in Task 2.
+
+6. Error Handling and Edge Case Testing:
+   - Send malformed Modbus requests and verify that the server responds with appropriate exception codes.
+   - Test boundary conditions, such as reading/writing at the edges of the available address range.
+   - Verify proper handling of connection timeouts and unexpected disconnections.

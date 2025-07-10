@@ -1,0 +1,24 @@
+{
+  "name": "@mtconnect/common-dto",
+  "version": "1.0.0",
+  "description": "Common Data Transfer Objects for MTConnect system",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "reflect-metadata": "^0.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "rimraf": "^5.0.0"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.2.0"
+  }
+} 

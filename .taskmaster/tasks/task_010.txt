@@ -1,0 +1,63 @@
+# Task ID: 10
+# Title: Implement REST API Controller
+# Status: done
+# Dependencies: 6, 9
+# Priority: high
+# Description: Create REST API endpoints to serve aggregated machine data to the frontend.
+# Details:
+1. Create src/controllers/api-controller.ts
+2. Implement a class to handle API requests:
+```typescript
+export class ApiController {
+  private stateManager: MachineStateManager;
+  private router: express.Router;
+
+  constructor(stateManager: MachineStateManager) {
+    this.stateManager = stateManager;
+    this.router = express.Router();
+    this.setupRoutes();
+  }
+
+  getRouter(): express.Router {
+    return this.router;
+  }
+
+  private setupRoutes(): void {
+    // Get current data for all machines
+    this.router.get('/current', (req, res) => {
+      const machineStates = this.stateManager.getAllMachineStates();
+      res.json(machineStates);
+    });
+
+    // Get current data for a specific machine
+    this.router.get('/current/:machineId', (req, res) => {
+      const machineState = this.stateManager.getMachineState(req.params.machineId);
+      if (machineState) {
+        res.json(machineState);
+      } else {
+        res.status(404).json({ error: 'Machine not found' });
+      }
+    });
+
+    // Get probe data (machine information)
+    this.router.get('/probe', (req, res) => {
+      const machineStates = this.stateManager.getAllMachineStates();
+      // For now, just return basic machine info
+      const probeData = machineStates.map(machine => ({
+        id: machine.id,
+        name: machine.name,
+        ip: machine.ip,
+        manufacturer: machine.manufacturer,
+        model: machine.model
+      }));
+      res.json(probeData);
+    });
+  }
+}
+```
+3. Add CORS support for cross-origin requests
+4. Implement error handling for API requests
+5. Add rate limiting to prevent abuse
+
+# Test Strategy:
+Test API endpoints with HTTP requests. Verify correct JSON responses. Test error handling with invalid requests. Test rate limiting.

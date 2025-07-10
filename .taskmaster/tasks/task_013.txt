@@ -1,0 +1,129 @@
+# Task ID: 13
+# Title: Implement Frontend CSS Styling
+# Status: pending
+# Dependencies: 12
+# Priority: low
+# Description: Create CSS styles for the web dashboard to provide a clean and user-friendly interface.
+# Details:
+1. Create public/css/styles.css
+2. Implement the CSS styles:
+```css
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background-color: #f4f4f4;
+}
+
+header {
+  background-color: #35424a;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+}
+
+main {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard {
+  background-color: white;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.refresh-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+#refresh-button {
+  padding: 0.5rem 1rem;
+  background-color: #35424a;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+#refresh-button:hover {
+  background-color: #2a343a;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table th, table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+/* Status colors */
+.status-active {
+  color: green;
+  font-weight: bold;
+}
+
+.status-ready {
+  color: blue;
+}
+
+.status-stopped {
+  color: orange;
+}
+
+.status-unavailable {
+  color: red;
+}
+
+footer {
+  background-color: #35424a;
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .refresh-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  table th, table td {
+    padding: 0.5rem;
+  }
+}
+```
+3. Add animations for status changes
+4. Implement print-friendly styles
+
+# Test Strategy:
+Verify styles render correctly in different browsers. Test responsive design on different screen sizes. Ensure status colors are distinguishable and accessible.

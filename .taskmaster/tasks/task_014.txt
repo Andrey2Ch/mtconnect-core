@@ -1,0 +1,129 @@
+# Task ID: 14
+# Title: Implement Frontend JavaScript
+# Status: done
+# Dependencies: 10, 12, 13
+# Priority: high
+# Description: Create JavaScript code to fetch and display machine data in the web dashboard.
+# Details:
+1. Create public/js/dashboard.js
+2. Implement the JavaScript code:
+```javascript
+// DOM elements
+const machineTableBody = document.getElementById('machine-data');
+const lastUpdatedSpan = document.getElementById('last-updated');
+const refreshButton = document.getElementById('refresh-button');
+
+// Configuration
+const API_URL = '/api';
+const REFRESH_INTERVAL = 10000; // 10 seconds
+
+// State
+let refreshTimer;
+
+// Functions
+async function fetchMachineData() {
+  try {
+    const response = await fetch(`${API_URL}/current`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching machine data:', error);
+    return [];
+  }
+}
+
+function formatDateTime(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleString();
+}
+
+function formatDuration(seconds) {
+  if (!seconds) return '-';
+  
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  
+  if (minutes === 0) {
+    return `${remainingSeconds}s`;
+  } else {
+    return `${minutes}m ${remainingSeconds}s`;
+  }
+}
+
+function getStatusClass(status) {
+  switch (status.toLowerCase()) {
+    case 'active': return 'status-active';
+    case 'ready': return 'status-ready';
+    case 'stopped': return 'status-stopped';
+    default: return 'status-unavailable';
+  }
+}
+
+function renderMachineData(machines) {
+  // Clear existing rows
+  machineTableBody.innerHTML = '';
+  
+  if (machines.length === 0) {
+    const row = document.createElement('tr');
+    row.innerHTML = '<td colspan="6">No machine data available</td>';
+    machineTableBody.appendChild(row);
+    return;
+  }
+  
+  // Sort machines by name
+  machines.sort((a, b) => a.name.localeCompare(b.name));
+  
+  // Create rows for each machine
+  machines.forEach(machine => {
+    const row = document.createElement('tr');
+    
+    const statusClass = getStatusClass(machine.status);
+    
+    row.innerHTML = `
+      <td>${machine.name}</td>
+      <td class="${statusClass}">${machine.status}</td>
+      <td>${machine.programName || '-'}</td>
+      <td>${machine.partCount}</td>
+      <td>${formatDuration(machine.lastCycleTime)}</td>
+      <td>${formatDuration(machine.avgCycleTime)}</td>
+    `;
+    
+    machineTableBody.appendChild(row);
+  });
+  
+  // Update last updated time
+  lastUpdatedSpan.textContent = formatDateTime(new Date());
+}
+
+async function refreshData() {
+  const machines = await fetchMachineData();
+  renderMachineData(machines);
+}
+
+// Event listeners
+refreshButton.addEventListener('click', () => {
+  refreshData();
+});
+
+// Initial load and auto-refresh
+document.addEventListener('DOMContentLoaded', () => {
+  refreshData();
+  
+  // Set up auto-refresh
+  refreshTimer = setInterval(refreshData, REFRESH_INTERVAL);
+});
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+  }
+});
+```
+3. Add error handling for API requests
+4. Implement visual feedback for data loading and errors
+
+# Test Strategy:
+Test data fetching and rendering with mock API responses. Verify auto-refresh functionality works correctly. Test error handling with simulated network failures.

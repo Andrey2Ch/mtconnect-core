@@ -1,2 +1,0 @@
-agent.exe remove
-pause
