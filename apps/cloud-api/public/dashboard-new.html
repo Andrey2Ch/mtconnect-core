@@ -246,7 +246,7 @@
         </div>
 
         <div class="api-info">
-            <strong>🔗 API URL:</strong> https://mtconnect-core-production.up.railway.app/machines
+            <strong>🔗 API URL:</strong> <span id="apiUrl">/api/dashboard/machines</span>
         </div>
 
         <div class="summary">
@@ -268,9 +268,9 @@
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="showTab('all')">Все машины</button>
-            <button class="tab" onclick="showTab('mtconnect')">MTConnect</button>
-            <button class="tab" onclick="showTab('adam')">ADAM-6050</button>
+            <button class="tab active" onclick="filterMachines('all')">Все станки</button>
+            <button class="tab" onclick="filterMachines('mtconnect')">MTConnect</button>
+            <button class="tab" onclick="filterMachines('adam')">ADAM-6050</button>
         </div>
 
         <div id="loading" class="loading">
@@ -295,8 +295,11 @@
     </div>
 
     <script>
-        let allData = null;
-        let currentTab = 'all';
+        const API_URL = '/api/dashboard/machines';
+        document.getElementById('apiUrl').textContent = API_URL;
+
+        let currentFilter = 'all';
+        let allMachines = [];
 
         function showTab(tab) {
             currentTab = tab;
@@ -442,7 +445,7 @@
                 console.log('📡 Отправляем запрос к API...');
                 
                 // Используем абсолютный URL для API
-                const apiUrl = 'https://mtconnect-core-production.up.railway.app/machines';
+                const apiUrl = 'http://localhost:3000/machines';
                 const timestamp = new Date().getTime();
                 
                 const response = await fetch(`${apiUrl}?cache=${timestamp}`, {

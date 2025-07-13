@@ -9,14 +9,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MetricsService = void 0;
 const common_1 = require("@nestjs/common");
 let MetricsService = class MetricsService {
-    metrics = {
-        httpRequests: 0,
-        dataIngestionCount: 0,
-        activeConnections: 0,
-        activeMachines: 0,
-        apiErrors: 0,
-        databaseOperations: 0,
-    };
+    constructor() {
+        this.metrics = {
+            httpRequests: 0,
+            dataIngestionCount: 0,
+            activeConnections: 0,
+            activeMachines: 0,
+            apiErrors: 0,
+            databaseOperations: 0,
+        };
+    }
     recordHttpRequest(method, endpoint, statusCode, duration) {
         this.metrics.httpRequests++;
         console.log('[METRICS] HTTP request recorded');

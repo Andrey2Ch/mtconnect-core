@@ -47,7 +47,6 @@ const common_1 = require("@nestjs/common");
 const winston = __importStar(require("winston"));
 require("winston-daily-rotate-file");
 let WinstonLoggerService = class WinstonLoggerService {
-    logger;
     constructor() {
         const isDevelopment = process.env.NODE_ENV === 'development';
         this.logger = winston.createLogger({

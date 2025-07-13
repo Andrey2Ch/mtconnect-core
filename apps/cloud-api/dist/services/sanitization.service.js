@@ -8,13 +8,13 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SanitizationService = void 0;
 const common_1 = require("@nestjs/common");
-const sanitize_html_1 = require("sanitize-html");
+const sanitizeHtml = require('sanitize-html');
 const validator_1 = require("validator");
 let SanitizationService = class SanitizationService {
     sanitizeText(text, maxLength = 255) {
         if (!text || typeof text !== 'string')
             return '';
-        const cleaned = (0, sanitize_html_1.default)(text, {
+        const cleaned = sanitizeHtml(text, {
             allowedTags: [],
             allowedAttributes: {},
             disallowedTagsMode: 'discard'
@@ -25,7 +25,7 @@ let SanitizationService = class SanitizationService {
     sanitizeCncCode(code, maxLength = 10000) {
         if (!code || typeof code !== 'string')
             return '';
-        const cleaned = (0, sanitize_html_1.default)(code, {
+        const cleaned = sanitizeHtml(code, {
             allowedTags: [],
             allowedAttributes: {},
             disallowedTagsMode: 'discard',

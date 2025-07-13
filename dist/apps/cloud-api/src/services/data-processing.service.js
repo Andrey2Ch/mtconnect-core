@@ -22,16 +22,12 @@ const aggregated_data_schema_1 = require("../schemas/aggregated-data.schema");
 const data_events_gateway_1 = require("../gateways/data-events.gateway");
 const alerting_service_1 = require("./alerting.service");
 let DataProcessingService = DataProcessingService_1 = class DataProcessingService {
-    machineDataModel;
-    aggregatedDataModel;
-    dataEventsGateway;
-    alertingService;
-    logger = new common_1.Logger(DataProcessingService_1.name);
     constructor(machineDataModel, aggregatedDataModel, dataEventsGateway, alertingService) {
         this.machineDataModel = machineDataModel;
         this.aggregatedDataModel = aggregatedDataModel;
         this.dataEventsGateway = dataEventsGateway;
         this.alertingService = alertingService;
+        this.logger = new common_1.Logger(DataProcessingService_1.name);
         this.logger.log('DataProcessingService initialized with WebSocket and Alerting integration');
     }
     async processIncomingData(data) {

@@ -17,7 +17,9 @@ exports.EdgeDataController = void 0;
 const common_1 = require("@nestjs/common");
 const edgeDataStore = new Map();
 let EdgeDataController = EdgeDataController_1 = class EdgeDataController {
-    logger = new common_1.Logger(EdgeDataController_1.name);
+    constructor() {
+        this.logger = new common_1.Logger(EdgeDataController_1.name);
+    }
     async receiveBatchData(batchData) {
         this.logger.log('Получены данные от Cloud Consumer');
         const { updates, source, timestamp } = batchData;

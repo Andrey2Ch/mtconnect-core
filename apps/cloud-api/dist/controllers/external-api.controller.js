@@ -123,6 +123,8 @@ let ExternalApiController = class ExternalApiController {
                         edgeGatewayId: this.sanitizationService.sanitizeText(data.edgeGatewayId, 100),
                         machineId: sanitizedMachineId,
                         machineName: sanitizedMachineName,
+                        dataType: 'production',
+                        source: 'mtconnect'
                     },
                     data: sanitizedData,
                     createdAt: now

@@ -15,7 +15,6 @@ const operators_1 = require("rxjs/operators");
 const winston_logger_service_1 = require("../services/winston-logger.service");
 const uuid_1 = require("uuid");
 let LoggingInterceptor = class LoggingInterceptor {
-    logger;
     constructor(logger) {
         this.logger = logger;
     }

@@ -23,9 +23,11 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "useDefineForClassFields": false
   },
   "include": [
+    "src/**/*",
     "apps/*/src/**/*",
     "packages/*/src/**/*"
   ],

@@ -12,16 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MachineDataDto = void 0;
 const class_validator_1 = require("class-validator");
 class MachineDataDto {
-    machineId;
-    machineName;
-    timestamp;
-    partCount;
-    cycleTime;
-    executionStatus;
-    availability;
-    program;
-    block;
-    line;
 }
 exports.MachineDataDto = MachineDataDto;
 __decorate([

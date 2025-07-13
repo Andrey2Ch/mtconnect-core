@@ -15,7 +15,6 @@ const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
 const metrics_service_1 = require("../services/metrics.service");
 let MetricsInterceptor = class MetricsInterceptor {
-    metricsService;
     constructor(metricsService) {
         this.metricsService = metricsService;
     }

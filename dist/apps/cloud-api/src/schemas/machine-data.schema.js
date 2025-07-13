@@ -12,10 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MachineDataSchema = exports.MachineData = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 let MachineData = class MachineData {
-    timestamp;
-    metadata;
-    data;
-    createdAt;
 };
 exports.MachineData = MachineData;
 __decorate([

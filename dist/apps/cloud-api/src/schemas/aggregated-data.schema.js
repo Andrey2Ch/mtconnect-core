@@ -12,11 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AggregatedDataSchema = exports.AggregatedData = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 let AggregatedData = class AggregatedData {
-    timestamp;
-    metadata;
-    aggregatedData;
-    createdAt;
-    lastUpdated;
 };
 exports.AggregatedData = AggregatedData;
 __decorate([

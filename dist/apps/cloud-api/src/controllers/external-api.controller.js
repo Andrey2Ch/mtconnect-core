@@ -23,10 +23,6 @@ const sanitization_service_1 = require("../services/sanitization.service");
 const winston_logger_service_1 = require("../services/winston-logger.service");
 const metrics_service_1 = require("../services/metrics.service");
 let ExternalApiController = class ExternalApiController {
-    machineDataModel;
-    logger;
-    sanitizationService;
-    metricsService;
     constructor(machineDataModel, logger, sanitizationService, metricsService) {
         this.machineDataModel = machineDataModel;
         this.logger = logger;
@@ -127,6 +123,8 @@ let ExternalApiController = class ExternalApiController {
                         edgeGatewayId: this.sanitizationService.sanitizeText(data.edgeGatewayId, 100),
                         machineId: sanitizedMachineId,
                         machineName: sanitizedMachineName,
+                        dataType: 'production',
+                        source: 'mtconnect'
                     },
                     data: sanitizedData,
                     createdAt: now

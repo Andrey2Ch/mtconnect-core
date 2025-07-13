@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import sanitizeHtml from 'sanitize-html';
+const sanitizeHtml = require('sanitize-html');
 import { escape } from 'validator';
 
 @Injectable()

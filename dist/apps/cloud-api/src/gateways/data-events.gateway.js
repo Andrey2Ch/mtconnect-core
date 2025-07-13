@@ -18,9 +18,10 @@ const websockets_1 = require("@nestjs/websockets");
 const socket_io_1 = require("socket.io");
 const common_1 = require("@nestjs/common");
 let DataEventsGateway = DataEventsGateway_1 = class DataEventsGateway {
-    server;
-    logger = new common_1.Logger(DataEventsGateway_1.name);
-    connectedClients = new Map();
+    constructor() {
+        this.logger = new common_1.Logger(DataEventsGateway_1.name);
+        this.connectedClients = new Map();
+    }
     handleConnection(client) {
         this.connectedClients.set(client.id, client);
         this.logger.log(`Client connected: ${client.id}. Total clients: ${this.connectedClients.size}`);

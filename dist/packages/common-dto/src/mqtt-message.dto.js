@@ -12,13 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MqttMessageDto = void 0;
 const class_validator_1 = require("class-validator");
 class MqttMessageDto {
-    topic;
-    messageId;
-    timestamp;
-    payload;
-    qos;
-    retain;
-    metadata;
 }
 exports.MqttMessageDto = MqttMessageDto;
 __decorate([

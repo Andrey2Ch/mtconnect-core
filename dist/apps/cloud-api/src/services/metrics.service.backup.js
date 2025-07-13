@@ -17,15 +17,6 @@ const common_1 = require("@nestjs/common");
 const nestjs_prometheus_1 = require("@willsoto/nestjs-prometheus");
 const prom_client_1 = require("prom-client");
 let MetricsService = class MetricsService {
-    httpRequestsTotal;
-    httpRequestDuration;
-    activeConnections;
-    dataIngestionTotal;
-    dataIngestionVolume;
-    activeMachines;
-    apiErrorsTotal;
-    databaseOperationsTotal;
-    databaseOperationDuration;
     constructor(httpRequestsTotal, httpRequestDuration, activeConnections, dataIngestionTotal, dataIngestionVolume, activeMachines, apiErrorsTotal, databaseOperationsTotal, databaseOperationDuration) {
         this.httpRequestsTotal = httpRequestsTotal;
         this.httpRequestDuration = httpRequestDuration;

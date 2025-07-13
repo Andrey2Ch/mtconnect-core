@@ -16,21 +16,20 @@ import { MachineHandlerFactory } from './machine-handlers/factory';
 import { RailwayClient, loadRailwayConfig } from './railway-client';
 
 // Загружаем конфигурацию из файла (поддержка разных конфигураций)
-let configName: string;
+function loadConfig() {
+    const localConfigPath = path.join(__dirname, 'config.local.json');
+    const defaultConfigPath = path.join(__dirname, 'config.json');
 
-// Проверяем аргументы командной строки для кастомной конфигурации
-const customConfigArg = process.argv.find(arg => arg.endsWith('.json') && !arg.startsWith('--'));
-if (customConfigArg) {
-    configName = customConfigArg;
-} else if (process.argv.includes('--simulator')) {
-    configName = 'config-simulator.json';
-} else {
-    configName = 'config.json';
+    if (fs.existsSync(localConfigPath)) {
+        console.log('🔧 Обнаружен локальный конфиг. Используется: config.local.json');
+        return localConfigPath;
+    }
+
+    console.log('🔧 Используется конфигурация: config.json');
+    return defaultConfigPath;
 }
 
-const configPath = path.join(__dirname, configName);
-
-console.log(`🔧 Используется конфигурация: ${configName}`);
+const configPath = loadConfig();
 
 if (!fs.existsSync(configPath)) {
     throw new Error(`❌ Конфигурационный файл не найден: ${configPath}`);
@@ -38,7 +37,7 @@ if (!fs.existsSync(configPath)) {
 
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
-const DEBUG_DETAILS = process.env.DEBUG_DETAILS === 'true' || config.settings.debugDetails;
+const DEBUG_DETAILS = process.env.DEBUG_DETAILS === 'true' || config.settings?.debugDetails;
 
 // Интерфейсы
 interface MachineConfig {

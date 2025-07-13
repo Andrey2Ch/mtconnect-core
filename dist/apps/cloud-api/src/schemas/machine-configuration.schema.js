@@ -12,16 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MachineConfigurationSchema = exports.MachineConfiguration = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 let MachineConfiguration = class MachineConfiguration {
-    machineId;
-    machineName;
-    manufacturer;
-    model;
-    serialNumber;
-    networkConfig;
-    settings;
-    location;
-    isActive;
-    lastConfigUpdate;
 };
 exports.MachineConfiguration = MachineConfiguration;
 __decorate([

@@ -88,5 +88,8 @@
       "spindles": ["S1"],
       "axes": ["X", "Y", "Z"]
     }
-  ]
+  ],
+  "settings": {
+    "debugDetails": false
+  }
 } 

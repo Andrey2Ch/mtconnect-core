@@ -55,9 +55,6 @@ const sanitization_service_1 = require("../services/sanitization.service");
 const winston_logger_service_1 = require("../services/winston-logger.service");
 const path = __importStar(require("path"));
 let DashboardController = class DashboardController {
-    machineDataModel;
-    logger;
-    sanitizationService;
     constructor(machineDataModel, logger, sanitizationService) {
         this.machineDataModel = machineDataModel;
         this.logger = logger;

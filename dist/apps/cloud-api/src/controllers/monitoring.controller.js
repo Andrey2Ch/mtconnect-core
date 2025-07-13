@@ -53,9 +53,6 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const os = __importStar(require("os"));
 let MonitoringController = class MonitoringController {
-    metricsService;
-    logger;
-    mongoConnection;
     constructor(metricsService, logger, mongoConnection) {
         this.metricsService = metricsService;
         this.logger = logger;

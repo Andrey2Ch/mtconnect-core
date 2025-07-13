@@ -14,12 +14,11 @@ exports.AlertingService = void 0;
 const common_1 = require("@nestjs/common");
 const data_events_gateway_1 = require("../gateways/data-events.gateway");
 let AlertingService = AlertingService_1 = class AlertingService {
-    dataEventsGateway;
-    logger = new common_1.Logger(AlertingService_1.name);
-    alertRules = new Map();
-    activeAlerts = new Map();
     constructor(dataEventsGateway) {
         this.dataEventsGateway = dataEventsGateway;
+        this.logger = new common_1.Logger(AlertingService_1.name);
+        this.alertRules = new Map();
+        this.activeAlerts = new Map();
         this.logger.log('AlertingService initialized');
         this.initializeDefaultRules();
     }

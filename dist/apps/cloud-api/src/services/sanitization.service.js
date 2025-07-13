@@ -5,19 +5,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SanitizationService = void 0;
 const common_1 = require("@nestjs/common");
-const sanitize_html_1 = __importDefault(require("sanitize-html"));
+const sanitizeHtml = require('sanitize-html');
 const validator_1 = require("validator");
 let SanitizationService = class SanitizationService {
     sanitizeText(text, maxLength = 255) {
         if (!text || typeof text !== 'string')
             return '';
-        const cleaned = (0, sanitize_html_1.default)(text, {
+        const cleaned = sanitizeHtml(text, {
             allowedTags: [],
             allowedAttributes: {},
             disallowedTagsMode: 'discard'
@@ -28,7 +25,7 @@ let SanitizationService = class SanitizationService {
     sanitizeCncCode(code, maxLength = 10000) {
         if (!code || typeof code !== 'string')
             return '';
-        const cleaned = (0, sanitize_html_1.default)(code, {
+        const cleaned = sanitizeHtml(code, {
             allowedTags: [],
             allowedAttributes: {},
             disallowedTagsMode: 'discard',

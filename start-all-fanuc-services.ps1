@@ -12,7 +12,7 @@ $baseDir = "PIM/Fanuc"
 
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "Starting all FANUC MTConnect Adapters and Agents..."
-Write-Host "Each service will launch in a hidden background window."
+Write-Host "Each service will launch in a visible window for debugging."
 Write-Host "Searching for machines in: $FanucDir"
 Write-Host "==========================================================" -ForegroundColor Green
 
@@ -57,7 +57,7 @@ foreach ($MachineDir in $MachineDirs) {
         } else {
             Write-Host "[INFO] Starting Adapter for $MachineName..."
             $Title = "Adapter - $MachineName"
-            Start-Process -FilePath "cmd.exe" -ArgumentList "/k title $Title && cd /d `"$AdapterDir`" && `"$AdapterExePath`" run" -WindowStyle Hidden
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/k title `"$Title`" && cd /d `"$AdapterDir`" && `"$AdapterExePath`"" -WindowStyle Normal
         }
     } else {
         Write-Warning "[WARN] Adapter executable not found for $MachineName in $AdapterDir"
@@ -73,7 +73,7 @@ foreach ($MachineDir in $MachineDirs) {
         } else {
             Write-Host "[INFO] Starting Agent for $MachineName..."
             $Title = "Agent - $MachineName"
-            Start-Process -FilePath "cmd.exe" -ArgumentList "/k title $Title && cd /d `"$AgentDir`" && `"$AgentExePath`" run" -WindowStyle Hidden
+            Start-Process -FilePath "cmd.exe" -ArgumentList "/k title `"$Title`" && cd /d `"$AgentDir`" && `"$AgentExePath`"" -WindowStyle Normal
         }
     } else {
         Write-Warning "[WARN] Agent executable not found for $MachineName in $AgentDir"
@@ -81,10 +81,10 @@ foreach ($MachineDir in $MachineDirs) {
 }
 
 Write-Host "`n==========================================================" -ForegroundColor Green
-Write-Host "All service windows have been launched."
-Write-Host "Check each window for errors."
+Write-Host "All service windows have been launched in VISIBLE mode."
+Write-Host "Check each window for errors - they will stay open now."
 Write-Host "You can now start the main dashboard server."
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "Note: Services are running in the background. Check Task Manager to see the processes."
+Write-Host "Note: Services are running visibly. Check each window for error messages."
 Write-Host "Press any key to exit this script..."
 Read-Host 

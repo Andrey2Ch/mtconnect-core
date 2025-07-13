@@ -54,8 +54,6 @@ const machine_data_schema_1 = require("./schemas/machine-data.schema");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 let AppController = class AppController {
-    appService;
-    machineDataModel;
     constructor(appService, machineDataModel) {
         this.appService = appService;
         this.machineDataModel = machineDataModel;

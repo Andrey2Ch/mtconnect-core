@@ -21,10 +21,6 @@ const machine_state_schema_1 = require("../schemas/machine-state.schema");
 const machine_data_schema_1 = require("../schemas/machine-data.schema");
 const aggregated_data_schema_1 = require("../schemas/aggregated-data.schema");
 let TestDatabaseController = class TestDatabaseController {
-    machineConfigModel;
-    machineStateModel;
-    machineDataModel;
-    aggregatedDataModel;
     constructor(machineConfigModel, machineStateModel, machineDataModel, aggregatedDataModel) {
         this.machineConfigModel = machineConfigModel;
         this.machineStateModel = machineStateModel;

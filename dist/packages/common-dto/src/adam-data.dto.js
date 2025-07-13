@@ -12,14 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdamDataDto = void 0;
 const class_validator_1 = require("class-validator");
 class AdamDataDto {
-    machineId;
-    machineName;
-    counter;
-    cycleTime;
-    confidence;
-    discreteInputs;
-    analogInputs;
-    metadata;
 }
 exports.AdamDataDto = AdamDataDto;
 __decorate([

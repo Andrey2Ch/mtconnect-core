@@ -133,7 +133,6 @@ export class AdamReader {
                 };
                 this.counterHistories.set(machineId, history);
                 console.log(`📋 Инициализирована история для ${machineId} (${dataType}), начальное значение: ${currentCount.toLocaleString()}`);
-                continue;
               }
               
               // Проверяем, изменился ли счетчик

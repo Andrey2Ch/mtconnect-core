@@ -26,9 +26,6 @@ var AvailabilityStatus;
     AvailabilityStatus["UNAVAILABLE"] = "UNAVAILABLE";
 })(AvailabilityStatus || (exports.AvailabilityStatus = AvailabilityStatus = {}));
 class AdamDataDto {
-    digitalInputs;
-    digitalOutputs;
-    analogData;
 }
 exports.AdamDataDto = AdamDataDto;
 __decorate([
@@ -47,14 +44,6 @@ __decorate([
     __metadata("design:type", Object)
 ], AdamDataDto.prototype, "analogData", void 0);
 class MachineDataValueDto {
-    partCount;
-    cycleTime;
-    executionStatus;
-    availability;
-    program;
-    block;
-    line;
-    adamData;
 }
 exports.MachineDataValueDto = MachineDataValueDto;
 __decorate([
@@ -117,10 +106,6 @@ __decorate([
     __metadata("design:type", AdamDataDto)
 ], MachineDataValueDto.prototype, "adamData", void 0);
 class MachineDataItemDto {
-    machineId;
-    machineName;
-    timestamp;
-    data;
 }
 exports.MachineDataItemDto = MachineDataItemDto;
 __decorate([
@@ -146,9 +131,6 @@ __decorate([
     __metadata("design:type", MachineDataValueDto)
 ], MachineDataItemDto.prototype, "data", void 0);
 class EdgeGatewayDataDto {
-    edgeGatewayId;
-    timestamp;
-    data;
 }
 exports.EdgeGatewayDataDto = EdgeGatewayDataDto;
 __decorate([
