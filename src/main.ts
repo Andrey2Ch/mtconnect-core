@@ -518,7 +518,8 @@ app.get('/', (req, res) => {
             <li><a href="/current">📊 Current Data (Real-time)</a></li>
             <li><a href="/health">💚 Health Check</a></li>
             <li><a href="/railway-status">☁️ Railway Status</a></li>
-            <li><a href="/dashboard-pro.html">🔥 Real Dashboard</a></li>
+            <li><a href="http://localhost:3000">🔥 Cloud Dashboard (Локально)</a></li>
+            <li><a href="https://mtconnect-core-production.up.railway.app">☁️ Cloud Dashboard (Railway)</a></li>
         </ul>
         <p><em>Порт: ${port}</em></p>
     `);
@@ -931,8 +932,10 @@ async function getAdamCounters() {
 // Запуск сервера
 async function startServer(): Promise<void> {
     app.listen(port, () => {
-        console.log(`✅ Сервер запущен на http://localhost:${port}`);
-        console.log('💡 Откройте http://localhost:5000/dashboard-pro.html для просмотра дашборда');
+        console.log(`✅ Edge Gateway запущен на http://localhost:${port}`);
+        console.log('📡 MTConnect данные: http://localhost:5000/current');
+        console.log('💡 Для полного дашборда запустите: npm run start:cloud');
+        console.log('🔥 Затем откройте: http://localhost:3000');
     });
 }
 

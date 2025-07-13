@@ -65,7 +65,7 @@ let DashboardController = class DashboardController {
     }
     async serveDashboard(res) {
         try {
-            const dashboardPath = path.join(__dirname, '../../public/dashboard-pro.html');
+            const dashboardPath = path.join(__dirname, '../../public/dashboard-new.html');
             return res.sendFile(dashboardPath);
         }
         catch (error) {

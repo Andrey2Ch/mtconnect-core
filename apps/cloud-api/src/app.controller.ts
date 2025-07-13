@@ -26,7 +26,7 @@ export class AppController {
     @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>
   ) {}
 
-  @Get()
+  @Get('/hello')
   getHello(): string {
     return this.appService.getHello();
   }
