@@ -8,16 +8,22 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppController = void 0;
 const common_1 = require("@nestjs/common");
 const app_service_1 = require("./app.service");
+const mongoose_1 = require("@nestjs/mongoose");
+const mongoose_2 = require("mongoose");
+const machine_data_schema_1 = require("./schemas/machine-data.schema");
 const fs = require("fs");
 const path = require("path");
-const axios_1 = require("axios");
 let AppController = class AppController {
-    constructor(appService) {
+    constructor(appService, machineDataModel) {
         this.appService = appService;
+        this.machineDataModel = machineDataModel;
     }
     getHello() {
         return this.appService.getHello();
@@ -42,11 +48,24 @@ let AppController = class AppController {
     }
     async getMachines() {
         try {
+            console.log('📊 Получаю данные машин из MongoDB...');
+            const latestData = await this.machineDataModel.aggregate([
+                {
+                    $sort: { 'metadata.machineId': 1, timestamp: -1 }
+                },
+                {
+                    $group: {
+                        _id: '$metadata.machineId',
+                        latestRecord: { $first: '$$ROOT' }
+                    }
+                }
+            ]);
+            console.log(`📊 Найдено ${latestData.length} машин в базе данных`);
             const configPaths = [
-                path.join(__dirname, '..', '..', '..', 'src', 'config.json'),
-                path.join(__dirname, '..', '..', '..', '..', 'src', 'config.json'),
-                path.join(process.cwd(), 'src', 'config.json'),
-                path.join(process.cwd(), 'config.json')
+                path.join(__dirname, 'config.json'),
+                path.join(__dirname, '..', 'config.json'),
+                path.join(process.cwd(), 'config.json'),
+                path.join(process.cwd(), 'src', 'config.json')
             ];
             let configPath = '';
             for (const testPath of configPaths) {
@@ -58,46 +77,61 @@ let AppController = class AppController {
             if (!configPath) {
                 throw new Error('Конфигурационный файл не найден');
             }
-            console.log(`📁 Используем config.json из: ${configPath}`);
+            console.log(`⚙️ Используем config.json из: ${configPath}`);
             const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-            const mtconnectMachines = await Promise.all(config.machines.map(async (machine) => {
-                try {
-                    console.log(`📡 Получаю данные от ${machine.name} (${machine.mtconnectAgentUrl})`);
-                    const response = await axios_1.default.get(`${machine.mtconnectAgentUrl}/current`, { timeout: 5000 });
-                    console.log(`✅ ${machine.name} - статус: online`);
-                    return {
-                        id: machine.id,
-                        name: machine.name,
-                        ip: machine.ip,
-                        port: machine.port,
-                        type: machine.type,
-                        status: 'online',
-                        agentUrl: machine.mtconnectAgentUrl,
-                        uuid: machine.uuid,
-                        spindles: machine.spindles,
-                        axes: machine.axes,
-                        source: 'MTConnect Agent'
-                    };
+            const configMap = new Map();
+            config.machines.forEach(machine => {
+                configMap.set(machine.id, machine);
+            });
+            const onlineThreshold = 5 * 60 * 1000;
+            const now = new Date();
+            const mtconnectMachines = [];
+            const adamMachines = [];
+            for (const item of latestData) {
+                const record = item.latestRecord;
+                const machineId = record.metadata.machineId;
+                const machineName = record.metadata.machineName;
+                const lastUpdate = new Date(record.timestamp);
+                const timeDiff = now.getTime() - lastUpdate.getTime();
+                const isOnline = timeDiff < onlineThreshold;
+                console.log(`🔍 ${machineId}: последнее обновление ${lastUpdate.toISOString()}, разница ${timeDiff}мс, статус: ${isOnline ? 'online' : 'offline'}`);
+                if (record.data.adamData) {
+                    adamMachines.push({
+                        id: machineId,
+                        name: machineName,
+                        channel: record.data.adamData.channel || 0,
+                        ip: '192.168.1.120',
+                        port: 502,
+                        type: 'ADAM-6050 Counter',
+                        status: isOnline ? 'online' : 'offline',
+                        count: record.data.adamData.analogData?.['count'] || 0,
+                        lastUpdate: lastUpdate.toISOString(),
+                        confidence: record.data.adamData.confidence || 'unknown'
+                    });
                 }
-                catch (error) {
-                    console.log(`❌ ${machine.name} - статус: offline (${error.message})`);
-                    return {
-                        id: machine.id,
-                        name: machine.name,
-                        ip: machine.ip,
-                        port: machine.port,
-                        type: machine.type,
-                        status: 'offline',
-                        agentUrl: machine.mtconnectAgentUrl,
-                        uuid: machine.uuid,
-                        spindles: machine.spindles,
-                        axes: machine.axes,
-                        source: 'MTConnect Agent',
-                        error: error.message
-                    };
+                else {
+                    const configMachine = configMap.get(machineId);
+                    if (configMachine) {
+                        mtconnectMachines.push({
+                            id: machineId,
+                            name: machineName,
+                            ip: configMachine.ip,
+                            port: configMachine.port,
+                            type: configMachine.type,
+                            status: isOnline ? 'online' : 'offline',
+                            agentUrl: configMachine.mtconnectAgentUrl,
+                            uuid: configMachine.uuid,
+                            spindles: configMachine.spindles,
+                            axes: configMachine.axes,
+                            source: 'Edge Gateway',
+                            lastUpdate: lastUpdate.toISOString(),
+                            partCount: record.data.partCount,
+                            executionStatus: record.data.executionStatus,
+                            cycleTime: record.data.cycleTime
+                        });
+                    }
                 }
-            }));
-            const adamMachines = await this.getAdamMachines();
+            }
             const result = {
                 timestamp: new Date().toISOString(),
                 summary: {
@@ -118,6 +152,7 @@ let AppController = class AppController {
                     adam: adamMachines
                 }
             };
+            console.log(`✅ Возвращаю данные: ${result.summary.total} машин (${result.summary.mtconnect.online + result.summary.adam.online} online)`);
             return result;
         }
         catch (error) {
@@ -136,116 +171,6 @@ let AppController = class AppController {
                 }
             };
         }
-    }
-    async getAdamMachines() {
-        const adamIP = '192.168.1.120';
-        const adamPort = 502;
-        const channelMapping = new Map([
-            [0, 'SR-22'],
-            [1, 'SB-16'],
-            [2, 'BT-38'],
-            [3, 'K-162'],
-            [4, 'K-163'],
-            [5, 'L-20'],
-            [6, 'K-16'],
-            [8, 'SR-20'],
-            [9, 'SR-32'],
-            [11, 'SR-24']
-        ]);
-        try {
-            console.log(`📡 Подключаюсь к ADAM-6050 (${adamIP}:${adamPort})`);
-            const adamTest = await this.testAdamConnection(adamIP, adamPort);
-            if (adamTest.connected) {
-                console.log(`✅ ADAM-6050 - статус: online`);
-                const machines = [];
-                if (adamTest.counters && adamTest.counters.length > 0) {
-                    adamTest.counters.forEach(counter => {
-                        machines.push({
-                            id: counter.machineId,
-                            name: counter.machineId,
-                            channel: counter.channel,
-                            ip: adamIP,
-                            port: adamPort,
-                            type: 'ADAM-6050 Counter',
-                            status: 'online',
-                            count: counter.count,
-                            lastUpdate: counter.timestamp,
-                            confidence: counter.confidence
-                        });
-                    });
-                }
-                else {
-                    channelMapping.forEach((machineId, channel) => {
-                        machines.push({
-                            id: machineId,
-                            name: machineId,
-                            channel: channel,
-                            ip: adamIP,
-                            port: adamPort,
-                            type: 'ADAM-6050 Counter',
-                            status: 'online'
-                        });
-                    });
-                }
-                return machines;
-            }
-            else {
-                console.log(`❌ ADAM-6050 - статус: offline (${adamTest.error})`);
-                const machines = [];
-                channelMapping.forEach((machineId, channel) => {
-                    machines.push({
-                        id: machineId,
-                        name: machineId,
-                        channel: channel,
-                        ip: adamIP,
-                        port: adamPort,
-                        type: 'ADAM-6050 Counter',
-                        status: 'offline'
-                    });
-                });
-                return machines;
-            }
-        }
-        catch (error) {
-            console.error('❌ Ошибка подключения к ADAM-6050:', error);
-            const machines = [];
-            const channelMapping = new Map([
-                [0, 'SR-22'], [1, 'SB-16'], [2, 'BT-38'], [3, 'K-162'], [4, 'K-163'],
-                [5, 'L-20'], [6, 'K-16'], [8, 'SR-20'], [9, 'SR-32'], [11, 'SR-24']
-            ]);
-            channelMapping.forEach((machineId, channel) => {
-                machines.push({
-                    id: machineId,
-                    name: machineId,
-                    channel: channel,
-                    ip: adamIP,
-                    port: adamPort,
-                    type: 'ADAM-6050 Counter',
-                    status: 'offline'
-                });
-            });
-            return machines;
-        }
-    }
-    async testAdamConnection(ip, port) {
-        return new Promise((resolve) => {
-            const net = require('net');
-            const socket = new net.Socket();
-            const timeout = setTimeout(() => {
-                socket.destroy();
-                resolve({ connected: false, error: 'Timeout' });
-            }, 5000);
-            socket.on('connect', () => {
-                clearTimeout(timeout);
-                socket.destroy();
-                resolve({ connected: true });
-            });
-            socket.on('error', (err) => {
-                clearTimeout(timeout);
-                resolve({ connected: false, error: err.message });
-            });
-            socket.connect(port, ip);
-        });
     }
 };
 exports.AppController = AppController;
@@ -275,6 +200,8 @@ __decorate([
 ], AppController.prototype, "getMachines", null);
 exports.AppController = AppController = __decorate([
     (0, common_1.Controller)(),
-    __metadata("design:paramtypes", [app_service_1.AppService])
+    __param(1, (0, mongoose_1.InjectModel)(machine_data_schema_1.MachineData.name)),
+    __metadata("design:paramtypes", [app_service_1.AppService,
+        mongoose_2.Model])
 ], AppController);
 //# sourceMappingURL=app.controller.js.map

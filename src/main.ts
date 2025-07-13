@@ -638,11 +638,18 @@ app.get('/railway-status', async (req, res) => {
 app.get('/status', async (req, res) => {
     try {
         // Проверка MTConnect агентов
-        const agentStatuses = [];
+        const agentStatuses: Array<{
+            id: string;
+            name: string;
+            status: string;
+            responseTime: number;
+            error: string | null;
+            url: string | undefined;
+        }> = [];
         for (const machine of FANUC_MACHINES) {
             let status = 'UNKNOWN';
             let responseTime = 0;
-            let error = null;
+            let error: string | null = null;
             
             if (machine.mtconnectAgentUrl) {
                 try {
@@ -670,8 +677,8 @@ app.get('/status', async (req, res) => {
         
         // Проверка Adam-6050
         let adamStatus = 'OK';
-        let adamError = null;
-        let adamCounters = [];
+        let adamError: string | null = null;
+        let adamCounters: any[] = [];
         try {
             adamCounters = await adamReader.readCounters();
         } catch (error: any) {
@@ -803,7 +810,7 @@ async function getAdamCounters() {
                 console.log(`🚀 ПЕРВАЯ ОТПРАВКА ADAM ДАННЫХ - пропускаем cooldown!`);
             }
             
-            const adamDataBatch = [];
+            const adamDataBatch: any[] = [];
             
             for (const counter of counters) {
                 // Валидация данных перед обработкой
@@ -891,7 +898,7 @@ async function getAdamCounters() {
                     console.error(`Уникальные ID: ${uniqueMachineIds.join(', ')}`);
                     
                     // Удаляем дубликаты
-                    const uniqueData = [];
+                    const uniqueData: any[] = [];
                     const seenIds = new Set();
                     
                     for (const item of batchData.data) {
@@ -953,8 +960,19 @@ async function main() {
         try {
             console.log('🔄 Периодический сбор данных с машин...');
             
-            // Читаем MTConnect данные
-            await generateMTConnectXML();
+            // Читаем MTConnect данные И ОТПРАВЛЯЕМ В RAILWAY
+            const mtconnectData = await collectMTConnectData();
+            if (mtconnectData.length > 0) {
+                const batchData = {
+                    edgeGatewayId: 'mtconnect-gateway',
+                    timestamp: new Date().toISOString(),
+                    data: mtconnectData
+                };
+                
+                console.log(`📤 Отправка MTConnect batch данных в Railway (${mtconnectData.length} машин)...`);
+                railwayClient.sendDataBatch(batchData);
+                console.log(`📊 MTConnect данные отправлены в Railway как batch (${mtconnectData.length} машин)`);
+            }
             
             // Читаем Adam данные
             await getAdamCounters();
@@ -965,6 +983,98 @@ async function main() {
     }, 5000); // 5 секунд
     
     console.log('✅ Основной цикл запущен');
+}
+
+// Новая функция для сбора MTConnect данных
+async function collectMTConnectData(): Promise<any[]> {
+    const mtconnectBatch: any[] = [];
+    
+    for (const machine of FANUC_MACHINES) {
+        if (machine.mtconnectAgentUrl) {
+            try {
+                console.log(`🔄 Запрос данных от MTConnect Agent для ${machine.name} (${machine.id}) по адресу ${machine.mtconnectAgentUrl}/current`);
+                const response = await axios.get(`${machine.mtconnectAgentUrl}/current`);
+                console.log(`✅ Данные для ${machine.name} (${machine.id}) получены от MTConnect Agent`);
+                
+                const parser = new xml2js.Parser({ explicitArray: false });
+                const mtconnectData = await parser.parseStringPromise(response.data as string);
+                
+                if (mtconnectData?.MTConnectStreams?.Streams?.DeviceStream) {
+                    const deviceStreams = Array.isArray(mtconnectData.MTConnectStreams.Streams.DeviceStream) 
+                        ? mtconnectData.MTConnectStreams.Streams.DeviceStream 
+                        : [mtconnectData.MTConnectStreams.Streams.DeviceStream];
+                    
+                    for (const deviceStream of deviceStreams) {
+                        if (deviceStream.ComponentStream) {
+                            const components = Array.isArray(deviceStream.ComponentStream) 
+                                ? deviceStream.ComponentStream 
+                                : [deviceStream.ComponentStream];
+                            
+                            // Получаем execution status
+                            const currentExecutionStatus = findExecutionStatusRecursive(components) || "UNAVAILABLE";
+                            const currentExecutionStatusTimestamp = new Date().toISOString();
+                            
+                            // Получаем part count
+                            const currentPartCount = partCountStates.get(machine.id)?.lastCount || 0;
+                            
+                            // Маппинг MTConnect статусов в API enum
+                            let apiExecutionStatus = "UNAVAILABLE";
+                            switch(currentExecutionStatus) {
+                                case "ACTIVE":
+                                case "EXECUTING":
+                                    apiExecutionStatus = "ACTIVE";
+                                    break;
+                                case "IDLE":
+                                case "READY":
+                                    apiExecutionStatus = "READY";
+                                    break;
+                                case "STOPPED":
+                                case "STOP":
+                                    apiExecutionStatus = "STOPPED";
+                                    break;
+                                case "INTERRUPTED":
+                                case "FAULT":
+                                    apiExecutionStatus = "INTERRUPTED";
+                                    break;
+                                default:
+                                    apiExecutionStatus = "UNAVAILABLE";
+                            }
+                            
+                            // Добавляем в batch
+                            mtconnectBatch.push({
+                                machineId: machine.id,
+                                machineName: machine.name,
+                                timestamp: currentExecutionStatusTimestamp,
+                                data: {
+                                    partCount: currentPartCount,
+                                    executionStatus: apiExecutionStatus,
+                                    availability: "AVAILABLE",
+                                    program: "O1001"
+                                }
+                            });
+                        }
+                    }
+                }
+            } catch (error: any) {
+                console.error(`❌ ОШИБКА подключения к MTConnect Agent ${machine.name} (${machine.id}): ${error.message}`);
+                console.error(`🔗 URL: ${machine.mtconnectAgentUrl}/current`);
+                // Добавляем OFFLINE данные
+                mtconnectBatch.push({
+                    machineId: machine.id,
+                    machineName: machine.name,
+                    timestamp: new Date().toISOString(),
+                    data: {
+                        partCount: 0,
+                        executionStatus: "UNAVAILABLE",
+                        availability: "UNAVAILABLE",
+                        program: "N/A"
+                    }
+                });
+            }
+        }
+    }
+    
+    return mtconnectBatch;
 }
 
 function findExecutionStatusRecursive(components: any[] | undefined): string | null {

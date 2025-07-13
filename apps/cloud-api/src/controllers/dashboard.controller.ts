@@ -31,7 +31,7 @@ export class DashboardController {
   @Get('/')
   async serveDashboard(@Res() res: Response) {
     try {
-      const dashboardPath = path.join(__dirname, '../../public/dashboard-pro.html');
+      const dashboardPath = path.join(__dirname, '../../public/dashboard-new.html');
       return res.sendFile(dashboardPath);
     } catch (error) {
       this.logger.error(`Failed to serve dashboard: ${error.message}`, error.stack, 'DashboardController');

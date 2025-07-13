@@ -1,19 +1,10 @@
 import { AppService } from './app.service';
-interface AdamMachine {
-    id: string;
-    name: string;
-    channel: number;
-    ip: string;
-    port: number;
-    type: string;
-    status: string;
-    count?: number;
-    lastUpdate?: string;
-    confidence?: string;
-}
+import { Model } from 'mongoose';
+import { MachineDataDocument } from './schemas/machine-data.schema';
 export declare class AppController {
     private readonly appService;
-    constructor(appService: AppService);
+    private machineDataModel;
+    constructor(appService: AppService, machineDataModel: Model<MachineDataDocument>);
     getHello(): string;
     getHealth(): {
         status: string;
@@ -46,7 +37,7 @@ export declare class AppController {
         };
         machines: {
             mtconnect: any[];
-            adam: AdamMachine[];
+            adam: any[];
         };
     } | {
         timestamp: string;
@@ -69,7 +60,4 @@ export declare class AppController {
             adam: any[];
         };
     }>;
-    private getAdamMachines;
-    private testAdamConnection;
 }
-export {};
