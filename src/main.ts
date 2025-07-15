@@ -871,6 +871,7 @@ async function getAdamCounters() {
             // Отправка Adam данных в Railway как batch
             if (adamDataBatch.length > 0) {
                 const batchData = {
+                    source: 'adam-gateway', // <-- ИСПРАВЛЕНИЕ
                     edgeGatewayId: 'adam-6050-gateway',
                     timestamp: new Date().toISOString(),
                     data: adamDataBatch.map(item => ({
@@ -966,6 +967,7 @@ async function main() {
             const mtconnectData = await collectMTConnectData();
             if (mtconnectData.length > 0) {
                 const batchData = {
+                    source: 'mtconnect-gateway',
                     edgeGatewayId: 'mtconnect-gateway',
                     timestamp: new Date().toISOString(),
                     data: mtconnectData

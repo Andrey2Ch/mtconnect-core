@@ -107,7 +107,7 @@ export class RailwayClient {
         }
 
         try {
-            log(`📤 Preparing to send batch data for ${batchData.data.length} machines.`);
+            log(`📤 Preparing to send batch data for ${batchData.data.length} machines from source: ${batchData.source}`);
             console.log(`📤 Отправка batch данных в Railway (${batchData.data.length} машин)...`);
             
             // Форматируем данные в правильный формат для API
@@ -119,14 +119,15 @@ export class RailwayClient {
             }));
             
             const payload = {
+                source: batchData.source || 'unknown', // Используем source из batchData
                 edgeGatewayId: this.config.edgeGatewayId,
                 timestamp: new Date().toISOString(),
-                data: formattedData
+                updates: formattedData
             };
             
             log(`PAYLOAD: ${JSON.stringify(payload, null, 2)}`);
 
-            const response = await this.httpClient.post('/api/ext/data', payload);
+            const response = await this.httpClient.post('/api/machine-data/batch', payload);
             
             if (response.status === 200 || response.status === 201) {
                 log(`✅ SUCCESS: Batch data sent successfully. Status: ${response.status}`);
@@ -143,7 +144,7 @@ export class RailwayClient {
                 log(`ERROR DETAILS: Status ${error.response.status}, Data: ${JSON.stringify(error.response.data, null, 2)}`);
             }
             console.error('❌ Ошибка отправки batch данных в Railway:');
-            console.error(`🔗 URL: ${this.config.baseUrl}/api/ext/data`);
+            console.error(`🔗 URL: ${this.config.baseUrl}/api/machine-data/batch`);
             console.error(`📝 Статус: ${error.response?.status || 'N/A'}`);
             // Исправляем логирование - правильно сериализуем объект
             const errorData = error.response?.data;
@@ -173,15 +174,16 @@ export class RailwayClient {
             }));
             
             const payload = {
+                source: 'adam-gateway', // Для flushBuffer всегда adam
                 edgeGatewayId: this.config.edgeGatewayId,
                 timestamp: new Date().toISOString(),
-                data: formattedData
+                updates: formattedData
             };
 
             log(`📤 Flushing buffer with ${this.dataBuffer.data.length} records.`);
             console.log(`📤 Отправка ${this.dataBuffer.data.length} записей в Railway...`);
             
-            const response = await this.httpClient.post('/api/ext/data', payload);
+            const response = await this.httpClient.post('/api/machine-data/batch', payload);
             
             if (response.status === 200 || response.status === 201) {
                 log(`✅ SUCCESS: Buffer flushed successfully. Status: ${response.status}`);
@@ -201,7 +203,7 @@ export class RailwayClient {
                 log(`ERROR DETAILS on flush: Status ${error.response.status}, Data: ${JSON.stringify(error.response.data, null, 2)}`);
             }
             console.error('❌ Ошибка отправки данных в Railway:');
-            console.error(`🔗 URL: ${this.config.baseUrl}/api/ext/data`);
+            console.error(`🔗 URL: ${this.config.baseUrl}/api/machine-data/batch`);
             console.error(`📝 Статус: ${error.response?.status || 'N/A'}`);
             // Исправляем логирование - правильно сериализуем объект
             const errorData = error.response?.data;
@@ -232,7 +234,7 @@ export class RailwayClient {
 
         try {
             log('🩺 Performing health check...');
-            const response = await this.httpClient.get('/api/ext/health');
+            const response = await this.httpClient.get('/api/health'); // Используем стандартный health-check
             this.isOnline = response.status === 200;
             log(`헬스 체크 결과: ${this.isOnline ? 'Online' : 'Offline'}`);
             return this.isOnline;

@@ -30,3 +30,17 @@ node_modules/
 
 # Local configuration - DO NOT COMMIT
 config.local.json 
+
+# Build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Backup files
+*.bak
+*.backup
+
+# Docker
+docker/mosquitto/data/
+docker/mosquitto/log/ 

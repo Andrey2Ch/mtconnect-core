@@ -1,147 +1,151 @@
-# 🚀 Локальная разработка MTConnect
+# 🚀 MTConnect: Руководство по локальной разработке
+
+Это руководство поможет вам настроить и запустить проект локально.
+
+## ⚠️ Важно: Первичная настройка Git
+
+В проекте есть `.gitignore` для предотвращения попадания в репозиторий лишних файлов (таких как `node_modules`, `dist`, `.env`). Если вы видите в `git status` файлы, которые должны игнорироваться, выполните следующие команды, чтобы очистить кэш Git:
+
+```powershell
+git rm -r --cached .
+git add .
+git commit -m "chore: Clean up git index and apply .gitignore"
+```
+
+---
 
 ## 📋 Архитектура
 
-У нас есть **два сервера**, которые работают с **одними и теми же данными**:
+Проект состоит из двух основных частей, работающих одновременно:
 
-### 📡 Edge Gateway (порт 5000)
-- **Файл:** `src/main.ts`
-- **Функции:** Сбор данных с машин, отправка в Railway
-- **URL:** http://localhost:5000
+1.  **📡 Edge Gateway** (`src/main.ts`):
+    *   **Порт:** `5000`
+    *   **Назначение:** Сбор данных с физических станков (MTConnect, Adam-6050) и отправка их в облако Railway. Предоставляет "сырые" данные для локальной отладки.
 
-### ☁️ Cloud API (порт 3000)  
-- **Файл:** `apps/cloud-api`
-- **Функции:** Продвинутые дашборды, анализ, MongoDB
-- **URL:** http://localhost:3000
+2.  **☁️ Cloud API** (`apps/cloud-api`):
+    *   **Порт:** `3000`
+    *   **Назначение:** Продвинутый API на NestJS для дашбордов, аналитики и взаимодействия с MongoDB. Получает данные из облака.
+
+---
 
 ## 🔧 Быстрый старт
 
-### Вариант 1: Автоматический запуск (рекомендуется)
+### Вариант 1: Автоматический запуск (Рекомендуется для Windows)
+
+Этот скрипт откроет два отдельных окна PowerShell для каждого сервера.
+
 ```powershell
 .\start-local-dev.ps1
 ```
 
-### Вариант 2: Ручной запуск
+### Вариант 2: Ручной запуск в одном терминале
+
+Используйте `concurrently` для параллельного запуска обоих серверов.
+
 ```powershell
-# Терминал 1: Edge Gateway
-npm run build
+# Запустит и Edge, и Cloud
+npm run start:dev
+```
+
+### Вариант 3: Ручной запуск в разных терминалах
+
+Для более гранулярного контроля.
+
+```powershell
+# Терминал 1: Запуск Edge Gateway
+# Эта команда сначала соберет проект (tsc), а затем запустит его.
 npm run start:edge
 
-# Терминал 2: Cloud API
+# Терминал 2: Запуск Cloud API
+# Запускает NestJS в режиме отслеживания изменений (hot-reload)
 npm run start:cloud
 ```
 
-### Вариант 3: Отдельные команды
-```powershell
-# Только Edge Gateway (сбор данных)
-npm run start:edge
-
-# Только Cloud API (дашборды)
-npm run start:cloud
-```
+---
 
 ## 🌐 Доступные интерфейсы
 
 ### Edge Gateway (http://localhost:5000)
-- `/` - главная страница с ссылками
-- `/current` - MTConnect XML данные в реальном времени
-- `/probe` - информация о машинах
-- `/health` - статус системы
-- `/railway-status` - подключение к Railway
-- `/api/machines` - список машин (JSON)
-- `/api/adam/counters` - данные Adam-6050
+*   `/`: Главная страница со ссылками на все эндпоинты
+*   `/current`: XML-данные MTConnect в реальном времени
+*   `/probe`: Информация о конфигурации станков
+*   `/health`: Статус работоспособности Edge Gateway
+*   `/railway-status`: Статус подключения к облаку Railway
+*   `/api/machines`: Список машин в формате JSON
+*   `/api/adam/counters`: Данные со счетчиков Adam-6050
 
 ### Cloud API (http://localhost:3000)
-- `/` - главный дашборд (dashboard-new.html)
-- `/api/dashboard/health` - статус дашборда
-- `/api/dashboard/machines` - список машин с аналитикой
-- `/api/dashboard/data/:machineId` - данные конкретной машины
-- `/api/dashboard/status` - общий статус системы
+*   `/`: Основной дашборд (`dashboard-new.html`)
+*   `/api/dashboard/health`: Статус работоспособности Cloud API
+*   `/api/dashboard/machines`: Список машин с аналитическими данными
+*   `/api/dashboard/data/:machineId`: Детальные данные по конкретной машине
+*   `/api/dashboard/status`: Общий статус системы, включая состояние БД
 
-## 📊 Источники данных
-
-**ВНИМАНИЕ:** Оба сервера используют одни и те же данные!
-
-- **8 MTConnect машин:** XD-20, SR-26, XD-38, SR-10, DT-26, SR-21, SR-23, SR-25
-- **Adam-6050 счетчики:** 10 каналов с вычислением времени цикла
-- **Railway Cloud:** автоматическая отправка данных в продакшн
+---
 
 ## 🔄 Поток данных
 
+```mermaid
+graph TD
+    subgraph "Физические станки"
+        M[MTConnect / Adam-6050]
+    end
+
+    subgraph "Локальная среда"
+        EG[Edge Gateway (localhost:5000)]
+    end
+    
+    subgraph "Облако"
+        RC[Railway Cloud]
+        DB[(MongoDB)]
+    end
+
+    subgraph "API и Дашборды"
+        CA[Cloud API (localhost:3000)]
+        D[Дашборды]
+    end
+
+    M --> EG
+    EG --> RC
+    RC --> CA
+    CA --> D
+    CA --- DB
 ```
-Машины → Edge Gateway → Railway Cloud ← Cloud API
-                ↓
-           Локальные API
-```
+---
 
-## 🛠️ Разработка
+## 🛠️ Процесс разработки
 
-### Изменение Edge Gateway
-1. Редактируй `src/main.ts`
-2. `npm run build`
-3. Перезапусти Edge Gateway
+*   **Изменение Edge Gateway (`src/`):**
+    1.  Отредактируйте файлы в корневой папке `src/`.
+    2.  Для применения изменений требуется пересборка и перезапуск: `npm run start:edge`.
 
-### Изменение Cloud API  
-1. Редактируй файлы в `apps/cloud-api/src/`
-2. Hot reload работает автоматически (NestJS watch mode)
+*   **Изменение Cloud API (`apps/cloud-api/src/`):**
+    1.  Отредактируйте файлы в `apps/cloud-api/src/`.
+    2.  Сервер перезапустится автоматически благодаря режиму `watch` в NestJS.
 
-### Изменение дашбордов
-1. Редактируй `apps/cloud-api/public/dashboard-new.html`
-2. Обнови страницу в браузере
+*   **Изменение Дашбордов (`apps/cloud-api/public/`):**
+    1.  Отредактируйте HTML/JS/CSS файлы в `apps/cloud-api/public/`.
+    2.  Просто обновите страницу в браузере, чтобы увидеть изменения.
 
-## 🚀 Деплой
+---
 
-Изменения автоматически деплоятся на Railway при push в main:
+## 🚀 Деплой на Railway
+
+Изменения автоматически деплоятся на Railway при каждом `push` в ветку `main`.
 
 ```powershell
-git add -A
-git commit -m "описание изменений"
+git add .
+git commit -m "feat: Описание ваших изменений"
 git push origin main
 ```
+**URL Продакшена:** https://mtconnect-core-production.up.railway.app
 
-**Railway URL:** https://mtconnect-core-production.up.railway.app
+---
 
 ## 🐛 Отладка
 
-### Проверка данных
-```powershell
-# Локальные данные MTConnect
-curl http://localhost:5000/current
-
-# Статус системы
-curl http://localhost:5000/health
-
-# Данные Adam
-curl http://localhost:5000/api/adam/counters
-
-# Cloud API статус
-curl http://localhost:3000/api/dashboard/health
-```
-
-### Логи
-- **Edge Gateway:** Логи в терминале где запущен
-- **Cloud API:** NestJS логи + Winston (файлы в logs/)
-
-### Типичные проблемы
-1. **Порт занят:** Убей процессы `taskkill /f /im node.exe`
-2. **Нет данных:** Проверь MTConnect агенты в PIM/
-3. **Railway не работает:** Проверь `/railway-status`
-
-## 📱 Полезные команды
-
-```powershell
-# Сборка всех пакетов
-npm run build
-
-# Только Edge Gateway  
-npm run start:edge
-
-# Только Cloud API
-npm run start:cloud
-
-# Остановка всех процессов Node.js
-taskkill /f /im node.exe
-
-# Проверка запущенных процессов
-Get-Process | Where-Object {$_.ProcessName -eq "node"}
-``` 
+*   **Проверка локальных данных MTConnect:** `curl http://localhost:5000/current`
+*   **Проверка статуса Cloud API:** `curl http://localhost:3000/api/dashboard/health`
+*   **Логи Edge Gateway:** Смотрите в терминале, где запущен `start:edge`.
+*   **Логи Cloud API:** Выводятся в терминале (NestJS) и пишутся в файлы в папке `logs/` (Winston).
+*   **Убить все процессы Node.js (если что-то зависло):** `taskkill /f /im node.exe` 

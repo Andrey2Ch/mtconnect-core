@@ -246,7 +246,7 @@
         </div>
 
         <div class="api-info">
-            <strong>🔗 API URL:</strong> <span id="apiUrl">/api/dashboard/machines</span>
+            <strong>🔗 API URL:</strong> <span id="apiUrl">/machines</span>
         </div>
 
         <div class="summary">
@@ -268,9 +268,9 @@
         </div>
 
         <div class="tabs">
-            <button class="tab active" onclick="filterMachines('all')">Все станки</button>
-            <button class="tab" onclick="filterMachines('mtconnect')">MTConnect</button>
-            <button class="tab" onclick="filterMachines('adam')">ADAM-6050</button>
+            <button class="filter-btn active" onclick="filterMachines('all')">Все станки</button>
+            <button class="filter-btn" onclick="filterMachines('mtconnect')">MTConnect</button>
+            <button class="filter-btn" onclick="filterMachines('adam')">ADAM-6050</button>
         </div>
 
         <div id="loading" class="loading">
@@ -295,7 +295,7 @@
     </div>
 
     <script>
-        const API_URL = '/api/dashboard/machines';
+        const API_URL = '/machines';
         document.getElementById('apiUrl').textContent = API_URL;
 
         let currentFilter = 'all';
@@ -330,7 +330,7 @@
 
         function createMTConnectMachineCard(machine) {
             return `
-                <div class="machine-card ${machine.status}">
+                <div class="machine-card ${machine.status}" data-type="mtconnect">
                     <div class="machine-header">
                         <div class="machine-name">${machine.name}</div>
                         <div class="machine-status ${machine.status}">${machine.status}</div>
@@ -367,7 +367,7 @@
 
         function createADAMMachineCard(machine) {
             return `
-                <div class="machine-card adam-specific ${machine.status}">
+                <div class="machine-card adam-specific ${machine.status}" data-type="adam">
                     <div class="machine-header">
                         <div class="machine-name">${machine.name}</div>
                         <div class="machine-status ${machine.status}">${machine.status}</div>
@@ -406,25 +406,47 @@
         }
 
         function updateDashboard(data) {
-            console.log('🔄 Обновляем дашборд с данными:', data);
-            allData = data;
-            
+            console.log(`🔄 Обновляем дашборд с данными:`, data);
+            document.getElementById('loading').style.display = 'none';
+
+            // --- ИСПРАВЛЕНИЕ: Проверка на пустые данные ---
+            if (!data || !data.machines || !data.summary) {
+                console.warn('⚠️ Получены неполные данные от API. Пропускаем обновление.', data);
+                return;
+            }
+            // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
+            // Диагностика
+            console.log('Станки MTConnect, полученные от API:', data.machines.mtconnectMachines);
+            console.log('Станки ADAM, полученные от API:', data.machines.adamMachines);
+
             // Обновляем сводку
-            document.getElementById('totalMachines').textContent = data.summary.total;
-            document.getElementById('mtconnectOnline').textContent = `${data.summary.mtconnect.online}/${data.summary.mtconnect.total}`;
-            document.getElementById('adamOnline').textContent = `${data.summary.adam.online}/${data.summary.adam.total}`;
-            
-            // Обновляем MTConnect машины
+            const summary = data.summary;
+            document.getElementById('totalMachines').textContent = summary.total;
+            document.getElementById('mtconnectOnline').textContent = `${summary.mtconnect.online}/${summary.mtconnect.total}`;
+            document.getElementById('adamOnline').textContent = `${summary.adam.online}/${summary.adam.total}`;
+
             const mtconnectContainer = document.getElementById('mtconnect-machines');
-            mtconnectContainer.innerHTML = data.machines.mtconnect
-                .map(machine => createMTConnectMachineCard(machine))
-                .join('');
-            
-            // Обновляем ADAM машины
             const adamContainer = document.getElementById('adam-machines');
-            adamContainer.innerHTML = data.machines.adam
-                .map(machine => createADAMMachineCard(machine))
-                .join('');
+
+            // --- ИСПРАВЛЕНИЕ: Дополнительная проверка на существование массивов ---
+            const mtconnectMachines = data.machines.mtconnectMachines || [];
+            const adamMachines = data.machines.adamMachines || [];
+            // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
+            // Обновляем MTConnect машины
+            if (mtconnectMachines.length > 0) {
+                mtconnectContainer.innerHTML = mtconnectMachines.map(createMTConnectMachineCard).join('');
+            } else {
+                mtconnectContainer.innerHTML = '<p class="no-data">Нет данных по станкам MTConnect</p>';
+            }
+
+            // Обновляем ADAM машины
+            if (adamMachines.length > 0) {
+                adamContainer.innerHTML = adamMachines.map(createADAMMachineCard).join('');
+            } else {
+                adamContainer.innerHTML = '<p class="no-data">Нет данных по станкам ADAM</p>';
+            }
             
             // Обновляем время последнего обновления
             document.getElementById('lastUpdate').textContent = new Date(data.timestamp).toLocaleString();
@@ -440,12 +462,39 @@
             document.getElementById('loading').style.display = 'none';
         }
 
+        // Утилита для получения цвета статуса
+        function getStatusColor(status) {
+          return status === 'online' ? '#28a745' :
+                 status === 'idle' ? '#ffc107' :
+                 status === 'working' ? '#007bff' :
+                 '#dc3545';
+        }
+
+        function filterMachines(type) {
+          const machineCards = document.querySelectorAll('.machine-card');
+          machineCards.forEach(card => {
+            const machineType = card.dataset.type;
+            if (type === 'all' || machineType === type) {
+              card.style.display = '';
+            } else {
+              card.style.display = 'none';
+            }
+          });
+          
+          // Обновляем активную кнопку
+          document.querySelectorAll('.filter-btn').forEach(btn => {
+              btn.classList.remove('active');
+          });
+          document.querySelector(`.filter-btn[onclick="filterMachines('${type}')"]`).classList.add('active');
+        }
+
+        // Функция для получения и обновления данных
         async function fetchMachines() {
             try {
                 console.log('📡 Отправляем запрос к API...');
                 
-                // Используем абсолютный URL для API
-                const apiUrl = 'http://localhost:3000/machines';
+                // Используем относительный URL для API
+                const apiUrl = '/machines';
                 const timestamp = new Date().getTime();
                 
                 const response = await fetch(`${apiUrl}?cache=${timestamp}`, {
