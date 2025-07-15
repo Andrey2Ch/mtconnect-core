@@ -17,15 +17,16 @@ import { RailwayClient, loadRailwayConfig } from './railway-client';
 
 // Загружаем конфигурацию из файла (поддержка разных конфигураций)
 function loadConfig() {
-    const localConfigPath = path.join(__dirname, 'config.local.json');
-    const defaultConfigPath = path.join(__dirname, 'config.json');
+    const projectRoot = path.join(__dirname, '..', '..');
+    const localConfigPath = path.join(projectRoot, 'config.local.json');
+    const defaultConfigPath = path.join(projectRoot, 'config.json');
 
     if (fs.existsSync(localConfigPath)) {
-        console.log('🔧 Обнаружен локальный конфиг. Используется: config.local.json');
+        console.log(`🔧 Обнаружен локальный конфиг. Используется: ${localConfigPath}`);
         return localConfigPath;
     }
 
-    console.log('🔧 Используется конфигурация: config.json');
+    console.log(`🔧 Используется конфигурация: ${defaultConfigPath}`);
     return defaultConfigPath;
 }
 
@@ -77,7 +78,7 @@ const port = parseInt(process.env.PORT || '5000', 10);
 // Middleware
 app.use(cors());
 // Используем папку дашборда из облачного API для единого файла
-app.use(express.static(path.join(__dirname, '..', 'cloud-api', 'mtconnect-cloud', 'public')));
+app.use(express.static(path.join(__dirname, '..', '..', 'apps', 'cloud-api', 'public')));
 app.use(express.json());
 
 // Configuration машин FANUC из config.json

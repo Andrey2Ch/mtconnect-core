@@ -140,19 +140,31 @@ export class RailwayClient {
             }
         } catch (error: any) {
             log(`❌ ERROR sending batch data: ${error.message}`);
-            if (error.response) {
-                log(`ERROR DETAILS: Status ${error.response.status}, Data: ${JSON.stringify(error.response.data, null, 2)}`);
-            }
-            console.error('❌ Ошибка отправки batch данных в Railway:');
+            console.error('❌ ДЕТАЛЬНАЯ ОШИБКА отправки batch данных в Railway:');
             console.error(`🔗 URL: ${this.config.baseUrl}/api/machine-data/batch`);
             console.error(`📝 Статус: ${error.response?.status || 'N/A'}`);
-            // Исправляем логирование - правильно сериализуем объект
-            const errorData = error.response?.data;
-            if (errorData && typeof errorData === 'object') {
-                console.error(`💬 Сообщение: ${JSON.stringify(errorData, null, 2)}`);
-            } else {
-                console.error(`💬 Сообщение: ${errorData || error.message || error.toString()}`);
+            console.error(`🔥 Тип ошибки: ${error.constructor.name}`);
+            console.error(`📜 Полное сообщение: ${error.message}`);
+            console.error(`🏷️ Код ошибки: ${error.code || 'N/A'}`);
+            
+            if (error.response) {
+                log(`ERROR DETAILS: Status ${error.response.status}, Data: ${JSON.stringify(error.response.data, null, 2)}`);
+                console.error(`📡 Ответ сервера: ${JSON.stringify(error.response.data, null, 2)}`);
             }
+            
+            if (error.request) {
+                console.error(`📤 Запрос был отправлен, но ответ не получен`);
+            }
+            
+            // Для AggregateError показываем все под-ошибки
+            if (error.errors && Array.isArray(error.errors)) {
+                console.error(`🔍 Под-ошибки (${error.errors.length}):`);
+                error.errors.forEach((subError, index) => {
+                    console.error(`  ${index + 1}. ${subError.message || subError}`);
+                });
+            }
+            
+            console.error(`📊 Полный объект ошибки: ${JSON.stringify(error, null, 2)}`);
             
             this.isOnline = false;
             return false;

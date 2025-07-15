@@ -3,8 +3,7 @@ import { AppService } from './app.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { MachineData, MachineDataDocument } from './schemas/machine-data.schema';
-import * as fs from 'fs';
-import * as path from 'path';
+import { ConfigService } from '@nestjs/config';
 
 interface AdamMachine {
   id: string;
@@ -22,11 +21,20 @@ interface AdamMachine {
 @Controller()
 export class AppController {
   private readonly logger = new Logger(AppController.name);
+  private machineConfigs: any;
 
   constructor(
     private readonly appService: AppService,
-    @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>
-  ) {}
+    @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>,
+    private configService: ConfigService,
+  ) {
+    this.machineConfigs = this.configService.get('machines');
+    if (!this.machineConfigs || Object.keys(this.machineConfigs).length === 0) {
+      this.logger.error('FATAL: Machine configurations could not be loaded from ConfigService!');
+    } else {
+      this.logger.log(`✅ Конфигурация для ${Object.keys(this.machineConfigs).length} машин успешно загружена.`);
+    }
+  }
 
   @Get('/dev/clear-db')
   async clearDatabase() {
@@ -159,18 +167,6 @@ export class AppController {
       const mtconnectMachines = [];
       const adamMachines = [];
 
-      // Загружаем статические данные для MTConnect машин
-      const configPath = path.join(__dirname, 'config.json');
-      let machineConfigs = {};
-      
-      try {
-        const configData = fs.readFileSync(configPath, 'utf8');
-        const config = JSON.parse(configData);
-        machineConfigs = config.machines || {};
-      } catch (configError) {
-        console.warn('⚠️  Не удалось загрузить config.json:', configError.message);
-      }
-
       for (const record of latestRecords) {
         // --- SAFETY CHECK ---
         if (!record.metadata || !record.metadata.machineId) {
@@ -188,7 +184,7 @@ export class AppController {
 
         if (record.metadata.source === 'adam') {
           // ADAM машины
-          const adamConfig = machineConfigs[machineId];
+          const adamConfig = this.machineConfigs[machineId];
           adamMachines.push({
             id: machineId,
             name: adamConfig?.name || machineId,
@@ -203,7 +199,7 @@ export class AppController {
           });
         } else {
           // MTConnect машины
-          const machineConfig = machineConfigs[machineId];
+          const machineConfig = this.machineConfigs[machineId];
           mtconnectMachines.push({
             id: machineId,
             name: machineConfig?.name || machineId,

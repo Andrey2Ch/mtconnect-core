@@ -8,8 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "start": "node dist/main.js",
-    "start:edge": "npm run build && node dist/main.js",
+    "start": "node dist/src/main.js",
+    "start:edge": "npm run build && node dist/src/main.js",
     "start:cloud": "cd apps/cloud-api && npm run start:dev",
     "start:dev": "concurrently \"npm run start:edge\" \"npm run start:cloud\"",
     "dev:local": "concurrently \"npm run start:edge\" \"npm run start:cloud\"",
