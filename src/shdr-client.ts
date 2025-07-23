@@ -95,15 +95,63 @@ export class SHDRClient extends EventEmitter {
     private parseSHDRLine(line: string): void {
         const parts = line.split('|');
         
-        if (parts.length >= 4) {
-            const dataItem: SHDRDataItem = {
-                timestamp: parts[0],
-                device: parts[1],
-                dataItem: parts[2],
-                value: parts[3]
-            };
+        // Поддерживаем формат: timestamp|dataItem|value (3 части)
+        // или timestamp|device|dataItem|value (4 части)
+        if (parts.length >= 3) {
+            let dataItem: SHDRDataItem;
             
-            this.emit('data', dataItem);
+            if (parts.length === 3) {
+                // Формат: timestamp|dataItem|value
+                const programMatch = parts[2].match(/^O(\d+)/);
+                let processedValue = parts[2];
+                let processedDataItem = parts[1];
+                
+                // Если значение начинается с O0001 - это программа
+                if (programMatch) {
+                    processedDataItem = 'program';
+                    processedValue = parts[2]; // Оставляем полное значение O0001...
+                }
+                
+                dataItem = {
+                    timestamp: parts[0],
+                    device: this.config.machineName,
+                    dataItem: processedDataItem,
+                    value: processedValue
+                };
+            } else {
+                // Формат: timestamp|device|dataItem|value  
+                const programMatch = parts[3].match(/^O(\d+)/);
+                let processedValue = parts[3];
+                let processedDataItem = parts[2];
+                
+                // Если значение начинается с O0001 - это программа
+                if (programMatch) {
+                    processedDataItem = 'program';
+                    processedValue = parts[3]; // Оставляем полное значение O0001...
+                }
+                
+                dataItem = {
+                    timestamp: parts[0],
+                    device: parts[1],
+                    dataItem: processedDataItem,
+                    value: processedValue
+                };
+            }
+            
+            // ФИЛЬТР: Игнорируем данные осей и шпинделей - нужны только program и partCount
+            const allowedDataItems = [
+                'program',      // Программа CNC
+                'partCount',    // Счетчик деталей  
+                'execution',    // Статус выполнения
+                'availability', // Доступность
+                'block'         // Текущий блок программы
+            ];
+            
+            if (allowedDataItems.includes(dataItem.dataItem)) {
+                this.emit('data', dataItem);
+            }
+            // Остальные данные (оси, шпиндели, нагрузки) ИГНОРИРУЕМ
+            
         } else {
             console.warn(`⚠️ Неверный формат SHDR для ${this.config.machineName}: ${line}`);
         }

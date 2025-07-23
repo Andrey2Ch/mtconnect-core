@@ -1,92 +1,130 @@
 {
   "machines": [
     {
-      "id": "DT-26",
-      "name": "STUDER DT-26",
-      "ip": "192.168.1.90",
-      "port": 8193,
-      "type": "CNC",
-      "mtconnectAgentUrl": "http://localhost:5005",
-      "uuid": "002",
-      "spindles": ["S0", "S1", "S2"],
-      "axes": ["X", "Y", "Z", "A", "B", "C"]
-    },
-    {
-      "id": "SR-10",
-      "name": "SR-10",
-      "ip": "192.168.1.91",
-      "port": 8193,
-      "type": "CNC",
-      "mtconnectAgentUrl": "http://localhost:5004",
-      "uuid": "sr10",
-      "spindles": ["S0"],
-      "axes": ["X", "Y", "Z"]
-    },
-    {
-      "id": "SR-21",
-      "name": "SR-21",
-      "ip": "192.168.1.199",
-      "port": 8193,
-      "type": "CNC",
-      "mtconnectAgentUrl": "http://localhost:5006",
-      "uuid": "sr21",
-      "spindles": ["S0"],
-      "axes": ["X", "Y", "Z"]
-    },
-    {
-      "id": "SR-23",
-      "name": "SR-23",
-      "ip": "192.168.1.103",
-      "port": 8193,
-      "type": "CNC",
-      "mtconnectAgentUrl": "http://localhost:5007",
-      "uuid": "sr23",
-      "spindles": ["S0"],
-      "axes": ["X", "Y", "Z"]
-    },
-    {
-      "id": "SR-25",
-      "name": "SR-25",
-      "ip": "192.168.1.104",
-      "port": 8193,
-      "type": "CNC",
-      "mtconnectAgentUrl": "http://localhost:5008",
-      "uuid": "sr25",
-      "spindles": ["S0"],
-      "axes": ["X", "Y", "Z"]
-    },
-    {
-      "id": "SR-26",
-      "name": "SR-26",
-      "ip": "192.168.1.54",
-      "port": 8193,
-      "type": "CNC",
-      "mtconnectAgentUrl": "http://localhost:5002",
-      "uuid": "sr26",
-      "spindles": ["S0"],
-      "axes": ["X", "Y", "Z"]
-    },
-    {
-      "id": "XD-20",
+      "id": "M_1_XD-20",
       "name": "XD-20",
-      "ip": "192.168.1.105",
-      "port": 8193,
-      "type": "CNC",
-      "mtconnectAgentUrl": "http://localhost:5001",
-      "uuid": "xd20",
-      "spindles": ["S0"],
-      "axes": ["X", "Y", "Z"]
+      "ip": "localhost",
+      "port": 7701,
+      "type": "FANUC",
+      "uuid": "M_1_XD-20"
     },
     {
-      "id": "XD-38",
+      "id": "M_2_SR_26",
+      "name": "SR-26",
+      "ip": "localhost",
+      "port": 7702,
+      "type": "FANUC",
+      "uuid": "M_2_SR_26"
+    },
+    {
+      "id": "M_3_XD_38",
       "name": "XD-38",
-      "ip": "192.168.1.101",
-      "port": 8193,
-      "type": "CNC",
-      "mtconnectAgentUrl": "http://localhost:5003",
-      "uuid": "xd38",
-      "spindles": ["S0"],
-      "axes": ["X", "Y", "Z"]
+      "ip": "localhost",
+      "port": 7703,
+      "type": "FANUC",
+      "uuid": "M_3_XD_38"
+    },
+    {
+      "id": "M_4_SR_10",
+      "name": "SR-10",
+      "ip": "localhost",
+      "port": 7704,
+      "type": "FANUC",
+      "uuid": "M_4_SR_10"
+    },
+    {
+      "id": "M_5_DT_26",
+      "name": "DT-26",
+      "ip": "localhost",
+      "port": 7705,
+      "type": "FANUC",
+      "uuid": "M_5_DT_26"
+    },
+    {
+      "id": "M_6_SR_21",
+      "name": "SR-21",
+      "ip": "localhost",
+      "port": 7706,
+      "type": "FANUC",
+      "uuid": "M_6_SR_21"
+    },
+    {
+      "id": "M_7_SR_23",
+      "name": "SR-23",
+      "ip": "localhost",
+      "port": 7707,
+      "type": "FANUC",
+      "uuid": "M_7_SR_23"
+    },
+    {
+      "id": "M_8_SR_25",
+      "name": "SR-25",
+      "ip": "localhost",
+      "port": 7708,
+      "type": "FANUC",
+      "uuid": "M_8_SR_25"
+    }
+  ],
+  "adamDevices": [
+    {
+      "id": "SR-22",
+      "name": "SR-22",
+      "type": "ADAM-6050",
+      "channel": 0
+    },
+    {
+      "id": "SB-16",
+      "name": "SB-16",
+      "type": "ADAM-6050",
+      "channel": 1
+    },
+    {
+      "id": "BT-38",
+      "name": "BT-38",
+      "type": "ADAM-6050",
+      "channel": 2
+    },
+    {
+      "id": "K-162",
+      "name": "K-162",
+      "type": "ADAM-6050",
+      "channel": 3
+    },
+    {
+      "id": "K-163",
+      "name": "K-163",
+      "type": "ADAM-6050",
+      "channel": 4
+    },
+    {
+      "id": "L-20",
+      "name": "L-20",
+      "type": "ADAM-6050",
+      "channel": 5
+    },
+    {
+      "id": "K-16",
+      "name": "K-16",
+      "type": "ADAM-6050",
+      "channel": 6
+    },
+    {
+      "id": "SR-20",
+      "name": "SR-20",
+      "type": "ADAM-6050",
+      "channel": 7
+    },
+    {
+      "id": "SR-32",
+      "name": "SR-32",
+      "type": "ADAM-6050",
+      "channel": 8
+    },
+    {
+      "id": "SR-24",
+      "name": "SR-24",
+      "type": "ADAM-6050",
+      "channel": 9
     }
   ],
   "settings": {
@@ -95,5 +133,13 @@
     "connectionTimeout": 2500,
     "maxRetries": 3,
     "debugDetails": false
+  },
+  "railway": {
+    "enabled": true,
+    "baseUrl": "https://mtconnect-core-production.up.railway.app",
+    "apiKey": "edge-gateway-api-key",
+    "edgeGatewayId": "MTConnect-Edge-1",
+    "retryAttempts": 3,
+    "retryDelay": 5000
   }
 } 

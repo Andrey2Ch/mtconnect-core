@@ -98,13 +98,44 @@ class SHDRClient extends events_1.EventEmitter {
     }
     parseSHDRLine(line) {
         const parts = line.split('|');
-        if (parts.length >= 4) {
-            const dataItem = {
-                timestamp: parts[0],
-                device: parts[1],
-                dataItem: parts[2],
-                value: parts[3]
-            };
+        // Поддерживаем формат: timestamp|dataItem|value (3 части)
+        // или timestamp|device|dataItem|value (4 части)
+        if (parts.length >= 3) {
+            let dataItem;
+            if (parts.length === 3) {
+                // Формат: timestamp|dataItem|value
+                const programMatch = parts[2].match(/^O(\d+)/);
+                let processedValue = parts[2];
+                let processedDataItem = parts[1];
+                // Если значение начинается с O0001 - это программа
+                if (programMatch) {
+                    processedDataItem = 'program';
+                    processedValue = parts[2]; // Оставляем полное значение O0001...
+                }
+                dataItem = {
+                    timestamp: parts[0],
+                    device: this.config.machineName,
+                    dataItem: processedDataItem,
+                    value: processedValue
+                };
+            }
+            else {
+                // Формат: timestamp|device|dataItem|value  
+                const programMatch = parts[3].match(/^O(\d+)/);
+                let processedValue = parts[3];
+                let processedDataItem = parts[2];
+                // Если значение начинается с O0001 - это программа
+                if (programMatch) {
+                    processedDataItem = 'program';
+                    processedValue = parts[3]; // Оставляем полное значение O0001...
+                }
+                dataItem = {
+                    timestamp: parts[0],
+                    device: parts[1],
+                    dataItem: processedDataItem,
+                    value: processedValue
+                };
+            }
             this.emit('data', dataItem);
         }
         else {

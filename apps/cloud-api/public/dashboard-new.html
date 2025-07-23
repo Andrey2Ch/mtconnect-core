@@ -246,7 +246,7 @@
         </div>
 
         <div class="api-info">
-            <strong>🔗 API URL:</strong> https://mtconnect-core-production.up.railway.app/machines
+                            <strong>🔗 API URL:</strong> http://localhost:3000/api/machines
         </div>
 
         <div class="summary">
@@ -343,16 +343,13 @@
                             <strong>Тип:</strong> ${machine.type}
                         </div>
                         <div class="machine-detail">
-                            <strong>UUID:</strong> ${machine.uuid.substring(0, 8)}...
+                            <strong>ID:</strong> ${machine.id}
                         </div>
                         <div class="machine-detail">
-                            <strong>Шпиндели:</strong> ${machine.spindles.join(', ')}
+                            <strong>Протокол:</strong> SHDR (Прямое подключение)
                         </div>
                         <div class="machine-detail">
-                            <strong>Оси:</strong> ${machine.axes.join(', ')}
-                        </div>
-                        <div class="machine-detail">
-                            <strong>Agent:</strong> ${machine.agentUrl.split('//')[1]}
+                            <strong>Статус:</strong> ${machine.connectionStatus}
                         </div>
                         <div class="machine-detail">
                             <strong>Источник:</strong> ${machine.source}
@@ -441,8 +438,8 @@
             try {
                 console.log('📡 Отправляем запрос к API...');
                 
-                // Используем абсолютный URL для API
-                const apiUrl = 'https://mtconnect-core-production.up.railway.app/machines';
+                // Используем локальный API
+                const apiUrl = 'http://localhost:3000/api/machines';
                 const timestamp = new Date().getTime();
                 
                 const response = await fetch(`${apiUrl}?cache=${timestamp}`, {
