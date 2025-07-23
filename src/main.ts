@@ -101,10 +101,16 @@ app.get('/api/machines', async (req, res) => {
     const mtconnectMachines = FANUC_MACHINES.map(machine => {
         const connectionStatus = shdrManager.getMachineConnectionStatus(machine.id);
         const machineData = shdrManager.getMachineData(machine.id);
+        const cycleTimeData = shdrManager.getMachineCycleTime(machine.id);
 
-        const partCount = machineData?.get('partCount')?.value || 'N/A';
+        const partCount = machineData?.get('part_count')?.value || 'N/A';
         const program = machineData?.get('program')?.value || 'N/A';
         const execution = machineData?.get('execution')?.value || 'N/A';
+        
+        // Форматируем время цикла
+        const cycleTime = cycleTimeData?.cycleTimeMs 
+            ? (cycleTimeData.cycleTimeMs / 1000).toFixed(2) 
+            : 'N/A';
 
         return {
             id: machine.id,
@@ -118,6 +124,8 @@ app.get('/api/machines', async (req, res) => {
             partCount: partCount,
             program: program,
             execution: execution,
+            cycleTime: cycleTime,
+            cycleConfidence: cycleTimeData?.confidence || 'N/A',
             source: 'SHDR (Direct)'
         };
     });
@@ -131,8 +139,9 @@ app.get('/api/machines', async (req, res) => {
             id: counter.machineId,
             name: counter.machineId,
             type: 'ADAM-6050',
-            counter: counter.count,
-            cycleTime: counter.cycleTimeMs ? (counter.cycleTimeMs / 1000).toFixed(1) + 's' : 'N/A',
+            count: counter.count,
+            cycleTime: counter.cycleTimeMs ? (counter.cycleTimeMs / 1000).toFixed(2) : 'N/A',
+            confidence: counter.confidence || 'N/A',
             status: 'active',
             category: 'adam'
         }));

@@ -166,6 +166,22 @@
             margin: 10px 0;
         }
 
+        .adam-badge {
+            font-size: 0.7em;
+            margin-left: 8px;
+            opacity: 0.7;
+        }
+
+        .fanuc-count {
+            background: #3498db;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
         .last-update {
             text-align: center;
             color: white;
@@ -326,6 +342,21 @@
         }
 
         function createMTConnectMachineCard(machine) {
+            // Парсим программу: из O1212(2-753-04) берем только 753-04
+            let programDisplay = 'N/A';
+            if (machine.program && machine.program !== 'N/A') {
+                const match = machine.program.match(/\(([^)]+)\)$/);
+                if (match) {
+                    // Убираем цифру с дефисом в начале (2-753-04 -> 753-04)
+                    programDisplay = match[1].replace(/^\d+-/, '');
+                } else {
+                    programDisplay = machine.program;
+                }
+            }
+
+            // Счетчик деталей - всегда показываем
+            const partCountDisplay = machine.partCount && machine.partCount !== 'N/A' ? machine.partCount : 'N/A';
+
             return `
                 <div class="machine-card ${machine.status}">
                     <div class="machine-header">
@@ -333,26 +364,17 @@
                         <div class="machine-status ${machine.status}">${machine.status}</div>
                     </div>
                     <div class="machine-details">
-                        <div class="machine-detail">
-                            <strong>ID:</strong> ${machine.id}
+                        <div class="fanuc-count">
+                            🔢 ${partCountDisplay}
                         </div>
                         <div class="machine-detail">
-                            <strong>IP:</strong> ${machine.ip}:${machine.port}
+                            <strong>🔧 Программа:</strong> ${programDisplay}
                         </div>
                         <div class="machine-detail">
-                            <strong>Тип:</strong> ${machine.type}
+                            <strong>⚡ Статус:</strong> ${machine.execution || 'N/A'}
                         </div>
                         <div class="machine-detail">
-                            <strong>ID:</strong> ${machine.id}
-                        </div>
-                        <div class="machine-detail">
-                            <strong>Протокол:</strong> SHDR (Прямое подключение)
-                        </div>
-                        <div class="machine-detail">
-                            <strong>Статус:</strong> ${machine.connectionStatus}
-                        </div>
-                        <div class="machine-detail">
-                            <strong>Источник:</strong> ${machine.source}
+                            <strong>⏱️ Цикл:</strong> ${machine.cycleTime !== 'N/A' ? machine.cycleTime + ' сек/дет' : 'N/A'}
                         </div>
                     </div>
                 </div>
@@ -360,40 +382,30 @@
         }
 
         function createADAMMachineCard(machine) {
+            // Время цикла - показываем если есть
+            const cycleTimeDisplay = machine.cycleTime 
+                ? `${machine.cycleTime} сек/дет` 
+                : 'N/A';
+
             return `
-                <div class="machine-card adam-specific ${machine.status}">
+                <div class="machine-card ${machine.status}">
                     <div class="machine-header">
-                        <div class="machine-name">${machine.name}</div>
+                        <div class="machine-name">
+                            ${machine.name}
+                            <span class="adam-badge">📊</span>
+                        </div>
                         <div class="machine-status ${machine.status}">${machine.status}</div>
                     </div>
                     <div class="machine-details">
-                        <div class="machine-detail">
-                            <strong>ID:</strong> ${machine.id}
+                        <div class="adam-count">
+                            🔢 ${machine.count !== undefined ? machine.count.toLocaleString() : 'N/A'}
                         </div>
                         <div class="machine-detail">
-                            <strong>Канал:</strong> DI${machine.channel}
+                            <strong>⏱️ Цикл:</strong> ${cycleTimeDisplay}
                         </div>
                         <div class="machine-detail">
-                            <strong>IP:</strong> ${machine.ip}:${machine.port}
+                            <strong>📈 Точность:</strong> ${machine.confidence || 'N/A'}
                         </div>
-                        <div class="machine-detail">
-                            <strong>Тип:</strong> ${machine.type}
-                        </div>
-                        ${machine.count !== undefined ? `
-                            <div class="adam-count">
-                                Счетчик: ${machine.count.toLocaleString()}
-                            </div>
-                        ` : ''}
-                        ${machine.confidence ? `
-                            <div class="machine-detail">
-                                <strong>Уверенность:</strong> ${machine.confidence}
-                            </div>
-                        ` : ''}
-                        ${machine.lastUpdate ? `
-                            <div class="machine-detail">
-                                <strong>Обновлено:</strong> ${new Date(machine.lastUpdate).toLocaleTimeString()}
-                            </div>
-                        ` : ''}
                     </div>
                 </div>
             `;
