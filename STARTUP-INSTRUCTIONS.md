@@ -29,6 +29,11 @@ rm start-v2.ps1
 
 запуска адаптеров 
 cd "Fanuc\M_1_XD-20\Adapter"; Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD'; .\run.bat" -WindowStyle Minimized
+
+ Проверка адаптеров
+ netstat -ano | findstr ":770[1-8].*LISTENING" | Sort-Object
+
+
 ```
 
 ## 🔧 **ЧТО ИСПРАВЛЕНО:**
