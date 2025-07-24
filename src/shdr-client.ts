@@ -8,6 +8,17 @@ export interface SHDRDataItem {
     value: string;
 }
 
+interface PartCountHistory {
+    machineId: string;
+    changes: Array<{
+        timestamp: Date;
+        count: number;
+        delta: number;
+    }>;
+    lastCount?: number;
+    initialized: boolean;
+}
+
 export interface SHDRConnectionConfig {
     ip: string;
     port: number;
@@ -25,6 +36,7 @@ export class SHDRClient extends EventEmitter {
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = 5;
     private buffer: string = '';
+    private partCountHistory: PartCountHistory;
 
     constructor(config: SHDRConnectionConfig) {
         super();
@@ -32,6 +44,11 @@ export class SHDRClient extends EventEmitter {
             reconnectInterval: 5000,
             timeout: 10000,
             ...config
+        };
+        this.partCountHistory = {
+            machineId: config.machineId,
+            changes: [],
+            initialized: false
         };
     }
 
@@ -95,65 +112,85 @@ export class SHDRClient extends EventEmitter {
     private parseSHDRLine(line: string): void {
         const parts = line.split('|');
         
-        // Поддерживаем формат: timestamp|dataItem|value (3 части)
-        // или timestamp|device|dataItem|value (4 части)
-        if (parts.length >= 3) {
-            let dataItem: SHDRDataItem;
+        if (parts.length < 2) {
+            console.warn(`⚠️ Неверный формат SHDR для ${this.config.machineName}: ${line}`);
+            return;
+        }
+
+        const timestamp = parts[0];
+        
+        // Обрабатываем все пары dataItem|value, начиная с индекса 1
+        for (let i = 1; i < parts.length; i += 2) {
+            if (i + 1 >= parts.length) break; // Нет пары для последнего элемента
             
-            if (parts.length === 3) {
-                // Формат: timestamp|dataItem|value
-                const programMatch = parts[2].match(/^O(\d+)/);
-                let processedValue = parts[2];
-                let processedDataItem = parts[1];
-                
-                // Если значение начинается с O0001 - это программа
+            const dataItemName = parts[i];
+            const dataItemValue = parts[i + 1];
+            
+            // Обработка программы - разные форматы для разных станков
+            let processedDataItem = dataItemName;
+            let processedValue = dataItemValue;
+            
+            // Для SR-23 и SR-25: используем старый формат program = O0030(1211-39)
+            if (dataItemName === 'program' && (this.config.machineName === 'SR-23' || this.config.machineName === 'SR-25')) {
+                const programMatch = dataItemValue.match(/^O(\d+)\(([^)]+)\)$/);
                 if (programMatch) {
-                    processedDataItem = 'program';
-                    processedValue = parts[2]; // Оставляем полное значение O0001...
+                    // Убираем только одну цифру с дефисом в начале (2-753-04 -> 753-04)
+                    let programName = programMatch[2];
+                    programName = programName.replace(/^(\d-|<)/, ''); // Только одна цифра!
+                    programName = programName.replace(/(\+[^>]*>?|>)$/, '');
+                    processedValue = programName;
+                } else {
+                    continue; // Пропускаем program без правильного формата
                 }
-                
-                dataItem = {
-                    timestamp: parts[0],
-                    device: this.config.machineName,
-                    dataItem: processedDataItem,
-                    value: processedValue
-                };
-            } else {
-                // Формат: timestamp|device|dataItem|value  
-                const programMatch = parts[3].match(/^O(\d+)/);
-                let processedValue = parts[3];
-                let processedDataItem = parts[2];
-                
-                // Если значение начинается с O0001 - это программа
-                if (programMatch) {
+            }
+            // Для остальных станков: используем program_comment = % O1212(753-04)
+            else if (dataItemName === 'program_comment') {
+                const commentMatch = dataItemValue.match(/O\d+\(([^)]+)\)/);
+                if (commentMatch) {
                     processedDataItem = 'program';
-                    processedValue = parts[3]; // Оставляем полное значение O0001...
+                    let programName = commentMatch[1];
+                    // Убираем только одну цифру с дефисом в начале (2-753-04 -> 753-04) или < в начале
+                    programName = programName.replace(/^(\d-|<)/, ''); // Только одна цифра!
+                    programName = programName.replace(/(\+[^>]*>?|>)$/, '');
+                    processedValue = programName;
+                } else {
+                    continue; // Пропускаем program_comment без правильного формата
                 }
-                
-                dataItem = {
-                    timestamp: parts[0],
-                    device: parts[1],
-                    dataItem: processedDataItem,
-                    value: processedValue
-                };
+            }
+            // Игнорируем мусорные значения program для остальных станков
+            else if (dataItemName === 'program' && this.config.machineName !== 'SR-23' && this.config.machineName !== 'SR-25') {
+                continue; // Пропускаем мусорные значения типа "4.0", "27.27"
             }
             
-            // ФИЛЬТР: Игнорируем данные осей и шпинделей - нужны только program и partCount
+            // Фильтруем только нужные данные
             const allowedDataItems = [
                 'program',      // Программа CNC
-                'partCount',    // Счетчик деталей  
+                'part_count',   // Счетчик деталей 
                 'execution',    // Статус выполнения
+                'execution2',   // Статус выполнения для 2-го канала
                 'availability', // Доступность
                 'block'         // Текущий блок программы
             ];
             
-            if (allowedDataItems.includes(dataItem.dataItem)) {
+            if (allowedDataItems.includes(processedDataItem)) {
+                const dataItem = {
+                    timestamp: timestamp,
+                    device: this.config.machineName,
+                    dataItem: processedDataItem,
+                    value: processedValue
+                };
+                
+                // Отслеживаем изменения part_count для расчета времени цикла
+                if (processedDataItem === 'part_count') {
+                    const partCount = parseInt(processedValue);
+                    if (!isNaN(partCount)) {
+                        this.updatePartCountHistory(partCount);
+                    }
+                }
+                
+                console.log(`✅ SHDR ACCEPTED для ${this.config.machineName}: ${processedDataItem} = ${processedValue}`);
                 this.emit('data', dataItem);
             }
-            // Остальные данные (оси, шпиндели, нагрузки) ИГНОРИРУЕМ
-            
-        } else {
-            console.warn(`⚠️ Неверный формат SHDR для ${this.config.machineName}: ${line}`);
         }
     }
 
@@ -203,6 +240,89 @@ export class SHDRClient extends EventEmitter {
     public getReconnectAttempts(): number {
         return this.reconnectAttempts;
     }
+
+    getCycleTimeData(): { cycleTimeMs?: number; partsInCycle: number; confidence: string } {
+        return this.calculateCycleTime();
+    }
+
+    private calculateCycleTime(): { cycleTimeMs?: number; partsInCycle: number; confidence: string } {
+        const history = this.partCountHistory;
+        const maxAgeMs = 5 * 60 * 1000; // 5 минут
+        const now = new Date();
+
+        // Очищаем старые записи
+        history.changes = history.changes.filter(change => 
+            now.getTime() - change.timestamp.getTime() <= maxAgeMs
+        );
+
+        if (history.changes.length < 2) {
+            return { 
+                cycleTimeMs: undefined, 
+                partsInCycle: 0,
+                confidence: 'Недостаточно данных'
+            };
+        }
+
+        const totalParts = history.changes.reduce((sum, change) => sum + change.delta, 0);
+        const firstChange = history.changes[0];
+        const lastChange = history.changes[history.changes.length - 1];
+        const totalTimeMs = lastChange.timestamp.getTime() - firstChange.timestamp.getTime();
+
+        if (totalParts <= 0 || totalTimeMs <= 0) {
+            return { 
+                cycleTimeMs: undefined, 
+                partsInCycle: totalParts,
+                confidence: 'Нет изменений счетчика'
+            };
+        }
+
+        const avgCycleTimeMs = totalTimeMs / totalParts;
+
+        let confidence = 'НИЗКАЯ';
+        if (history.changes.length >= 5) {
+            confidence = 'ВЫСОКАЯ';
+        } else if (history.changes.length >= 3) {
+            confidence = 'СРЕДНЯЯ';
+        }
+
+        console.log(`⏱️ ${history.machineId}: ${totalParts} дет. за ${(totalTimeMs/1000).toFixed(1)} сек = ${(avgCycleTimeMs/1000).toFixed(2)} сек/дет (${confidence})`);
+
+        return {
+            cycleTimeMs: avgCycleTimeMs,
+            partsInCycle: totalParts,
+            confidence: confidence
+        };
+    }
+
+    private updatePartCountHistory(newCount: number): void {
+        const history = this.partCountHistory;
+        const now = new Date();
+
+        if (!history.initialized) {
+            history.lastCount = newCount;
+            history.initialized = true;
+            console.log(`📋 Инициализирована история для ${history.machineId}, начальное значение: ${newCount.toLocaleString()}`);
+            return;
+        }
+
+        if (history.lastCount !== undefined && newCount !== history.lastCount) {
+            const delta = newCount - history.lastCount;
+            if (delta > 0) { // Только положительные изменения
+                history.changes.push({
+                    timestamp: now,
+                    count: newCount,
+                    delta: delta
+                });
+
+                console.log(`🔄 ${history.machineId}: part_count изменился с ${history.lastCount.toLocaleString()} на ${newCount.toLocaleString()} (+${delta}) в ${now.toLocaleTimeString()}`);
+                
+                // Рассчитываем время цикла
+                this.calculateCycleTime();
+            }
+        }
+
+        history.lastCount = newCount;
+    }
 }
 
 export class SHDRManager extends EventEmitter {
@@ -250,6 +370,11 @@ export class SHDRManager extends EventEmitter {
 
     public getMachineData(machineId: string): Map<string, SHDRDataItem> | undefined {
         return this.dataStore.get(machineId);
+    }
+
+    public getMachineCycleTime(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string } | undefined {
+        const client = this.clients.get(machineId);
+        return client?.getCycleTimeData();
     }
 
     public getAllMachinesData(): Map<string, Map<string, SHDRDataItem>> {
