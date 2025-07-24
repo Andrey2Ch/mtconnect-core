@@ -5,10 +5,10 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Указываем правильную корневую директорию, где лежат папки со станками
-$FanucDir = Join-Path -Path $ScriptDir -ChildPath "PIM/Fanuc"
+$FanucDir = Join-Path -Path $ScriptDir -ChildPath "Fanuc"
 
 # Корневая директория, где лежат папки со станками (M_1_..., M_2_...)
-$baseDir = "PIM/Fanuc"
+$baseDir = "Fanuc"
 
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "Starting all FANUC MTConnect Adapters and Agents..."

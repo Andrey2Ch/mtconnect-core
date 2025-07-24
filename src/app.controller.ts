@@ -1,22 +1,59 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { AppService } from './app.service';
+import { SHDRManager, SHDRDataItem } from './shdr-client';
 
-@Controller()
+@Controller('/api')
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    @Inject(SHDRManager) private readonly shdrManager: SHDRManager,
+    @Inject('FANUC_MACHINES') private readonly fanucMachines: any[],
+    @Inject('ADAM_MACHINES') private readonly adamMachines: any[],
+  ) {}
 
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
-  }
+  @Get('machines')
+  getMachineData() {
+    const mtconnectMachines = this.fanucMachines.map(machine => {
+      const isConnected = this.shdrManager.getMachineConnectionStatus(machine.id);
+      const machineData = this.shdrManager.getMachineData(machine.id);
+      
+      const getVal = (key: string) => machineData?.get(key)?.value || 'UNAVAILABLE'; // ✅ ИСПРАВЛЕНО: было 'N/A'
 
-  @Get('health')
-  getHealth() {
+      return {
+        id: machine.id,
+        name: machine.name,
+        ip: machine.ip,
+        port: machine.port,
+        type: machine.type,
+        connectionStatus: isConnected ? 'active' : 'inactive',
+        status: getVal('availability'),
+        execution: getVal('execution'),
+        partCount: getVal('partCount'),
+        program: getVal('program'),
+      };
+    });
+
+    const summary = {
+      total: this.fanucMachines.length + this.adamMachines.length,
+      mtconnect: {
+        total: this.fanucMachines.length,
+        online: mtconnectMachines.filter(m => m.connectionStatus === 'active').length,
+        offline: mtconnectMachines.filter(m => m.connectionStatus !== 'active').length,
+      },
+      adam: {
+        total: this.adamMachines.length,
+        online: 0, // ADAM logic not implemented yet
+        offline: this.adamMachines.length,
+      },
+    };
+
     return {
-      status: 'ok',
-      service: 'MTConnect Cloud API',
       timestamp: new Date().toISOString(),
-      version: '1.0.0'
+      summary,
+      machines: {
+        mtconnect: mtconnectMachines,
+        adam: this.adamMachines, // Placeholder
+      },
     };
   }
 } 

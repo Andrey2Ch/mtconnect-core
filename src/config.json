@@ -6,7 +6,7 @@
       "ip": "localhost",
       "port": 7701,
       "type": "FANUC",
-      "isSimulator": true,
+      "isSimulator": false,
       "uuid": "M_1_XD-20",
       "spindles": ["S1"],
       "axes": ["X", "Y", "Z"]
@@ -17,7 +17,7 @@
       "ip": "localhost",
       "port": 7702,
       "type": "FANUC",
-      "isSimulator": true,
+      "isSimulator": false,
       "uuid": "M_2_SR_26",
       "spindles": ["S1"],
       "axes": ["X", "Y", "Z"]
@@ -28,7 +28,7 @@
       "ip": "localhost",
       "port": 7703,
       "type": "FANUC",
-      "isSimulator": true,
+      "isSimulator": false,
       "uuid": "M_3_XD_38",
       "spindles": ["S1"],
       "axes": ["X", "Y", "Z"]
@@ -39,7 +39,7 @@
       "ip": "localhost",
       "port": 7704,
       "type": "FANUC",
-      "isSimulator": true,
+      "isSimulator": false,
       "uuid": "M_4_SR_10",
       "spindles": ["S1"],
       "axes": ["X", "Y", "Z"]
@@ -50,7 +50,7 @@
       "ip": "localhost",
       "port": 7705,
       "type": "FANUC",
-      "isSimulator": true,
+      "isSimulator": false,
       "uuid": "M_5_DT_26",
       "spindles": ["S1"],
       "axes": ["X", "Y", "Z"]
@@ -61,7 +61,7 @@
       "ip": "localhost",
       "port": 7706,
       "type": "FANUC",
-      "isSimulator": true,
+      "isSimulator": false,
       "uuid": "M_6_SR_21",
       "spindles": ["S1"],
       "axes": ["X", "Y", "Z"]
@@ -72,7 +72,7 @@
       "ip": "localhost",
       "port": 7707,
       "type": "FANUC",
-      "isSimulator": true,
+      "isSimulator": false,
       "uuid": "M_7_SR_23",
       "spindles": ["S1"],
       "axes": ["X", "Y", "Z"]
@@ -83,7 +83,7 @@
       "ip": "localhost",
       "port": 7708,
       "type": "FANUC",
-      "isSimulator": true,
+      "isSimulator": false,
       "uuid": "M_8_SR_25",
       "spindles": ["S1"],
       "axes": ["X", "Y", "Z"]

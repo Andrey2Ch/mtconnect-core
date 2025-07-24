@@ -34,4 +34,4 @@ export declare class MetricsService {
         };
     }>;
 }
-export declare const metricsProviders: import("@nestjs/common").Provider[];
+export declare const metricsProviders: any[];

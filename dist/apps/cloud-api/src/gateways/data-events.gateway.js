@@ -12,6 +12,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var DataEventsGateway_1;
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DataEventsGateway = void 0;
 const websockets_1 = require("@nestjs/websockets");
@@ -86,14 +87,14 @@ let DataEventsGateway = DataEventsGateway_1 = class DataEventsGateway {
 exports.DataEventsGateway = DataEventsGateway;
 __decorate([
     (0, websockets_1.WebSocketServer)(),
-    __metadata("design:type", socket_io_1.Server)
+    __metadata("design:type", typeof (_a = typeof socket_io_1.Server !== "undefined" && socket_io_1.Server) === "function" ? _a : Object)
 ], DataEventsGateway.prototype, "server", void 0);
 __decorate([
     (0, websockets_1.SubscribeMessage)('subscribe-machine'),
     __param(0, (0, websockets_1.MessageBody)()),
     __param(1, (0, websockets_1.ConnectedSocket)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, socket_io_1.Socket]),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof socket_io_1.Socket !== "undefined" && socket_io_1.Socket) === "function" ? _b : Object]),
     __metadata("design:returntype", void 0)
 ], DataEventsGateway.prototype, "handleMachineSubscription", null);
 __decorate([
@@ -101,7 +102,7 @@ __decorate([
     __param(0, (0, websockets_1.MessageBody)()),
     __param(1, (0, websockets_1.ConnectedSocket)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, socket_io_1.Socket]),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof socket_io_1.Socket !== "undefined" && socket_io_1.Socket) === "function" ? _c : Object]),
     __metadata("design:returntype", void 0)
 ], DataEventsGateway.prototype, "handleMachineUnsubscription", null);
 exports.DataEventsGateway = DataEventsGateway = DataEventsGateway_1 = __decorate([

@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a, _b, _c, _d, _e, _f, _g, _h, _j;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.metricsProviders = exports.MetricsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -127,15 +128,7 @@ exports.MetricsService = MetricsService = __decorate([
     __param(6, (0, nestjs_prometheus_1.InjectMetric)('api_errors_total')),
     __param(7, (0, nestjs_prometheus_1.InjectMetric)('database_operations_total')),
     __param(8, (0, nestjs_prometheus_1.InjectMetric)('database_operation_duration_seconds')),
-    __metadata("design:paramtypes", [prom_client_1.Counter,
-        prom_client_1.Histogram,
-        prom_client_1.Gauge,
-        prom_client_1.Counter,
-        prom_client_1.Counter,
-        prom_client_1.Gauge,
-        prom_client_1.Counter,
-        prom_client_1.Counter,
-        prom_client_1.Histogram])
+    __metadata("design:paramtypes", [typeof (_a = typeof prom_client_1.Counter !== "undefined" && prom_client_1.Counter) === "function" ? _a : Object, typeof (_b = typeof prom_client_1.Histogram !== "undefined" && prom_client_1.Histogram) === "function" ? _b : Object, typeof (_c = typeof prom_client_1.Gauge !== "undefined" && prom_client_1.Gauge) === "function" ? _c : Object, typeof (_d = typeof prom_client_1.Counter !== "undefined" && prom_client_1.Counter) === "function" ? _d : Object, typeof (_e = typeof prom_client_1.Counter !== "undefined" && prom_client_1.Counter) === "function" ? _e : Object, typeof (_f = typeof prom_client_1.Gauge !== "undefined" && prom_client_1.Gauge) === "function" ? _f : Object, typeof (_g = typeof prom_client_1.Counter !== "undefined" && prom_client_1.Counter) === "function" ? _g : Object, typeof (_h = typeof prom_client_1.Counter !== "undefined" && prom_client_1.Counter) === "function" ? _h : Object, typeof (_j = typeof prom_client_1.Histogram !== "undefined" && prom_client_1.Histogram) === "function" ? _j : Object])
 ], MetricsService);
 exports.metricsProviders = [
     (0, nestjs_prometheus_1.makeCounterProvider)({

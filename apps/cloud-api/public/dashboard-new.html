@@ -326,11 +326,13 @@
         }
 
         function createMTConnectMachineCard(machine) {
+            const statusClass = machine.connectionStatus === 'active' ? 'online' : 'offline';
+            const statusText = machine.connectionStatus === 'active' ? 'online' : 'offline';
             return `
-                <div class="machine-card ${machine.status}">
+                <div class="machine-card ${statusClass}">
                     <div class="machine-header">
                         <div class="machine-name">${machine.name}</div>
-                        <div class="machine-status ${machine.status}">${machine.status}</div>
+                        <div class="machine-status ${statusClass}">${statusText}</div>
                     </div>
                     <div class="machine-details">
                         <div class="machine-detail">
@@ -360,11 +362,13 @@
         }
 
         function createADAMMachineCard(machine) {
+            const statusClass = machine.connectionStatus === 'active' ? 'online' : 'offline';
+            const statusText = machine.connectionStatus === 'active' ? 'online' : 'offline';
             return `
-                <div class="machine-card adam-specific ${machine.status}">
+                <div class="machine-card adam-specific ${statusClass}">
                     <div class="machine-header">
                         <div class="machine-name">${machine.name}</div>
-                        <div class="machine-status ${machine.status}">${machine.status}</div>
+                        <div class="machine-status ${statusClass}">${statusText}</div>
                     </div>
                     <div class="machine-details">
                         <div class="machine-detail">
@@ -403,10 +407,15 @@
             console.log('🔄 Обновляем дашборд с данными:', data);
             allData = data;
             
-            // Обновляем сводку
+            // Обновляем сводку  
+            const mtconnectTotal = data.machines.mtconnect.length;
+            const mtconnectOnline = data.machines.mtconnect.filter(m => m.connectionStatus === 'active').length;
+            const adamTotal = data.machines.adam.length;
+            const adamOnline = data.machines.adam.filter(m => m.connectionStatus === 'active').length;
+            
             document.getElementById('totalMachines').textContent = data.summary.total;
-            document.getElementById('mtconnectOnline').textContent = `${data.summary.mtconnect.online}/${data.summary.mtconnect.total}`;
-            document.getElementById('adamOnline').textContent = `${data.summary.adam.online}/${data.summary.adam.total}`;
+            document.getElementById('mtconnectOnline').textContent = `${mtconnectOnline}/${mtconnectTotal}`;
+            document.getElementById('adamOnline').textContent = `${adamOnline}/${adamTotal}`;
             
             // Обновляем MTConnect машины
             const mtconnectContainer = document.getElementById('mtconnect-machines');
@@ -438,19 +447,11 @@
             try {
                 console.log('📡 Отправляем запрос к API...');
                 
-                // Используем локальный API
+                // Используем ЕДИНЫЙ API
                 const apiUrl = 'http://localhost:3000/api/machines';
-                const timestamp = new Date().getTime();
+                const response = await fetch(apiUrl);
                 
-                const response = await fetch(`${apiUrl}?cache=${timestamp}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                console.log('📊 Ответ от API:', response.status, response.statusText);
+                console.log(`📊 Ответ от API: ${response.status} ${response.statusText}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
