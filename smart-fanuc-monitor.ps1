@@ -45,7 +45,8 @@ foreach($machine in $machines) {
     if($exe) {
         Write-Host "  ✅ Запуск $($machine.Name)" -ForegroundColor Green
         $title = "Adapter-$($machine.Name)"
-        Start-Process cmd -ArgumentList "/k", "title $title && cd /d `"$adapterPath`" && $exe" -WindowStyle Minimized
+        # ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: добавляю параметр "run"
+        Start-Process cmd -ArgumentList "/k", "title $title && cd /d `"$adapterPath`" && $exe run" -WindowStyle Minimized
         $count++
         Start-Sleep 1
     }

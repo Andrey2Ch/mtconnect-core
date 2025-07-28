@@ -10,13 +10,14 @@ const configPath = path.resolve(__dirname, '../../config.json');
 const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 const { FANUC_MACHINES, ADAM_MACHINES } = config;
 
-// Создаем менеджер
+// Создаем SHDR менеджер (адаптеры работают по SHDR, не HTTP)
 const shdrManager = new SHDRManager();
-// Добавляем машины в менеджер, что инициирует подключение
+
+// Добавляем машины в SHDR менеджер
 FANUC_MACHINES.forEach(machine => {
-  console.log(`🔧 Настройка SHDR подключения для ${machine.name} (${machine.ip}:${machine.port})`);
+  console.log(`🔧 Настройка SHDR подключения для ${machine.name} (localhost:${machine.port})`);
   shdrManager.addMachine({
-    ip: machine.ip,
+    ip: 'localhost', // Адаптеры на localhost
     port: machine.port,
     machineId: machine.id,
     machineName: machine.name,
@@ -37,9 +38,9 @@ FANUC_MACHINES.forEach(machine => {
       useValue: FANUC_MACHINES,
     },
     {
-      provide: 'ADAM_MACHINES',
+      provide: 'ADAM_MACHINES', 
       useValue: ADAM_MACHINES,
-    }
+    },
   ],
 })
 export class AppModule {} 

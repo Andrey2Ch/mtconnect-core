@@ -1,11 +1,12 @@
 import express from 'express';
 import cors from 'cors';
-import * as path from 'path';
+import path from 'path';
 import * as fs from 'fs';
 import { SHDRManager } from './shdr-client';
+import { AdamReader } from './adam-reader';
 
 const app = express();
-const port = 3333; // Временно меняем порт
+const port = 3555; // Свободный порт для диагностики
 
 app.use(cors());
 app.use(express.json());
@@ -28,7 +29,10 @@ machines.forEach(machine => {
   });
 });
 
-app.get('/api/machines', (req, res) => {
+// Инициализация ADAM Reader
+const adamReader = new AdamReader('192.168.1.10', 502);
+
+app.get('/api/machines', async (req, res) => {
   const mtconnectMachines = machines.map(machine => {
     const isConnected = shdrManager.getMachineConnectionStatus(machine.id);
     const machineData = shdrManager.getMachineData(machine.id);
@@ -47,17 +51,37 @@ app.get('/api/machines', (req, res) => {
     };
   });
 
-  // ADAM машины (статические - пока без реального подключения)
-  const adamMachines = (adamDevices || []).map(device => ({
-    id: device.id,
-    name: device.name,
-    type: device.type,
-    channel: device.channel,
-    ip: '192.168.1.10', // ADAM-6050 контроллер IP
-    port: 502, // Modbus TCP порт
-    connectionStatus: 'active', // Предполагаем что подключены
-    partCount: Math.floor(Math.random() * 1000), // Временные данные
-  }));
+  // ADAM машины - РЕАЛЬНЫЕ ДАННЫЕ
+  let adamMachines;
+  try {
+    const adamCounters = await adamReader.readCounters();
+    adamMachines = (adamDevices || []).map(device => {
+      const counterData = adamCounters.find(c => c.machineId === device.id);
+      return {
+        id: device.id,
+        name: device.name,
+        type: device.type,
+        channel: device.channel,
+        ip: '192.168.1.10', // ADAM-6050 контроллер IP
+        port: 502, // Modbus TCP порт
+        connectionStatus: counterData ? 'active' : 'offline',
+        partCount: counterData ? counterData.count : 0, // РЕАЛЬНЫЕ ДАННЫЕ
+      };
+    });
+  } catch (error) {
+    console.error('❌ Ошибка чтения ADAM данных:', error);
+    // Fallback к симулированным данным при ошибке
+    adamMachines = (adamDevices || []).map(device => ({
+      id: device.id,
+      name: device.name,
+      type: device.type,
+      channel: device.channel,
+      ip: '192.168.1.10',
+      port: 502,
+      connectionStatus: 'offline',
+      partCount: 0,
+    }));
+  }
 
   const summary = {
     total: machines.length + adamDevices.length,
@@ -75,7 +99,7 @@ app.get('/api/machines', (req, res) => {
 });
 
 // API v2 endpoints для dashboard-v2.html
-app.get('/api/v2/dashboard/machines', (req, res) => {
+app.get('/api/v2/dashboard/machines', async (req, res) => {
   const mtconnectMachines = machines.map(machine => {
     const isConnected = shdrManager.getMachineConnectionStatus(machine.id);
     const machineData = shdrManager.getMachineData(machine.id);
@@ -106,24 +130,52 @@ app.get('/api/v2/dashboard/machines', (req, res) => {
     };
   });
 
-  const adamMachines = (adamDevices || []).map(device => ({
-    id: device.id,
-    name: device.name,
-    type: 'counter', // Dashboard ожидает 'counter' для ADAM машин
-    channel: device.channel,
-    ip: '192.168.1.10',
-    port: 502,
-    status: 'active',
-    isOnline: true,
-    // Поля для dashboard-v2
-    primaryValue: Math.floor(Math.random() * 1000),
-    secondaryValue: 'Счетчик',
-    cycleTime: Math.floor(Math.random() * 30000),
-    lastUpdate: new Date().toISOString(),
-    lastSeen: new Date().toISOString(),
-    totalRecords: Math.floor(Math.random() * 500),
-    hourlyActivity: [], // Пустой массив для графика
-  }));
+  // ADAM данные - РЕАЛЬНЫЕ для dashboard-v2
+  let adamMachines = [];
+  try {
+    const adamCounters = await adamReader.readCounters();
+    adamMachines = (adamDevices || []).map(device => {
+      const counterData = adamCounters.find(c => c.machineId === device.id);
+      return {
+        id: device.id,
+        name: device.name,
+        type: 'counter', // Dashboard ожидает 'counter' для ADAM машин
+        channel: device.channel,
+        ip: '192.168.1.10',
+        port: 502,
+        status: counterData ? 'active' : 'offline',
+        isOnline: counterData ? true : false,
+        // Поля для dashboard-v2 - РЕАЛЬНЫЕ ДАННЫЕ
+        primaryValue: counterData ? counterData.count : 0,
+        secondaryValue: 'Счетчик',
+        cycleTime: counterData?.cycleTimeMs || 0,
+        lastUpdate: counterData?.timestamp || new Date().toISOString(),
+        lastSeen: counterData?.timestamp || new Date().toISOString(),
+        totalRecords: counterData ? counterData.count : 0,
+        hourlyActivity: [], // Пустой массив для графика
+      };
+    });
+  } catch (error) {
+    console.error('❌ Ошибка чтения ADAM данных для dashboard-v2:', error);
+    // Fallback к пустому массиву при ошибке
+    adamMachines = (adamDevices || []).map(device => ({
+      id: device.id,
+      name: device.name,
+      type: 'counter',
+      channel: device.channel,
+      ip: '192.168.1.10',
+      port: 502,
+      status: 'offline',
+      isOnline: false,
+      primaryValue: 0,
+      secondaryValue: 'Счетчик',
+      cycleTime: 0,
+      lastUpdate: new Date().toISOString(),
+      lastSeen: new Date().toISOString(),
+      totalRecords: 0,
+      hourlyActivity: [],
+    }));
+  }
 
   res.json({
     success: true,

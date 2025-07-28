@@ -8,26 +8,46 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
-const mongoose_1 = require("@nestjs/mongoose");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
-const external_api_controller_1 = require("./controllers/external-api.controller");
-const dashboard_controller_1 = require("./controllers/dashboard.controller");
-const machine_data_schema_1 = require("./schemas/machine-data.schema");
-const sanitization_service_1 = require("./services/sanitization.service");
-const winston_logger_service_1 = require("./services/winston-logger.service");
-const metrics_service_1 = require("./services/metrics.service");
+const shdr_client_1 = require("./shdr-client");
+const fs = require("fs");
+const path = require("path");
+const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../config.json'), 'utf-8'));
+const shdrManager = new shdr_client_1.SHDRManager();
+config.machines.forEach(machine => {
+    if (machine.type === 'FANUC') {
+        console.log(`🔧 Настройка SHDR подключения для ${machine.name} (localhost:${machine.port})`);
+        shdrManager.addMachine({
+            ip: 'localhost',
+            port: machine.port,
+            machineId: machine.id,
+            machineName: machine.name,
+        });
+    }
+});
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [
-            mongoose_1.MongooseModule.forRoot(process.env.MONGODB_URI || "mongodb://localhost:27017/mtconnect"),
-            mongoose_1.MongooseModule.forFeature([{ name: machine_data_schema_1.MachineData.name, schema: machine_data_schema_1.MachineDataSchema }])
+        imports: [],
+        controllers: [app_controller_1.AppController],
+        providers: [
+            app_service_1.AppService,
+            {
+                provide: shdr_client_1.SHDRManager,
+                useValue: shdrManager,
+            },
+            {
+                provide: 'FANUC_MACHINES',
+                useValue: config.machines.filter(m => m.type === 'FANUC'),
+            },
+            {
+                provide: 'ADAM_MACHINES',
+                useValue: [],
+            },
         ],
-        controllers: [app_controller_1.AppController, external_api_controller_1.ExternalApiController, dashboard_controller_1.DashboardController],
-        providers: [app_service_1.AppService, sanitization_service_1.SanitizationService, winston_logger_service_1.WinstonLoggerService, metrics_service_1.MetricsService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

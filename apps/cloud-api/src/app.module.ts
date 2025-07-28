@@ -1,20 +1,46 @@
-﻿import { Module } from "@nestjs/common";
-import { MongooseModule } from "@nestjs/mongoose";
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
-import { ExternalApiController } from "./controllers/external-api.controller";
-import { DashboardController } from "./controllers/dashboard.controller";
-import { MachineData, MachineDataSchema } from "./schemas/machine-data.schema";
-import { SanitizationService } from "./services/sanitization.service";
-import { WinstonLoggerService } from "./services/winston-logger.service";
-import { MetricsService } from "./services/metrics.service";
+﻿import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { SHDRManager } from './shdr-client';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Загружаем конфигурацию из корня проекта
+const config = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../config.json'), 'utf-8'));
+
+// Создаем SHDR менеджер (адаптеры работают по SHDR, не HTTP)
+const shdrManager = new SHDRManager();
+
+// Добавляем машины в SHDR менеджер
+config.machines.forEach(machine => {
+  if (machine.type === 'FANUC') {
+    console.log(`🔧 Настройка SHDR подключения для ${machine.name} (localhost:${machine.port})`);
+    shdrManager.addMachine({
+      ip: 'localhost',
+      port: machine.port,
+      machineId: machine.id,
+      machineName: machine.name,
+    });
+  }
+});
 
 @Module({
-  imports: [
-    MongooseModule.forRoot(process.env.MONGODB_URI || "mongodb://localhost:27017/mtconnect"),
-    MongooseModule.forFeature([{ name: MachineData.name, schema: MachineDataSchema }])
+  imports: [],
+  controllers: [AppController],
+  providers: [
+    AppService,
+    {
+      provide: SHDRManager,
+      useValue: shdrManager,
+    },
+    {
+      provide: 'FANUC_MACHINES',
+      useValue: config.machines.filter(m => m.type === 'FANUC'),
+    },
+    {
+      provide: 'ADAM_MACHINES', 
+      useValue: [],
+    },
   ],
-  controllers: [AppController, ExternalApiController, DashboardController],
-  providers: [AppService, SanitizationService, WinstonLoggerService, MetricsService],
 })
 export class AppModule {}
