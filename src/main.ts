@@ -69,7 +69,8 @@ app.get('/api/machines', async (req, res) => {
       };
     });
   } catch (error) {
-    console.error('❌ Ошибка чтения ADAM данных:', error);
+    // Убираем спам ошибок ADAM - они ожидаемы в dev режиме
+    // console.error('❌ Ошибка чтения ADAM данных:', error);
     // Fallback к симулированным данным при ошибке
     adamMachines = (adamDevices || []).map(device => ({
       id: device.id,
@@ -156,7 +157,8 @@ app.get('/api/v2/dashboard/machines', async (req, res) => {
       };
     });
   } catch (error) {
-    console.error('❌ Ошибка чтения ADAM данных для dashboard-v2:', error);
+    // Убираем спам ошибок ADAM для dashboard-v2 
+    // console.error('❌ Ошибка чтения ADAM данных для dashboard-v2:', error);
     // Fallback к пустому массиву при ошибке
     adamMachines = (adamDevices || []).map(device => ({
       id: device.id,
@@ -209,4 +211,8 @@ app.get('/api/v2/dashboard/summary', (req, res) => {
 
 app.listen(port, () => {
   console.log(`✅ Edge Gateway запущен на http://localhost:${port}`);
+  console.log(`📊 Дашборд: http://localhost:${port}/dashboard-new.html`);
+  console.log(`🔧 FANUC машины настроены: ${config.machines.filter(m => m.type === 'FANUC').length}`);
+  console.log(`📈 ADAM устройства настроены: ${(config.adamDevices || []).length}`);
+  console.log(`🔄 Переподключение адаптеров: каждые 30 сек (макс. 3 попытки)`);
 }); 

@@ -34,14 +34,14 @@ export class SHDRClient extends EventEmitter {
     private reconnectTimer: NodeJS.Timeout | null = null;
     private isConnected: boolean = false;
     private reconnectAttempts: number = 0;
-    private maxReconnectAttempts: number = 5;
+    private maxReconnectAttempts: number = 3; // Уменьшаем попытки
     private buffer: string = '';
     private partCountHistory: PartCountHistory;
 
     constructor(config: SHDRConnectionConfig) {
         super();
         this.config = {
-            reconnectInterval: 5000,
+            reconnectInterval: 30000, // Увеличиваем интервал до 30 сек
             timeout: 10000,
             ...config
         };
@@ -77,17 +77,22 @@ export class SHDRClient extends EventEmitter {
         });
 
         this.socket.on('error', (error) => {
-            console.log(`❌ SHDR ошибка для ${this.config.machineName}: ${error.message}`);
+            // Убираем спам ошибок - логируем только при первой попытке
+            if (this.reconnectAttempts === 0) {
+                console.log(`❌ SHDR ошибка для ${this.config.machineName}: ${error.message}`);
+            }
             this.emit('error', error);
             this.handleDisconnect();
         });
 
         this.socket.on('close', () => {
-            console.log(`🔌 SHDR соединение закрыто для ${this.config.machineName}`);
+            // Убираем спам закрытия соединений
+            // console.log(`🔌 SHDR соединение закрыто для ${this.config.machineName}`);
             this.handleDisconnect();
         });
 
-        console.log(`🔄 Подключение SHDR к ${this.config.machineName} (${this.config.ip}:${this.config.port})...`);
+        // Убираем спам попыток подключения  
+        // console.log(`🔄 Подключение SHDR к ${this.config.machineName} (${this.config.ip}:${this.config.port})...`);
         this.socket.connect(this.config.port, this.config.ip);
     }
 
@@ -113,7 +118,8 @@ export class SHDRClient extends EventEmitter {
         const parts = line.split('|');
         
         // RAW SHDR данные  
-        console.log(`RAW SHDR от ${this.config.machineName}: ${line}`);
+                    // Убираем спам RAW данных
+            // console.log(`RAW SHDR от ${this.config.machineName}: ${line}`);
         
         if (parts.length < 2) {
             console.warn(`⚠️ Неверный формат SHDR для ${this.config.machineName}: ${line}`);
@@ -130,7 +136,8 @@ export class SHDRClient extends EventEmitter {
             const dataItemValue = parts[i + 1];
             
             // SHDR поле данных (включаю для диагностики)
-            console.log(`SHDR ПОЛЕ для ${this.config.machineName}: ${dataItemName} = ${dataItemValue}`);
+            // Убираем спам полей данных
+            // console.log(`SHDR ПОЛЕ для ${this.config.machineName}: ${dataItemName} = ${dataItemValue}`);
             
             // Обработка программы - разные форматы для разных станков
             let processedDataItem = dataItemName;
@@ -213,7 +220,10 @@ export class SHDRClient extends EventEmitter {
         // Автопереподключение
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
-            console.log(`🔄 Переподключение SHDR к ${this.config.machineName} через ${this.config.reconnectInterval}мс (попытка ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+            // Убираем спам переподключений - логируем только последнюю попытку
+        if (this.reconnectAttempts === this.maxReconnectAttempts) {
+            console.log(`⚠️  SHDR: ${this.config.machineName} недоступен (${this.maxReconnectAttempts} попыток)`);
+        }
             
             this.reconnectTimer = setTimeout(() => {
                 this.connect();
@@ -339,12 +349,13 @@ export class SHDRManager extends EventEmitter {
         const client = new SHDRClient(config);
         
         client.on('connect', () => {
-            console.log(`🔗 SHDR Manager: ${config.machineName} подключен`);
+            console.log(`✅ ${config.machineName}: Подключен`);
             this.emit('machineConnected', config.machineId);
         });
 
         client.on('disconnect', () => {
-            console.log(`🔌 SHDR Manager: ${config.machineName} отключен`);
+            // Убираем спам отключений  
+            // console.log(`🔌 SHDR Manager: ${config.machineName} отключен`);
             this.emit('machineDisconnected', config.machineId);
         });
 
