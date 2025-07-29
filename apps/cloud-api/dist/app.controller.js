@@ -12,47 +12,34 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppController = void 0;
 const common_1 = require("@nestjs/common");
 const app_service_1 = require("./app.service");
-const http = require("http");
 let AppController = class AppController {
     constructor(appService) {
         this.appService = appService;
     }
-    httpGet(url) {
-        return new Promise((resolve, reject) => {
-            http.get(url, (res) => {
-                let data = '';
-                res.on('data', (chunk) => { data += chunk; });
-                res.on('end', () => {
-                    try {
-                        resolve(JSON.parse(data));
-                    }
-                    catch (e) {
-                        reject(e);
-                    }
-                });
-            }).on('error', (err) => {
-                reject(err);
-            });
-        });
+    getHello() {
+        return 'MTConnect Cloud API is running! 🚀';
     }
-    async getMachines() {
-        try {
-            const data = await this.httpGet('http://localhost:3000/api/machines');
-            return data;
-        }
-        catch (error) {
-            console.error('Error fetching from Edge Gateway:', error.message);
-            return { error: 'Failed to fetch data' };
-        }
+    getHealth() {
+        return {
+            status: 'OK',
+            timestamp: new Date().toISOString(),
+            service: 'MTConnect Cloud API'
+        };
     }
 };
 exports.AppController = AppController;
 __decorate([
-    (0, common_1.Get)('/machines'),
+    (0, common_1.Get)('/'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], AppController.prototype, "getMachines", null);
+    __metadata("design:returntype", String)
+], AppController.prototype, "getHello", null);
+__decorate([
+    (0, common_1.Get)('/health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], AppController.prototype, "getHealth", null);
 exports.AppController = AppController = __decorate([
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [app_service_1.AppService])

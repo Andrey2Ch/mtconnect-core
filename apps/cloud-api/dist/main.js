@@ -12,7 +12,7 @@ async function bootstrap() {
         prefix: '/dashboard/',
     });
     app.useStaticAssets((0, path_1.join)(__dirname, '..', 'public'));
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 3001;
     await app.listen(port);
     logger.log(`🚀 Cloud API running on port ${port}`);
     logger.log(`📊 Dashboard: http://localhost:${port}/dashboard/index.html`);
