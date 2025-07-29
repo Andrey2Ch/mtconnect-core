@@ -221,8 +221,7 @@ export class AdamReader {
       });
 
       socket.on('error', (err) => {
-        // Убираем спам ошибок ADAM - логируем тише
-        // console.error('❌ Ошибка соединения с Adam-6050:', err);
+        console.error('❌ Ошибка соединения с Adam-6050:', err);
         reject(err);
       });
 

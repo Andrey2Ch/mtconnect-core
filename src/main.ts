@@ -29,8 +29,8 @@ machines.forEach(machine => {
   });
 });
 
-// Инициализация ADAM Reader
-const adamReader = new AdamReader('192.168.1.10', 502);
+// Инициализация ADAM Reader (используем настройки по умолчанию)
+const adamReader = new AdamReader(); // IP: 192.168.1.120:502
 
 app.get('/api/machines', async (req, res) => {
   const mtconnectMachines = machines.map(machine => {
@@ -62,22 +62,21 @@ app.get('/api/machines', async (req, res) => {
         name: device.name,
         type: device.type,
         channel: device.channel,
-        ip: '192.168.1.10', // ADAM-6050 контроллер IP
+        ip: '192.168.1.120', // ADAM-6050 контроллер IP
         port: 502, // Modbus TCP порт
         connectionStatus: counterData ? 'active' : 'offline',
         partCount: counterData ? counterData.count : 0, // РЕАЛЬНЫЕ ДАННЫЕ
       };
     });
   } catch (error) {
-    // Убираем спам ошибок ADAM - они ожидаемы в dev режиме
-    // console.error('❌ Ошибка чтения ADAM данных:', error);
+    console.error('❌ Ошибка чтения ADAM данных:', error);
     // Fallback к симулированным данным при ошибке
     adamMachines = (adamDevices || []).map(device => ({
       id: device.id,
       name: device.name,
       type: device.type,
       channel: device.channel,
-      ip: '192.168.1.10',
+      ip: '192.168.1.120',
       port: 502,
       connectionStatus: 'offline',
       partCount: 0,
@@ -142,7 +141,7 @@ app.get('/api/v2/dashboard/machines', async (req, res) => {
         name: device.name,
         type: 'counter', // Dashboard ожидает 'counter' для ADAM машин
         channel: device.channel,
-        ip: '192.168.1.10',
+        ip: '192.168.1.120',
         port: 502,
         status: counterData ? 'active' : 'offline',
         isOnline: counterData ? true : false,
@@ -157,15 +156,14 @@ app.get('/api/v2/dashboard/machines', async (req, res) => {
       };
     });
   } catch (error) {
-    // Убираем спам ошибок ADAM для dashboard-v2 
-    // console.error('❌ Ошибка чтения ADAM данных для dashboard-v2:', error);
+    console.error('❌ Ошибка чтения ADAM данных для dashboard-v2:', error);
     // Fallback к пустому массиву при ошибке
     adamMachines = (adamDevices || []).map(device => ({
       id: device.id,
       name: device.name,
       type: 'counter',
       channel: device.channel,
-      ip: '192.168.1.10',
+      ip: '192.168.1.120',
       port: 502,
       status: 'offline',
       isOnline: false,
