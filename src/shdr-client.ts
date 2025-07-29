@@ -1,5 +1,6 @@
 import * as net from 'net';
 import { EventEmitter } from 'events';
+import { CycleTimeCalculator } from './cycle-time-calculator';
 
 export interface SHDRDataItem {
     timestamp: string;
@@ -8,16 +9,7 @@ export interface SHDRDataItem {
     value: string;
 }
 
-interface PartCountHistory {
-    machineId: string;
-    changes: Array<{
-        timestamp: Date;
-        count: number;
-        delta: number;
-    }>;
-    lastCount?: number;
-    initialized: boolean;
-}
+// Удален - теперь используем CycleTimeCalculator
 
 export interface SHDRConnectionConfig {
     ip: string;
@@ -36,7 +28,7 @@ export class SHDRClient extends EventEmitter {
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = 3; // Уменьшаем попытки
     private buffer: string = '';
-    private partCountHistory: PartCountHistory;
+    private cycleTimeCalculator: CycleTimeCalculator;
 
     constructor(config: SHDRConnectionConfig) {
         super();
@@ -45,11 +37,7 @@ export class SHDRClient extends EventEmitter {
             timeout: 10000,
             ...config
         };
-        this.partCountHistory = {
-            machineId: config.machineId,
-            changes: [],
-            initialized: false
-        };
+        this.cycleTimeCalculator = new CycleTimeCalculator();
     }
 
     public connect(): void {
@@ -197,7 +185,7 @@ export class SHDRClient extends EventEmitter {
                 if (processedDataItem === 'part_count') {
                     const partCount = parseInt(processedValue);
                     if (!isNaN(partCount)) {
-                        this.updatePartCountHistory(partCount);
+                        this.cycleTimeCalculator.updateCount(this.config.machineId, partCount);
                     }
                 }
                 
@@ -258,87 +246,10 @@ export class SHDRClient extends EventEmitter {
     }
 
     getCycleTimeData(): { cycleTimeMs?: number; partsInCycle: number; confidence: string } {
-        return this.calculateCycleTime();
+        return this.cycleTimeCalculator.getCycleTime(this.config.machineId);
     }
 
-    private calculateCycleTime(): { cycleTimeMs?: number; partsInCycle: number; confidence: string } {
-        const history = this.partCountHistory;
-        const maxAgeMs = 5 * 60 * 1000; // 5 минут
-        const now = new Date();
-
-        // Очищаем старые записи
-        history.changes = history.changes.filter(change => 
-            now.getTime() - change.timestamp.getTime() <= maxAgeMs
-        );
-
-        if (history.changes.length < 2) {
-            return { 
-                cycleTimeMs: undefined, 
-                partsInCycle: 0,
-                confidence: 'Недостаточно данных'
-            };
-        }
-
-        const totalParts = history.changes.reduce((sum, change) => sum + change.delta, 0);
-        const firstChange = history.changes[0];
-        const lastChange = history.changes[history.changes.length - 1];
-        const totalTimeMs = lastChange.timestamp.getTime() - firstChange.timestamp.getTime();
-
-        if (totalParts <= 0 || totalTimeMs <= 0) {
-            return { 
-                cycleTimeMs: undefined, 
-                partsInCycle: totalParts,
-                confidence: 'Нет изменений счетчика'
-            };
-        }
-
-        const avgCycleTimeMs = totalTimeMs / totalParts;
-
-        let confidence = 'НИЗКАЯ';
-        if (history.changes.length >= 5) {
-            confidence = 'ВЫСОКАЯ';
-        } else if (history.changes.length >= 3) {
-            confidence = 'СРЕДНЯЯ';
-        }
-
-        console.log(`⏱️ ${history.machineId}: ${totalParts} дет. за ${(totalTimeMs/1000).toFixed(1)} сек = ${(avgCycleTimeMs/1000).toFixed(2)} сек/дет (${confidence})`);
-
-        return {
-            cycleTimeMs: avgCycleTimeMs,
-            partsInCycle: totalParts,
-            confidence: confidence
-        };
-    }
-
-    private updatePartCountHistory(newCount: number): void {
-        const history = this.partCountHistory;
-        const now = new Date();
-
-        if (!history.initialized) {
-            history.lastCount = newCount;
-            history.initialized = true;
-            console.log(`📋 Инициализирована история для ${history.machineId}, начальное значение: ${newCount.toLocaleString()}`);
-            return;
-        }
-
-        if (history.lastCount !== undefined && newCount !== history.lastCount) {
-            const delta = newCount - history.lastCount;
-            if (delta > 0) { // Только положительные изменения
-                history.changes.push({
-                    timestamp: now,
-                    count: newCount,
-                    delta: delta
-                });
-
-                console.log(`🔄 ${history.machineId}: part_count изменился с ${history.lastCount.toLocaleString()} на ${newCount.toLocaleString()} (+${delta}) в ${now.toLocaleTimeString()}`);
-                
-                // Рассчитываем время цикла
-                this.calculateCycleTime();
-            }
-        }
-
-        history.lastCount = newCount;
-    }
+    // Старые методы удалены - теперь используем CycleTimeCalculator
 }
 
 export class SHDRManager extends EventEmitter {

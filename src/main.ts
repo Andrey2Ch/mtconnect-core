@@ -38,6 +38,10 @@ app.get('/api/machines', async (req, res) => {
     const machineData = shdrManager.getMachineData(machine.id);
     const getVal = (key: string) => machineData?.get(key)?.value || 'UNAVAILABLE';
     
+    // Получаем время цикла от SHDR менеджера
+    const cycleTimeData = shdrManager.getMachineCycleTime(machine.id);
+    const cycleTimeSeconds = cycleTimeData?.cycleTimeMs ? (cycleTimeData.cycleTimeMs / 1000).toFixed(2) : 'N/A';
+    
     return {
       id: machine.id,
       name: machine.name,
@@ -46,8 +50,9 @@ app.get('/api/machines', async (req, res) => {
       type: machine.type,
       connectionStatus: isConnected ? 'active' : 'offline',
       execution: getVal('execution'),
-      partCount: getVal('partCount'),
+      partCount: getVal('part_count'),
       program: getVal('program'),
+      cycleTime: cycleTimeSeconds,
     };
   });
 
@@ -57,6 +62,8 @@ app.get('/api/machines', async (req, res) => {
     const adamCounters = await adamReader.readCounters();
     adamMachines = (adamDevices || []).map(device => {
       const counterData = adamCounters.find(c => c.machineId === device.id);
+      const cycleTimeSeconds = counterData?.cycleTimeMs ? (counterData.cycleTimeMs / 1000).toFixed(2) : 'N/A';
+      
       return {
         id: device.id,
         name: device.name,
@@ -66,6 +73,8 @@ app.get('/api/machines', async (req, res) => {
         port: 502, // Modbus TCP порт
         connectionStatus: counterData ? 'active' : 'offline',
         partCount: counterData ? counterData.count : 0, // РЕАЛЬНЫЕ ДАННЫЕ
+        cycleTime: cycleTimeSeconds,
+        confidence: counterData?.confidence || 'N/A',
       };
     });
   } catch (error) {
@@ -80,6 +89,8 @@ app.get('/api/machines', async (req, res) => {
       port: 502,
       connectionStatus: 'offline',
       partCount: 0,
+      cycleTime: 'N/A',
+      confidence: 'N/A',
     }));
   }
 
@@ -106,7 +117,7 @@ app.get('/api/v2/dashboard/machines', async (req, res) => {
     const getVal = (key: string) => machineData?.get(key)?.value || 'UNAVAILABLE';
     
     // Преобразуем данные в формат dashboard-v2
-    const partCount = getVal('partCount');
+    const partCount = getVal('part_count');
     const program = getVal('program');
     const cycleTime = getVal('cycleTime');
     

@@ -1,5 +1,6 @@
 import * as Modbus from 'jsmodbus';
 import * as net from 'net';
+import { CycleTimeCalculator } from './cycle-time-calculator';
 
 export interface AdamCounterData {
   channel: number;
@@ -12,30 +13,18 @@ export interface AdamCounterData {
   confidence?: string;       // Уровень уверенности в расчете
 }
 
-interface CounterChangeEvent {
-  timestamp: Date;
-  count: number;
-}
-
-interface AdamCounterHistory {
-  machineId: string;
-  changes: CounterChangeEvent[];  // История изменений счетчика
-  lastKnownCount: number;         // Последнее известное значение
-  lastUpdateTime: Date;           // Время последнего обновления
-}
+// Удален - теперь используем CycleTimeCalculator
 
 export class AdamReader {
   private host: string;
   private port: number;
   private channelMapping: Map<number, string>;
-  private counterHistories: Map<string, AdamCounterHistory>; // История изменений для каждого станка
-  private readonly MIN_PARTS_FOR_CALCULATION = 3; // Минимум деталей для расчета времени цикла
-  private readonly MAX_HISTORY_SIZE = 10; // Максимум записей в истории
+  private cycleTimeCalculator: CycleTimeCalculator;
 
   constructor(host: string = '192.168.1.120', port: number = 502) {
     this.host = host;
     this.port = port;
-    this.counterHistories = new Map();
+    this.cycleTimeCalculator = new CycleTimeCalculator();
     
     // Маппинг каналов на станки (из Adam-6050 веб-интерфейса)
     this.channelMapping = new Map([
@@ -122,64 +111,10 @@ export class AdamReader {
               const formattedCount = currentCount.toLocaleString();
               console.log(`📊 ${machineId}: ${dataType} = ${formattedCount}`);
               
-              // Получаем или создаем историю для этого станка
-              let history = this.counterHistories.get(machineId);
-              if (!history) {
-                history = {
-                  machineId: machineId,
-                  changes: [],
-                  lastKnownCount: currentCount,
-                  lastUpdateTime: currentTime
-                };
-                this.counterHistories.set(machineId, history);
-                console.log(`📋 Инициализирована история для ${machineId} (${dataType}), начальное значение: ${currentCount.toLocaleString()}`);
-                continue;
-              }
+              // Обновляем счетчик в калькуляторе
+              this.cycleTimeCalculator.updateCount(machineId, currentCount);
               
-              // Проверяем, изменился ли счетчик
-              if (currentCount > history.lastKnownCount) {
-                const newParts = currentCount - history.lastKnownCount;
-                
-                // Записываем изменение в историю
-                history.changes.push({
-                  timestamp: currentTime,
-                  count: currentCount
-                });
-                
-                console.log(`🔄 ${machineId}: ${dataType} изменился с ${history.lastKnownCount.toLocaleString()} на ${currentCount.toLocaleString()} (+${newParts}) в ${currentTime.toLocaleTimeString()}`);
-                
-                // Ограничиваем размер истории
-                if (history.changes.length > this.MAX_HISTORY_SIZE) {
-                  history.changes.shift(); // Удаляем самую старую запись
-                }
-                
-                history.lastKnownCount = currentCount;
-                history.lastUpdateTime = currentTime;
-              } else {
-                // Специальное логирование для Digital Input режима
-                if (digitalInputChannels.has(machineId)) {
-                  const timeSinceLastUpdate = Math.round((currentTime.getTime() - history.lastUpdateTime.getTime()) / 1000);
-                  console.log(`📍 ${machineId}: Digital Input = ${currentCount} (${timeSinceLastUpdate}с без изменений)`);
-                  
-                  // Digital Input должен быть только 0 или 1
-                  if (currentCount !== 0 && currentCount !== 1) {
-                    console.log(`⚠️ ${machineId}: Неожиданное значение для Digital Input: ${currentCount} (должно быть 0 или 1)`);
-                  }
-                } else {
-                  // Для обычных счетчиков (Counter режим)
-                  history.lastUpdateTime = currentTime;
-                }
-              }
-              
-              // Дополнительная проверка: счетчик мог сброситься (уменьшиться)
-              if (currentCount < history.lastKnownCount) {
-                console.log(`🔄 ${machineId}: ${dataType} СБРОШЕН с ${history.lastKnownCount.toLocaleString()} на ${currentCount.toLocaleString()} (возможна перезагрузка или сброс)`);
-                history.lastKnownCount = currentCount;
-                // Сбрасываем историю при сбросе счетчика
-                history.changes = [];
-              }
-              
-              // Вычисляем время цикла на основе истории
+              // Вычисляем время цикла
               let cycleTimeMs: number | undefined;
               let partsInCycle: number | undefined;
               let confidence: string | undefined;
@@ -191,7 +126,7 @@ export class AdamReader {
                 confidence = `Digital Input (${currentCount === 1 ? 'АКТИВЕН' : 'НЕАКТИВЕН'})`;
               } else {
                 // Для Counter режима вычисляем cycle time
-                const cycleData = this.calculateCycleTime(history);
+                const cycleData = this.cycleTimeCalculator.getCycleTime(machineId);
                 cycleTimeMs = cycleData.cycleTimeMs;
                 partsInCycle = cycleData.partsInCycle;
                 confidence = cycleData.confidence;
@@ -229,52 +164,6 @@ export class AdamReader {
     });
   }
 
-  private calculateCycleTime(history: AdamCounterHistory): { cycleTimeMs?: number, partsInCycle?: number, confidence?: string } {
-    // Нужно минимум записей для расчета
-    if (history.changes.length < this.MIN_PARTS_FOR_CALCULATION) {
-      return { 
-        cycleTimeMs: undefined, 
-        partsInCycle: history.changes.length,
-        confidence: `Недостаточно данных (${history.changes.length}/${this.MIN_PARTS_FOR_CALCULATION})`
-      };
-    }
-    
-    // Берем первую и последнюю запись из истории
-    const firstChange = history.changes[0];
-    const lastChange = history.changes[history.changes.length - 1];
-    
-    // Вычисляем общее время и количество произведенных деталей
-    const totalTimeMs = lastChange.timestamp.getTime() - firstChange.timestamp.getTime();
-    const totalParts = lastChange.count - firstChange.count;
-    
-    if (totalParts <= 0) {
-      return { 
-        cycleTimeMs: undefined, 
-        partsInCycle: totalParts,
-        confidence: 'Нет изменений счетчика'
-      };
-    }
-    
-    // Рассчитываем среднее время на одну деталь
-    const avgCycleTimeMs = totalTimeMs / totalParts;
-    
-    // Определяем уровень уверенности
-    let confidence = 'НИЗКАЯ';
-    if (history.changes.length >= 5) {
-      confidence = 'ВЫСОКАЯ';
-    } else if (history.changes.length >= 3) {
-      confidence = 'СРЕДНЯЯ';
-    }
-    
-    console.log(`⏱️ ${history.machineId}: ${totalParts} дет. за ${(totalTimeMs/1000).toFixed(1)} сек = ${(avgCycleTimeMs/1000).toFixed(2)} сек/дет (${confidence})`);
-    
-    return {
-      cycleTimeMs: avgCycleTimeMs,
-      partsInCycle: totalParts,
-      confidence: confidence
-    };
-  }
-
   async testConnection(): Promise<boolean> {
     try {
       const data = await this.readCounters();
@@ -282,16 +171,5 @@ export class AdamReader {
     } catch (err) {
       return false;
     }
-  }
-
-  // Метод для сброса истории (для отладки)
-  resetHistory(): void {
-    this.counterHistories.clear();
-    console.log('🔄 История счетчиков Adam-6050 сброшена');
-  }
-
-  // Метод для получения истории (для отладки)
-  getHistory(): Map<string, AdamCounterHistory> {
-    return new Map(this.counterHistories);
   }
 } 
