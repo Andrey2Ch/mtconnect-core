@@ -12,13 +12,17 @@ const mongoose_1 = require("@nestjs/mongoose");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const external_api_controller_1 = require("./controllers/external-api.controller");
+const machine_data_schema_1 = require("./schemas/machine-data.schema");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            mongoose_1.MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/mtconnect-local')
+            mongoose_1.MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/mtconnect-local'),
+            mongoose_1.MongooseModule.forFeature([
+                { name: machine_data_schema_1.MachineData.name, schema: machine_data_schema_1.MachineDataSchema }
+            ])
         ],
         controllers: [
             app_controller_1.AppController,

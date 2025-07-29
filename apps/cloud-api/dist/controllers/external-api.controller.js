@@ -14,8 +14,12 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExternalApiController = void 0;
 const common_1 = require("@nestjs/common");
+const mongoose_1 = require("@nestjs/mongoose");
+const mongoose_2 = require("mongoose");
+const machine_data_schema_1 = require("../schemas/machine-data.schema");
 let ExternalApiController = class ExternalApiController {
-    constructor() {
+    constructor(machineDataModel) {
+        this.machineDataModel = machineDataModel;
         this.logger = new common_1.Logger('ExternalAPI');
     }
     async receiveData(payload) {
@@ -25,6 +29,8 @@ let ExternalApiController = class ExternalApiController {
             dataArray.forEach((item) => {
                 this.logger.log(`🔧 ${item.metadata.machineId}: partCount=${item.data.partCount}, program=${item.data.program}, status=${item.data.executionStatus}`);
             });
+            const savedRecords = await this.machineDataModel.insertMany(dataArray);
+            this.logger.log(`💾 Сохранено в MongoDB: ${savedRecords.length} записей`);
             return {
                 success: true,
                 message: `Processed ${dataArray.length} machine data records`,
@@ -50,6 +56,8 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ExternalApiController.prototype, "receiveData", null);
 exports.ExternalApiController = ExternalApiController = __decorate([
-    (0, common_1.Controller)('api/ext')
+    (0, common_1.Controller)('api/ext'),
+    __param(0, (0, mongoose_1.InjectModel)(machine_data_schema_1.MachineData.name)),
+    __metadata("design:paramtypes", [mongoose_2.Model])
 ], ExternalApiController);
 //# sourceMappingURL=external-api.controller.js.map

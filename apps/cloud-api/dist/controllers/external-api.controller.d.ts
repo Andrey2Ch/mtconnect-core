@@ -1,3 +1,5 @@
+import { Model } from 'mongoose';
+import { MachineDataDocument } from '../schemas/machine-data.schema';
 interface MachineDataPayload {
     timestamp: string;
     metadata: {
@@ -16,7 +18,9 @@ interface MachineDataPayload {
     };
 }
 export declare class ExternalApiController {
+    private machineDataModel;
     private readonly logger;
+    constructor(machineDataModel: Model<MachineDataDocument>);
     receiveData(payload: MachineDataPayload | MachineDataPayload[]): Promise<{
         success: boolean;
         message: string;
