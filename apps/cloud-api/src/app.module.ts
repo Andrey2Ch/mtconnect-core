@@ -2,6 +2,7 @@
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ExternalApiController } from './controllers/external-api.controller';
 
 // Cloud API НЕ читает SHDR напрямую! 
 // Только принимает REST данные от Edge Gateway
@@ -12,7 +13,8 @@ import { AppService } from './app.service';
     MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/mtconnect-local')
   ],
   controllers: [
-    AppController
+    AppController,
+    ExternalApiController
   ],
   providers: [
     AppService

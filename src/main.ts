@@ -4,6 +4,7 @@ import path from 'path';
 import * as fs from 'fs';
 import { SHDRManager } from './shdr-client';
 import { AdamReader } from './adam-reader';
+import { CloudApiClient } from './cloud-client';
 
 const app = express();
 const port = 3555; // Свободный порт для диагностики
@@ -31,6 +32,15 @@ machines.forEach(machine => {
 
 // Инициализация ADAM Reader (используем настройки по умолчанию)
 const adamReader = new AdamReader(); // IP: 192.168.1.120:502
+
+// Инициализация Cloud API Client для отправки данных в облако
+// Cloud API Client из переменных окружения
+const CLOUD_API_URL = process.env.CLOUD_API_URL || 'http://localhost:3001';
+const EDGE_GATEWAY_ID = process.env.EDGE_GATEWAY_ID || 'edge-gateway-main';
+
+console.log(`🌐 Cloud API URL: ${CLOUD_API_URL}`);
+console.log(`🏭 Edge Gateway ID: ${EDGE_GATEWAY_ID}`);
+const cloudClient = new CloudApiClient(CLOUD_API_URL, EDGE_GATEWAY_ID);
 
 app.get('/api/machines', async (req, res) => {
   const mtconnectMachines = machines.map(machine => {
@@ -217,6 +227,77 @@ app.get('/api/v2/dashboard/summary', (req, res) => {
     }
   });
 });
+
+// Функция отправки данных в Cloud API
+async function sendDataToCloud() {
+  try {
+    const sendPromises: Promise<boolean>[] = [];
+
+    // FANUC машины через SHDR (ПАРАЛЛЕЛЬНО!)
+    for (const machine of machines) {
+      const isConnected = shdrManager.getMachineConnectionStatus(machine.id);
+      if (isConnected) {
+        const machineData = shdrManager.getMachineData(machine.id);
+        const getVal = (key: string) => machineData?.get(key)?.value || 'UNAVAILABLE';
+        
+        // Получаем время цикла
+        const cycleTimeData = shdrManager.getMachineCycleTime(machine.id);
+        const cycleTimeSeconds = cycleTimeData?.cycleTimeMs ? Number((cycleTimeData.cycleTimeMs / 1000).toFixed(2)) : undefined;
+        
+        const data = {
+          partCount: getVal('part_count') !== 'UNAVAILABLE' ? parseInt(getVal('part_count')) : undefined,
+          program: getVal('program') !== 'UNAVAILABLE' ? getVal('program') : undefined,
+          executionStatus: getVal('execution') !== 'UNAVAILABLE' ? getVal('execution') : undefined,
+          cycleTime: cycleTimeSeconds,
+          cycleTimeConfidence: cycleTimeData?.confidence
+        };
+
+        // Отправляем только если есть реальные данные (БЕЗ await!)
+        if (data.partCount !== undefined || data.program !== undefined || data.executionStatus !== undefined) {
+          sendPromises.push(cloudClient.sendMachineData(machine.id, machine.name, 'FANUC', data));
+        }
+      }
+    }
+
+    // ADAM машины (ПАРАЛЛЕЛЬНО!)
+    const adamCounters = await adamReader.readCounters();
+    if (adamCounters.length > 0) {
+      for (const counter of adamCounters) {
+        const cycleTimeSeconds = counter.cycleTimeMs ? Number((counter.cycleTimeMs / 1000).toFixed(2)) : undefined;
+        
+        const data = {
+          partCount: counter.count,
+          cycleTime: cycleTimeSeconds,
+          channel: counter.channel
+        };
+
+        const deviceInfo = adamDevices.find(d => d.id === counter.machineId);
+        if (deviceInfo) {
+          sendPromises.push(cloudClient.sendMachineData(counter.machineId, deviceInfo.name, 'ADAM', data));
+        }
+      }
+    }
+
+    // Ждем завершения ВСЕХ отправок параллельно
+    if (sendPromises.length > 0) {
+      const results = await Promise.allSettled(sendPromises);
+      const success = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
+      const failed = results.length - success;
+      
+      if (failed > 0) {
+        console.log(`⚠️  Cloud API: ${success} успешно, ${failed} ошибок из ${results.length} машин`);
+      } else {
+        console.log(`✅ Cloud API: все ${success} машин отправлены успешно`);
+      }
+    }
+  } catch (error) {
+    console.error(`❌ Ошибка отправки данных в Cloud API: ${error.message}`);
+  }
+}
+
+// Запуск периодической отправки данных в Cloud API (каждые 10 секунд)
+setInterval(sendDataToCloud, 10000);
+console.log('☁️ Периодическая отправка данных в Cloud API: каждые 10 секунд');
 
 app.listen(port, () => {
   console.log(`✅ Edge Gateway запущен на http://localhost:${port}`);

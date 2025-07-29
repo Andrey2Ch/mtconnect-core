@@ -3,46 +3,49 @@
 Write-Host "🚀 Запуск локальной разработки MTConnect..." -ForegroundColor Green
 Write-Host ""
 
-# Проверяем что проект собран
-Write-Host "📦 Проверка сборки..." -ForegroundColor Yellow
-if (!(Test-Path "dist/main.js")) {
-    Write-Host "⚙️ Проект не собран, запускаем сборку..." -ForegroundColor Yellow
-    npm run build
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Ошибка сборки!" -ForegroundColor Red
-        exit 1
+# Загружаем переменные окружения для Edge Gateway
+Write-Host "⚙️ Загружаем переменные окружения..." -ForegroundColor Yellow
+if (Test-Path ".env") {
+    Get-Content ".env" | ForEach-Object {
+        if ($_ -match "^([^#][^=]*)=(.*)$") {
+            [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2])
+            Write-Host "   📝 $($matches[1])=$($matches[2])" -ForegroundColor Gray
+        }
     }
+} else {
+    Write-Host "   ⚠️ Файл .env не найден, используем defaults" -ForegroundColor Yellow
 }
 
 Write-Host ""
 Write-Host "🎯 Запускаем два сервера:" -ForegroundColor Cyan
-Write-Host "   📡 Edge Gateway (порт 5000) - сбор данных с машин" -ForegroundColor White
-Write-Host "   ☁️  Cloud API (порт 3000) - дашборды и анализ" -ForegroundColor White
+Write-Host "   📡 Edge Gateway (порт 3555) - сбор данных с машин" -ForegroundColor White
+Write-Host "   ☁️  Cloud API (порт 3001) - прием данных и дашборд" -ForegroundColor White
 Write-Host ""
 
 # Запускаем Edge Gateway в отдельном окне
 Write-Host "🚀 Запуск Edge Gateway..." -ForegroundColor Green
-$edgeProcess = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD'; node dist/main.js" -PassThru
+$edgeProcess = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD'; npx ts-node src/main.ts" -PassThru
 
 Start-Sleep 3
 
 # Запускаем Cloud API в отдельном окне  
 Write-Host "🚀 Запуск Cloud API..." -ForegroundColor Green
-$cloudProcess = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\apps\cloud-api'; npm run start:dev" -PassThru
+$cloudProcess = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\apps\cloud-api'; pnpm run start:dev" -PassThru
 
 Write-Host ""
 Write-Host "✅ Серверы запущены!" -ForegroundColor Green
 Write-Host ""
 Write-Host "📱 Доступные интерфейсы:" -ForegroundColor Cyan
-Write-Host "   🌐 Edge Gateway:    http://localhost:5000" -ForegroundColor White
-Write-Host "   📊 MTConnect данные: http://localhost:5000/current" -ForegroundColor White  
-Write-Host "   💚 Health check:    http://localhost:5000/health" -ForegroundColor White
-Write-Host "   ☁️  Railway статус:  http://localhost:5000/railway-status" -ForegroundColor White
+Write-Host "   📡 Edge Gateway API:  http://localhost:3555/api/machines" -ForegroundColor White
+Write-Host "   🌐 Edge Dashboard:    http://localhost:3555/dashboard-new.html" -ForegroundColor White  
+Write-Host "   💚 Edge Health:       http://localhost:3555/health" -ForegroundColor White
 Write-Host ""
-Write-Host "   🔥 Cloud Dashboard:  http://localhost:3000" -ForegroundColor Yellow
-Write-Host "   📈 Dashboard API:    http://localhost:3000/api/dashboard/health" -ForegroundColor White
+Write-Host "   ☁️  Cloud Health:      http://localhost:3001/health" -ForegroundColor Yellow
+Write-Host "   📊 Cloud Dashboard:    http://localhost:3001/dashboard-new.html" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "📡 Данные идут от одних и тех же машин в оба интерфейса!" -ForegroundColor Green
+Write-Host "🔄 Архитектура:" -ForegroundColor Cyan
+Write-Host "   Edge Gateway → HTTP POST → Cloud API" -ForegroundColor White
+Write-Host "   Cloud API → MongoDB → Dashboard" -ForegroundColor White
 Write-Host ""
 Write-Host "⚠️  Для остановки закройте окна серверов или нажмите Ctrl+C" -ForegroundColor Yellow
 

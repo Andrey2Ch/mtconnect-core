@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
+const external_api_controller_1 = require("./controllers/external-api.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -20,7 +21,8 @@ exports.AppModule = AppModule = __decorate([
             mongoose_1.MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/mtconnect-local')
         ],
         controllers: [
-            app_controller_1.AppController
+            app_controller_1.AppController,
+            external_api_controller_1.ExternalApiController
         ],
         providers: [
             app_service_1.AppService
