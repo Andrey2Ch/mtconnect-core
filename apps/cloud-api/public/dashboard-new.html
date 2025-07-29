@@ -262,7 +262,7 @@
         </div>
 
         <div class="api-info">
-                            <strong>🔗 API URL:</strong> http://localhost:3555/api/machines
+                            <strong>🔗 API URL:</strong> <span id="current-api-url">Loading...</span>
         </div>
 
         <div class="summary">
@@ -464,8 +464,15 @@
             try {
                 console.log('📡 Отправляем запрос к API...');
                 
-                // Используем ЕДИНЫЙ API
-                const apiUrl = 'http://localhost:3555/api/machines';
+                // Определяем правильный API URL в зависимости от окружения
+                const isRailway = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
+                const apiUrl = isRailway ? '/api/dashboard/machines' : 'http://localhost:3555/api/machines';
+                
+                // Показываем текущий API URL в интерфейсе
+                document.getElementById('current-api-url').textContent = isRailway ? 
+                    `${window.location.origin}/api/dashboard/machines` : apiUrl;
+                
+                console.log(`🎯 Используем API: ${apiUrl}`);
                 const response = await fetch(apiUrl);
                 
                 console.log(`📊 Ответ от API: ${response.status} ${response.statusText}`);
