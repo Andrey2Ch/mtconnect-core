@@ -57,7 +57,8 @@ export class CloudApiClient {
           }
         };
 
-        const req = http.request(options, (res) => {
+        const protocol = url.protocol === 'https:' ? https : http;
+        const req = protocol.request(options, (res) => {
           const statusCode = res.statusCode || 0;
           if (statusCode >= 200 && statusCode < 300) {
             console.log(`☁️ Данные отправлены в Cloud API: ${machineId}`);
@@ -106,7 +107,8 @@ export class CloudApiClient {
           }
         };
 
-        const req = http.request(options, (res) => {
+        const protocol = url.protocol === 'https:' ? https : http;
+        const req = protocol.request(options, (res) => {
           const statusCode = res.statusCode || 0;
           if (statusCode >= 200 && statusCode < 300) {
             console.log(`☁️ Batch данные отправлены в Cloud API: ${machineDataArray.length} записей`);

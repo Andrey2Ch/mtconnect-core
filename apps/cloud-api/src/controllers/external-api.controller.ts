@@ -1,4 +1,7 @@
-import { Controller, Post, Body, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Logger, Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { MachineData, MachineDataDocument } from '../schemas/machine-data.schema';
 
 interface MachineDataPayload {
   timestamp: string;
@@ -21,6 +24,10 @@ interface MachineDataPayload {
 @Controller('api/ext')
 export class ExternalApiController {
   private readonly logger = new Logger('ExternalAPI');
+  
+  constructor(
+    @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>
+  ) {}
 
   @Post('/data')
   async receiveData(@Body() payload: MachineDataPayload | MachineDataPayload[]) {
@@ -34,8 +41,9 @@ export class ExternalApiController {
         this.logger.log(`🔧 ${item.metadata.machineId}: partCount=${item.data.partCount}, program=${item.data.program}, status=${item.data.executionStatus}`);
       });
 
-      // TODO: Сохранить в MongoDB
-      // Пока просто логируем для тестирования
+      // Сохраняем в MongoDB
+      const savedRecords = await this.machineDataModel.insertMany(dataArray);
+      this.logger.log(`💾 Сохранено в MongoDB: ${savedRecords.length} записей`);
       
       return {
         success: true,

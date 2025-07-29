@@ -1,9 +1,15 @@
 ﻿import { Controller, Get } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { AppService } from './app.service';
+import { MachineData, MachineDataDocument } from './schemas/machine-data.schema';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>
+  ) {}
 
   @Get('/')
   getHello(): string {
@@ -20,28 +26,69 @@ export class AppController {
   }
 
   @Get('api/dashboard/machines')
-  getMachines() {
-    // Временная заглушка для дашборда
-    // TODO: Подключить к реальной MongoDB когда будут данные
-    return {
-      success: true,
-      timestamp: new Date().toISOString(),
-      summary: {
-        total: 0,
-        mtconnect: {
-          online: 0,
-          total: 8
+  async getMachines() {
+    try {
+      // Получаем последние данные от каждой машины
+      const latestData = await this.machineDataModel.aggregate([
+        {
+          $sort: { 'metadata.machineId': 1, timestamp: -1 }
         },
-        adam: {
-          online: 0,
-          total: 10
+        {
+          $group: {
+            _id: '$metadata.machineId',
+            latest: { $first: '$$ROOT' }
+          }
         }
-      },
-      machines: {
-        mtconnect: [],
-        adam: []
-      },
-      message: 'No data yet - waiting for Edge Gateway connections'
-    };
+      ]);
+
+      const mtconnectMachines = [];
+      const adamMachines = [];
+
+      latestData.forEach(item => {
+        const machine = {
+          id: item.latest.metadata.machineId,
+          name: item.latest.metadata.machineName,
+          type: item.latest.metadata.machineType,
+          status: 'online',
+          lastUpdate: item.latest.timestamp,
+          data: item.latest.data
+        };
+
+        if (item.latest.metadata.machineType === 'FANUC') {
+          mtconnectMachines.push(machine);
+        } else {
+          adamMachines.push(machine);
+        }
+      });
+
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        summary: {
+          total: mtconnectMachines.length + adamMachines.length,
+          mtconnect: {
+            online: mtconnectMachines.length,
+            total: 8
+          },
+          adam: {
+            online: adamMachines.length,
+            total: 10
+          }
+        },
+        machines: {
+          mtconnect: mtconnectMachines,
+          adam: adamMachines
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching machines:', error);
+      return {
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+        summary: { total: 0, mtconnect: { online: 0, total: 8 }, adam: { online: 0, total: 10 } },
+        machines: { mtconnect: [], adam: [] }
+      };
+    }
   }
 }
