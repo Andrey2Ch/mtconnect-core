@@ -247,7 +247,7 @@ export class SHDRClient extends EventEmitter {
 
     getCycleTimeData(): { cycleTimeMs?: number; partsInCycle: number; confidence: string } {
         return this.cycleTimeCalculator.getCycleTime(this.config.machineId);
-    }
+        }
 
     // Старые методы удалены - теперь используем CycleTimeCalculator
 }
