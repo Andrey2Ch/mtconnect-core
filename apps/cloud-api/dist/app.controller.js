@@ -55,7 +55,13 @@ let AppController = class AppController {
                     type: item.latest.metadata.machineType,
                     status: 'online',
                     lastUpdate: item.latest.timestamp,
-                    data: item.latest.data
+                    data: item.latest.data || {
+                        partCount: 0,
+                        program: 'N/A',
+                        executionStatus: 'UNAVAILABLE',
+                        cycleTime: 0,
+                        cycleTimeConfidence: 'LOW'
+                    }
                 };
                 if (item.latest.metadata.machineType === 'FANUC') {
                     mtconnectMachines.push(machine);
