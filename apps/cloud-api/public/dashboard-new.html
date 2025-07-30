@@ -96,17 +96,40 @@
             transform: translateY(-5px);
         }
 
-        .machine-card.online {
-            border-left: 5px solid #2ecc71;
+        /* FANUC машины - полосы СПРАВА */
+        .machine-card.status-active:not(.adam-specific) {
+            border-right: 5px solid #2ecc71;
         }
 
-        .machine-card.offline {
-            border-left: 5px solid #e74c3c;
+        .machine-card.status-ready:not(.adam-specific) {
+            border-right: 5px solid #f1c40f;
         }
 
+        .machine-card.status-stopped:not(.adam-specific),
+        .machine-card.status-interrupted:not(.adam-specific) {
+            border-right: 5px solid #e67e22;
+        }
+
+        .machine-card.status-offline:not(.adam-specific) {
+            border-right: 5px solid #e74c3c;
+        }
+
+        /* ADAM машины - полосы СЛЕВА + фон */
         .machine-card.adam-specific {
             background: #fff8dc;
             border-left: 5px solid #f39c12;
+        }
+
+        .machine-card.adam-specific.status-active {
+            border-left: 5px solid #2ecc71;
+        }
+
+        .machine-card.adam-specific.status-ready {
+            border-left: 5px solid #f1c40f;
+        }
+
+        .machine-card.adam-specific.status-offline {
+            border-left: 5px solid #e74c3c;
         }
 
         .machine-header {
@@ -342,11 +365,6 @@
         }
 
         function createMTConnectMachineCard(machine) {
-            // Универсальная логика: Edge Gateway использует connectionStatus, Cloud API использует status
-            const isOnline = machine.connectionStatus === 'active' || machine.status === 'online';
-            const statusClass = isOnline ? 'online' : 'offline';
-            const statusText = isOnline ? 'online' : 'offline';
-            
             // Парсим программу: из O1212(2-753-04) берем только 753-04
             let programDisplay = 'N/A';
             if (machine.data && machine.data.program && machine.data.program !== 'N/A' && machine.data.program !== 'UNAVAILABLE') {
@@ -361,12 +379,61 @@
 
             // Счетчик деталей - всегда показываем
             const partCountDisplay = machine.data && machine.data.partCount !== undefined && machine.data.partCount !== 'N/A' ? machine.data.partCount : 'N/A';
+            
+            // Цветовой статус выполнения (универсальная логика)
+            const executionStatus = machine.data && machine.data.executionStatus || 'UNAVAILABLE';
+            const isConnected = machine.connectionStatus === 'active' || machine.status === 'online';
+            
+            let statusIcon = '';
+            let statusText = '';
+            let statusClass = '';
+            
+            // Если есть executionStatus - используем его, иначе fallback на connectionStatus
+            if (executionStatus !== 'UNAVAILABLE') {
+                switch(executionStatus) {
+                    case 'ACTIVE':
+                        statusIcon = '🟢';
+                        statusText = 'РАБОТАЕТ';
+                        statusClass = 'status-active';
+                        break;
+                    case 'READY':
+                        statusIcon = '🟡';
+                        statusText = 'ГОТОВ';
+                        statusClass = 'status-ready';
+                        break;
+                    case 'STOPPED':
+                        statusIcon = '🟠';
+                        statusText = 'ОСТАНОВЛЕН';
+                        statusClass = 'status-stopped';
+                        break;
+                    case 'INTERRUPTED':
+                        statusIcon = '🟠';
+                        statusText = 'ПРЕРВАН';
+                        statusClass = 'status-interrupted';
+                        break;
+                    default:
+                        statusIcon = '🔴';
+                        statusText = 'ОФЛАЙН';
+                        statusClass = 'status-offline';
+                }
+            } else {
+                // Fallback на connectionStatus (для порта 3555)
+                if (isConnected) {
+                    statusIcon = '🟢';
+                    statusText = 'ОНЛАЙН';
+                    statusClass = 'status-active';
+                } else {
+                    statusIcon = '🔴';
+                    statusText = 'ОФЛАЙН';
+                    statusClass = 'status-offline';
+                }
+            }
 
             return `
                 <div class="machine-card ${statusClass}">
                     <div class="machine-header">
                         <div class="machine-name">${machine.name}</div>
-                        <div class="machine-status ${statusClass}">${statusText}</div>
+                        <div class="execution-status ${statusClass}">${statusIcon} ${statusText}</div>
                     </div>
                     <div class="machine-details">
                         <div class="fanuc-count">
@@ -374,9 +441,6 @@
                         </div>
                         <div class="machine-detail">
                             <strong>🔧 Программа:</strong> ${programDisplay}
-                        </div>
-                        <div class="machine-detail">
-                            <strong>⚡ Статус:</strong> ${machine.data && machine.data.executionStatus || 'N/A'}
                         </div>
                         <div class="machine-detail">
                             <strong>⏱️ Цикл:</strong> ${machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A' ? machine.data.cycleTime + ' сек/дет' : 'N/A'}
@@ -387,15 +451,31 @@
         }
 
         function createADAMMachineCard(machine) {
-            // Универсальная логика: Edge Gateway использует connectionStatus, Cloud API использует status
-            const isOnline = machine.connectionStatus === 'active' || machine.status === 'online';
-            const statusClass = isOnline ? 'online' : 'offline';
-            const statusText = isOnline ? 'online' : 'offline';
-            
             // Время цикла - показываем если есть
             const cycleTimeDisplay = machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A'
                 ? `${machine.data.cycleTime} сек/дет` 
                 : 'N/A';
+            
+            // Универсальная логика статуса для ADAM
+            const hasData = machine.data && machine.data.partCount !== undefined && machine.data.partCount > 0;
+            const isConnected = machine.connectionStatus === 'active' || machine.status === 'online';
+            
+            let statusIcon, statusText, statusClass;
+            
+            // Если есть данные - используем их, иначе fallback на connectionStatus
+            if (hasData) {
+                statusIcon = '🟢';
+                statusText = 'АКТИВЕН';
+                statusClass = 'status-active';
+            } else if (isConnected) {
+                statusIcon = '🟡';
+                statusText = 'ПОДКЛЮЧЕН';
+                statusClass = 'status-ready';
+            } else {
+                statusIcon = '🔴';
+                statusText = 'ОФЛАЙН';
+                statusClass = 'status-offline';
+            }
 
             return `
                 <div class="machine-card adam-specific ${statusClass}">
@@ -404,7 +484,7 @@
                             ${machine.name}
                             <span class="adam-badge">📊</span>
                         </div>
-                        <div class="machine-status ${statusClass}">${statusText}</div>
+                        <div class="execution-status ${statusClass}">${statusIcon} ${statusText}</div>
                     </div>
                     <div class="machine-details">
                         <div class="adam-count">
@@ -412,9 +492,6 @@
                         </div>
                         <div class="machine-detail">
                             <strong>🔧 Программа:</strong> N/A
-                        </div>
-                        <div class="machine-detail">
-                            <strong>⚡ Статус:</strong> N/A
                         </div>
                         <div class="machine-detail">
                             <strong>⏱️ Цикл:</strong> ${cycleTimeDisplay}
@@ -430,9 +507,15 @@
             
             // Обновляем сводку  
             const mtconnectTotal = data.machines.mtconnect.length;
-            const mtconnectOnline = data.machines.mtconnect.filter(m => m.connectionStatus === 'active' || m.status === 'online').length;
+            const mtconnectOnline = data.machines.mtconnect.filter(m => 
+                (m.data && m.data.executionStatus && m.data.executionStatus !== 'UNAVAILABLE') ||
+                (m.connectionStatus === 'active' || m.status === 'online')
+            ).length;
             const adamTotal = data.machines.adam.length;
-            const adamOnline = data.machines.adam.filter(m => m.connectionStatus === 'active' || m.status === 'online').length;
+            const adamOnline = data.machines.adam.filter(m => 
+                (m.data && m.data.partCount !== undefined && m.data.partCount > 0) ||
+                (m.connectionStatus === 'active' || m.status === 'online')
+            ).length;
             
             document.getElementById('totalMachines').textContent = data.summary.total;
             document.getElementById('mtconnectOnline').textContent = `${mtconnectOnline}/${mtconnectTotal}`;
