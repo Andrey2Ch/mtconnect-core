@@ -58,11 +58,14 @@ app.get('/api/machines', async (req, res) => {
       ip: machine.ip,
       port: machine.port,
       type: machine.type,
+      status: isConnected ? 'online' : 'offline',
       connectionStatus: isConnected ? 'active' : 'offline',
-      execution: getVal('execution'),
-      partCount: getVal('part_count'),
-      program: getVal('program'),
-      cycleTime: cycleTimeSeconds,
+      data: {
+        executionStatus: getVal('execution'),
+        partCount: getVal('part_count'),
+        program: getVal('program'),
+        cycleTime: cycleTimeSeconds,
+      }
     };
   });
 
@@ -81,10 +84,13 @@ app.get('/api/machines', async (req, res) => {
         channel: device.channel,
         ip: '192.168.1.120', // ADAM-6050 контроллер IP
         port: 502, // Modbus TCP порт
+        status: counterData ? 'online' : 'offline',
         connectionStatus: counterData ? 'active' : 'offline',
-        partCount: counterData ? counterData.count : 0, // РЕАЛЬНЫЕ ДАННЫЕ
-        cycleTime: cycleTimeSeconds,
-        confidence: counterData?.confidence || 'N/A',
+        data: {
+          partCount: counterData ? counterData.count : 0, // РЕАЛЬНЫЕ ДАННЫЕ
+          cycleTime: cycleTimeSeconds,
+          confidence: counterData?.confidence || 'N/A',
+        }
       };
     });
   } catch (error) {
@@ -97,16 +103,19 @@ app.get('/api/machines', async (req, res) => {
       channel: device.channel,
       ip: '192.168.1.120',
       port: 502,
+      status: 'offline',
       connectionStatus: 'offline',
-      partCount: 0,
-      cycleTime: 'N/A',
-      confidence: 'N/A',
+      data: {
+        partCount: 0,
+        cycleTime: 'N/A',
+        confidence: 'N/A',
+      }
     }));
   }
 
   const summary = {
     total: machines.length + adamDevices.length,
-    online: mtconnectMachines.filter(m => m.connectionStatus === 'active').length + adamMachines.length,
+    online: mtconnectMachines.filter(m => m.status === 'online').length + adamMachines.filter(m => m.status === 'online').length,
   };
 
   res.json({

@@ -349,7 +349,7 @@
             
             // Парсим программу: из O1212(2-753-04) берем только 753-04
             let programDisplay = 'N/A';
-            if (machine.data && machine.data.program && machine.data.program !== 'N/A') {
+            if (machine.data && machine.data.program && machine.data.program !== 'N/A' && machine.data.program !== 'UNAVAILABLE') {
                 const match = machine.data.program.match(/\(([^)]+)\)$/);
                 if (match) {
                     // Убираем цифру с дефисом в начале (2-753-04 -> 753-04)
@@ -360,7 +360,7 @@
             }
 
             // Счетчик деталей - всегда показываем
-            const partCountDisplay = machine.data && machine.data.partCount && machine.data.partCount !== 'N/A' ? machine.data.partCount : 'N/A';
+            const partCountDisplay = machine.data && machine.data.partCount !== undefined && machine.data.partCount !== 'N/A' ? machine.data.partCount : 'N/A';
 
             return `
                 <div class="machine-card ${statusClass}">
@@ -379,7 +379,7 @@
                             <strong>⚡ Статус:</strong> ${machine.data && machine.data.executionStatus || 'N/A'}
                         </div>
                         <div class="machine-detail">
-                            <strong>⏱️ Цикл:</strong> ${machine.data && machine.data.cycleTime !== 'N/A' ? machine.data.cycleTime + ' сек/дет' : 'N/A'}
+                            <strong>⏱️ Цикл:</strong> ${machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A' ? machine.data.cycleTime + ' сек/дет' : 'N/A'}
                         </div>
                     </div>
                 </div>
@@ -393,7 +393,7 @@
             const statusText = isOnline ? 'online' : 'offline';
             
             // Время цикла - показываем если есть
-                        const cycleTimeDisplay = machine.data && machine.data.cycleTime
+            const cycleTimeDisplay = machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A'
                 ? `${machine.data.cycleTime} сек/дет` 
                 : 'N/A';
 
