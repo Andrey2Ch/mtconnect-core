@@ -1,4 +1,4 @@
-import { Controller, Post, Delete, Body, Logger, Injectable, Param } from '@nestjs/common';
+import { Controller, Post, Body, Logger, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { MachineData, MachineDataDocument } from '../schemas/machine-data.schema';
@@ -53,36 +53,6 @@ export class ExternalApiController {
       
     } catch (error) {
       this.logger.error(`❌ Ошибка обработки данных: ${error.message}`);
-      return {
-        success: false,
-        error: error.message,
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
-
-  @Delete('/test-machines')
-  async deleteTestMachines() {
-    try {
-      this.logger.warn('🗑️ Удаляем тестовые машины из MongoDB...');
-      
-      // Удаляем тестовые машины
-      const testMachineIds = ['TEST-MACHINE', 'ISOLATION-TEST'];
-      const result = await this.machineDataModel.deleteMany({
-        'metadata.machineId': { $in: testMachineIds }
-      });
-      
-      this.logger.log(`✅ Удалено ${result.deletedCount} записей тестовых машин`);
-      
-      return {
-        success: true,
-        message: `Deleted ${result.deletedCount} test machine records`,
-        deletedMachineIds: testMachineIds,
-        timestamp: new Date().toISOString()
-      };
-      
-    } catch (error) {
-      this.logger.error(`❌ Ошибка удаления тестовых машин: ${error.message}`);
       return {
         success: false,
         error: error.message,
