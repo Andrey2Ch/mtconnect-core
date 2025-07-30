@@ -451,30 +451,51 @@
         }
 
         function createADAMMachineCard(machine) {
-            // Время цикла - показываем если есть
+            // Время цикла - показываем как есть
             const cycleTimeDisplay = machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A'
                 ? `${machine.data.cycleTime} сек/дет` 
                 : 'N/A';
             
-            // Универсальная логика статуса для ADAM
-            const hasData = machine.data && machine.data.partCount !== undefined && machine.data.partCount > 0;
+            // 🧠 УМНАЯ ЛОГИКА СТАТУСА ДЛЯ ADAM на основе executionStatus
+            const executionStatus = machine.data && machine.data.executionStatus || 'UNAVAILABLE';
             const isConnected = machine.connectionStatus === 'active' || machine.status === 'online';
             
             let statusIcon, statusText, statusClass;
             
-            // Если есть данные - используем их, иначе fallback на connectionStatus
-            if (hasData) {
-                statusIcon = '🟢';
-                statusText = 'АКТИВЕН';
-                statusClass = 'status-active';
-            } else if (isConnected) {
-                statusIcon = '🟡';
-                statusText = 'ПОДКЛЮЧЕН';
-                statusClass = 'status-ready';
+            // Если есть executionStatus - используем его, иначе fallback
+            if (executionStatus !== 'UNAVAILABLE') {
+                switch(executionStatus) {
+                    case 'ACTIVE':
+                        statusIcon = '🟢';
+                        statusText = 'АКТИВЕН';
+                        statusClass = 'status-active';
+                        break;
+                    case 'READY':
+                        statusIcon = '🟡';
+                        statusText = 'ПРОСТОЙ';  // ГОТОВ = ПРОСТОЙ для ADAM
+                        statusClass = 'status-ready';
+                        break;
+                    default:
+                        statusIcon = '🔴';
+                        statusText = 'ОФЛАЙН';
+                        statusClass = 'status-offline';
+                }
             } else {
-                statusIcon = '🔴';
-                statusText = 'ОФЛАЙН';
-                statusClass = 'status-offline';
+                // Fallback на старую логику для совместимости
+                const hasData = machine.data && machine.data.partCount !== undefined && machine.data.partCount > 0;
+                if (hasData) {
+                    statusIcon = '🟢';
+                    statusText = 'АКТИВЕН';
+                    statusClass = 'status-active';
+                } else if (isConnected) {
+                    statusIcon = '🟡';
+                    statusText = 'ПОДКЛЮЧЕН';
+                    statusClass = 'status-ready';
+                } else {
+                    statusIcon = '🔴';
+                    statusText = 'ОФЛАЙН';
+                    statusClass = 'status-offline';
+                }
             }
 
             return `
@@ -513,7 +534,8 @@
             ).length;
             const adamTotal = data.machines.adam.length;
             const adamOnline = data.machines.adam.filter(m => 
-                (m.data && m.data.partCount !== undefined && m.data.partCount > 0) ||
+                // АКТИВЕН или ПРОСТОЙ считаются "онлайн" (только ОФЛАЙН - действительно офлайн)
+                (m.data && m.data.executionStatus && m.data.executionStatus !== 'UNAVAILABLE') ||
                 (m.connectionStatus === 'active' || m.status === 'online')
             ).length;
             

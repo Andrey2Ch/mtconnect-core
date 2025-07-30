@@ -11,6 +11,8 @@ export interface AdamCounterData {
   cycleTimeMs?: number;      // Время цикла в миллисекундах (точно рассчитанное)
   partsInCycle?: number;     // Количество деталей использованных для расчета
   confidence?: string;       // Уровень уверенности в расчете
+  isAnomalous?: boolean;     // Флаг аномального времени цикла (простой)
+  machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE';  // Умный статус станка
 }
 
 // Удален - теперь используем CycleTimeCalculator
@@ -114,22 +116,34 @@ export class AdamReader {
               // Обновляем счетчик в калькуляторе
               this.cycleTimeCalculator.updateCount(machineId, currentCount);
               
-              // Вычисляем время цикла
+              // Вычисляем время цикла и определяем статус
               let cycleTimeMs: number | undefined;
               let partsInCycle: number | undefined;
               let confidence: string | undefined;
+              let isAnomalous: boolean | undefined;
+              let machineStatus: 'ACTIVE' | 'IDLE' | 'OFFLINE' | undefined;
               
               if (digitalInputChannels.has(machineId)) {
                 // Для Digital Input режима не вычисляем cycle time
                 cycleTimeMs = undefined;
                 partsInCycle = 0;
                 confidence = `Digital Input (${currentCount === 1 ? 'АКТИВЕН' : 'НЕАКТИВЕН'})`;
+                isAnomalous = false;
+                machineStatus = currentCount === 1 ? 'ACTIVE' : 'IDLE';
               } else {
-                // Для Counter режима вычисляем cycle time
+                // Для Counter режима вычисляем cycle time и анализируем
                 const cycleData = this.cycleTimeCalculator.getCycleTime(machineId);
                 cycleTimeMs = cycleData.cycleTimeMs;
                 partsInCycle = cycleData.partsInCycle;
                 confidence = cycleData.confidence;
+                isAnomalous = cycleData.isAnomalous;
+                machineStatus = cycleData.machineStatus;
+                
+                // ✅ ДОПОЛНИТЕЛЬНАЯ ЛОГИКА: если нет времени цикла вообще = ПРОСТОЙ
+                if (!cycleTimeMs || cycleData.confidence === 'Недостаточно данных') {
+                  machineStatus = 'IDLE'; // Нет движения = простой
+                  console.log(`🟡 ${machineId}: ПРОСТОЙ - недостаточно данных для расчета времени цикла`);
+                }
               }
               
               results.push({
@@ -139,7 +153,9 @@ export class AdamReader {
                 timestamp: timestamp,
                 cycleTimeMs: cycleTimeMs,
                 partsInCycle: partsInCycle,
-                confidence: confidence
+                confidence: confidence,
+                isAnomalous: isAnomalous,
+                machineStatus: machineStatus
               });
             }
           }

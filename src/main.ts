@@ -76,7 +76,44 @@ app.get('/api/machines', async (req, res) => {
     const adamCounters = await adamReader.readCounters();
     adamMachines = (adamDevices || []).map(device => {
       const counterData = adamCounters.find(c => c.machineId === device.id);
-      const cycleTimeSeconds = counterData?.cycleTimeMs ? (counterData.cycleTimeMs / 1000).toFixed(2) : 'N/A';
+      
+      // 🧠 УМНАЯ ЛОГИКА ДЛЯ ADAM МАШИН
+      let status = 'offline';
+      let connectionStatus = 'offline';
+      let executionStatus = 'UNAVAILABLE';
+      let cycleTimeDisplay = 'N/A';
+      
+      if (counterData) {
+        // Есть соединение с ADAM
+        connectionStatus = 'active';
+        
+        // ✅ КЛЮЧЕВАЯ ЛОГИКА: N/A время цикла = ПРОСТОЙ
+        if (!counterData.cycleTimeMs || counterData.cycleTimeMs === undefined) {
+          // Нет времени цикла = нет движения = ПРОСТОЙ
+          status = 'online';
+          executionStatus = 'READY'; // ПРОСТОЙ
+          cycleTimeDisplay = 'N/A';
+          console.log(`🟡 ${device.id}: ПРОСТОЙ - нет данных о времени цикла (N/A)`);
+        } else {
+          // Есть время цикла - определяем статус на основе умной логики
+          switch (counterData.machineStatus) {
+            case 'ACTIVE':
+              status = 'online';
+              executionStatus = 'ACTIVE';
+              break;
+            case 'IDLE':
+              status = 'online';
+              executionStatus = 'READY'; // ПРОСТОЙ = ГОТОВ к работе
+              break;
+            default: // OFFLINE
+              status = 'offline';
+              executionStatus = 'UNAVAILABLE';
+          }
+          
+          // Показываем реальное время цикла
+          cycleTimeDisplay = (counterData.cycleTimeMs / 1000).toFixed(2);
+        }
+      }
       
       return {
         id: device.id,
@@ -85,12 +122,15 @@ app.get('/api/machines', async (req, res) => {
         channel: device.channel,
         ip: '192.168.1.120', // ADAM-6050 контроллер IP
         port: 502, // Modbus TCP порт
-        status: counterData ? 'online' : 'offline',
-        connectionStatus: counterData ? 'active' : 'offline',
+        status: status,
+        connectionStatus: connectionStatus,
         data: {
           partCount: counterData ? counterData.count : 0, // РЕАЛЬНЫЕ ДАННЫЕ
-          cycleTime: cycleTimeSeconds,
+          cycleTime: cycleTimeDisplay,
           confidence: counterData?.confidence || 'N/A',
+          executionStatus: executionStatus, // Добавляем executionStatus для ADAM
+          isAnomalous: counterData?.isAnomalous || false,
+          machineStatus: counterData?.machineStatus || 'OFFLINE'
         }
       };
     });
@@ -110,6 +150,9 @@ app.get('/api/machines', async (req, res) => {
         partCount: 0,
         cycleTime: 'N/A',
         confidence: 'N/A',
+        executionStatus: 'UNAVAILABLE',
+        isAnomalous: false,
+        machineStatus: 'OFFLINE'
       }
     }));
   }
