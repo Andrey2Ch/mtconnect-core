@@ -53,6 +53,9 @@ app.get('/api/machines', async (req, res) => {
     const cycleTimeData = shdrManager.getMachineCycleTime(machine.id);
     const cycleTimeSeconds = cycleTimeData?.cycleTimeMs ? (cycleTimeData.cycleTimeMs / 1000).toFixed(2) : 'N/A';
     
+    // 🕒 ПОЛУЧАЕМ ВРЕМЯ ПРОСТОЯ ДЛЯ FANUC (из централизованной логики)
+    const cycleTimeCalcData = adamReader.getCycleTimeData(machine.id);
+    
     return {
       id: machine.id,
       name: machine.name,
@@ -66,6 +69,7 @@ app.get('/api/machines', async (req, res) => {
         partCount: getVal('part_count'),
         program: getVal('program'),
         cycleTime: cycleTimeSeconds,
+        idleTimeMinutes: cycleTimeCalcData.idleTimeMinutes || 0 // 🕒 ВРЕМЯ ПРОСТОЯ ДЛЯ FANUC!
       }
     };
   });
@@ -87,31 +91,28 @@ app.get('/api/machines', async (req, res) => {
         // Есть соединение с ADAM
         connectionStatus = 'active';
         
-        // ✅ КЛЮЧЕВАЯ ЛОГИКА: N/A время цикла = ПРОСТОЙ
+        // ✅ ЦЕНТРАЛИЗОВАННАЯ ЛОГИКА: Все решения принимает CycleTimeCalculator
         if (!counterData.cycleTimeMs || counterData.cycleTimeMs === undefined) {
-          // Нет времени цикла = нет движения = ПРОСТОЙ
-          status = 'online';
-          executionStatus = 'READY'; // ПРОСТОЙ
+          // Нет времени цикла = отображаем N/A
           cycleTimeDisplay = 'N/A';
-          console.log(`🟡 ${device.id}: ПРОСТОЙ - нет данных о времени цикла (N/A)`);
         } else {
-          // Есть время цикла - определяем статус на основе умной логики
-          switch (counterData.machineStatus) {
-            case 'ACTIVE':
-              status = 'online';
-              executionStatus = 'ACTIVE';
-              break;
-            case 'IDLE':
-              status = 'online';
-              executionStatus = 'READY'; // ПРОСТОЙ = ГОТОВ к работе
-              break;
-            default: // OFFLINE
-              status = 'offline';
-              executionStatus = 'UNAVAILABLE';
-          }
-          
-          // Показываем реальное время цикла
+          // Есть время цикла = показываем в секундах
           cycleTimeDisplay = (counterData.cycleTimeMs / 1000).toFixed(2);
+        }
+        
+        // Статус определяется ТОЛЬКО на основе machineStatus из CycleTimeCalculator
+        switch (counterData.machineStatus) {
+          case 'ACTIVE':
+            status = 'online';
+            executionStatus = 'ACTIVE';
+            break;
+          case 'IDLE':
+            status = 'online';
+            executionStatus = 'READY'; // ПРОСТОЙ = ГОТОВ к работе
+            break;
+          default: // OFFLINE
+            status = 'offline';
+            executionStatus = 'UNAVAILABLE';
         }
       }
       
@@ -130,7 +131,8 @@ app.get('/api/machines', async (req, res) => {
           confidence: counterData?.confidence || 'N/A',
           executionStatus: executionStatus, // Добавляем executionStatus для ADAM
           isAnomalous: counterData?.isAnomalous || false,
-          machineStatus: counterData?.machineStatus || 'OFFLINE'
+          machineStatus: counterData?.machineStatus || 'OFFLINE',
+          idleTimeMinutes: counterData?.idleTimeMinutes || 0 // 🕒 ВРЕМЯ ПРОСТОЯ В МИНУТАХ
         }
       };
     });
@@ -321,7 +323,13 @@ async function sendDataToCloud() {
         const data = {
           partCount: counter.count,
           cycleTime: cycleTimeSeconds,
-          channel: counter.channel
+          channel: counter.channel,
+          executionStatus: counter.machineStatus === 'ACTIVE' ? 'ACTIVE' : 
+                          counter.machineStatus === 'IDLE' ? 'READY' : 
+                          'UNAVAILABLE', // 🎯 ДОБАВЛЯЕМ executionStatus!
+          isAnomalous: counter.isAnomalous || false,
+          machineStatus: counter.machineStatus || 'OFFLINE',
+          idleTimeMinutes: counter.idleTimeMinutes || 0 // 🕒 ВРЕМЯ ПРОСТОЯ В МИНУТАХ
         };
 
         const deviceInfo = adamDevices.find(d => d.id === counter.machineId);

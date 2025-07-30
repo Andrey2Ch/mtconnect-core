@@ -132,6 +132,21 @@
             border-left: 5px solid #e74c3c;
         }
 
+        /* 🕒 СТИЛИ ДЛЯ ВРЕМЕНИ ПРОСТОЯ */
+        .idle-time {
+            background-color: rgba(241, 196, 15, 0.1);
+            border-left: 3px solid #f1c40f;
+            padding: 8px;
+            margin-top: 5px;
+            border-radius: 4px;
+        }
+
+        .idle-duration {
+            color: #f39c12;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
         .machine-header {
             display: flex;
             justify-content: space-between;
@@ -450,6 +465,23 @@
             `;
         }
 
+        // 🕒 ФУНКЦИЯ ФОРМАТИРОВАНИЯ ВРЕМЕНИ ПРОСТОЯ
+        function formatIdleTime(minutes) {
+            if (minutes === 0) return '';
+            if (minutes < 60) return `${minutes} мин`;
+            
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            
+            if (hours < 24) {
+                return remainingMinutes > 0 ? `${hours}ч ${remainingMinutes}м` : `${hours}ч`;
+            }
+            
+            const days = Math.floor(hours / 24);
+            const remainingHours = hours % 24;
+            return remainingHours > 0 ? `${days}д ${remainingHours}ч` : `${days}д`;
+        }
+
         function createADAMMachineCard(machine) {
             // Время цикла - показываем как есть
             const cycleTimeDisplay = machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A'
@@ -459,6 +491,10 @@
             // 🧠 УМНАЯ ЛОГИКА СТАТУСА ДЛЯ ADAM на основе executionStatus
             const executionStatus = machine.data && machine.data.executionStatus || 'UNAVAILABLE';
             const isConnected = machine.connectionStatus === 'active' || machine.status === 'online';
+            
+            // 🕒 ВРЕМЯ ПРОСТОЯ (если есть)
+            const idleTimeMinutes = machine.data && machine.data.idleTimeMinutes || 0;
+            const idleTimeDisplay = idleTimeMinutes > 0 ? formatIdleTime(idleTimeMinutes) : '';
             
             let statusIcon, statusText, statusClass;
             
@@ -517,6 +553,9 @@
                         <div class="machine-detail">
                             <strong>⏱️ Цикл:</strong> ${cycleTimeDisplay}
                         </div>
+                        ${idleTimeDisplay ? `<div class="machine-detail idle-time">
+                            <strong>⏰ Простой:</strong> <span class="idle-duration">${idleTimeDisplay}</span>
+                        </div>` : ''}
                     </div>
                 </div>
             `;

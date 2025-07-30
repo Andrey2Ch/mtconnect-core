@@ -52,15 +52,41 @@ export class CycleTimeCalculator {
     history.lastCount = newCount;
   }
 
-  getCycleTime(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE' } {
+  getCycleTime(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } {
     const history = this.histories.get(machineId);
     
-    if (!history || history.changes.length < 2) {
+    // 🕒 СЛУЧАЙ 1: Нет истории вообще (новая машина)
+    if (!history || history.changes.length === 0) {
+      // Для машин без истории считаем что они стоят с момента запуска системы (примерно 10 минут)
+      const systemUptimeMinutes = Math.min(Math.round(process.uptime() / 60), 60); // максимум 60 минут
+      console.log(`🟡 ${machineId}: ПРОСТОЙ - нет данных о машине (новая)`);
+      console.log(`🕒 ${machineId}: idleTimeMinutes = ${systemUptimeMinutes} (система работает ${systemUptimeMinutes} мин)`);
       return { 
         cycleTimeMs: undefined, 
-        partsInCycle: history?.changes.length || 0,
+        partsInCycle: 0,
+        confidence: 'Нет данных',
+        isAnomalous: true,
+        machineStatus: 'IDLE',
+        idleTimeMinutes: systemUptimeMinutes // 🕒 ВРЕМЯ С ЗАПУСКА СИСТЕМЫ
+      };
+    }
+    
+    // 🕒 СЛУЧАЙ 2: Недостаточно данных для расчета (< 2 изменения)
+    if (history.changes.length < 2) {
+      const lastChange = history.changes[history.changes.length - 1];
+      const timeSinceLastPart = Date.now() - lastChange.timestamp.getTime();
+      const idleTimeMinutes = Math.round(timeSinceLastPart / 60000);
+      
+      console.log(`🟡 ${machineId}: ПРОСТОЙ - недостаточно данных для расчета времени цикла`);
+      console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (недостаточно данных)`);
+      
+      return { 
+        cycleTimeMs: undefined, 
+        partsInCycle: 1,
         confidence: 'Недостаточно данных',
-        machineStatus: 'OFFLINE'
+        isAnomalous: true,
+        machineStatus: 'IDLE',
+        idleTimeMinutes: idleTimeMinutes
       };
     }
 
@@ -70,12 +96,21 @@ export class CycleTimeCalculator {
     const totalTimeMs = last.timestamp.getTime() - first.timestamp.getTime();
     const totalParts = last.count - first.count;
     
+    // 🕒 СЛУЧАЙ 3: Нет изменений счетчика (машина не работает)
     if (totalParts <= 0 || totalTimeMs <= 0) {
+      const timeSinceLastPart = Date.now() - last.timestamp.getTime();
+      const idleTimeMinutes = Math.round(timeSinceLastPart / 60000);
+      
+      console.log(`🟡 ${machineId}: ПРОСТОЙ - нет изменений счетчика`);
+      console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (нет изменений)`);
+      
       return { 
         cycleTimeMs: undefined, 
         partsInCycle: totalParts,
         confidence: 'Нет изменений счетчика',
-        machineStatus: 'OFFLINE'
+        isAnomalous: true,
+        machineStatus: 'IDLE',
+        idleTimeMinutes: idleTimeMinutes
       };
     }
     
@@ -85,10 +120,17 @@ export class CycleTimeCalculator {
     const isAnomalous = this.isAnomalousCycleTime(machineId, avgCycleTimeMs, history);
     const isRecovered = this.checkRecoveryStatus(machineId, avgCycleTimeMs, history, isAnomalous);
     
-    // Определяем статус станка
+    // Определяем статус станка и время простоя
     let machineStatus: 'ACTIVE' | 'IDLE' | 'OFFLINE' = 'ACTIVE';
+    let idleTimeMinutes = 0; // 🕒 ВРЕМЯ ПРОСТОЯ
+    
     if (isAnomalous && !isRecovered) {
       machineStatus = 'IDLE'; // Станок стоит (большое время цикла = простой)
+      // 🕒 Вычисляем время простоя для аномального цикла
+      const timeSinceLastPart = Date.now() - last.timestamp.getTime();
+      idleTimeMinutes = Math.round(timeSinceLastPart / 60000);
+      console.log(`🟡 ${machineId}: ПРОСТОЙ обнаружен! Время цикла ${(avgCycleTimeMs/1000).toFixed(2)} сек/дет слишком большое`);
+      console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (аномальный цикл)`);
     } else if (isRecovered) {
       machineStatus = 'ACTIVE'; // Станок восстановился после простоя
       console.log(`🟢 ${machineId}: ВОССТАНОВЛЕНИЕ! Станок вернулся в работу после 3+ нормальных циклов`);
@@ -99,7 +141,10 @@ export class CycleTimeCalculator {
       
       if (timeSinceLastPart > maxIdleTime) {
         machineStatus = 'IDLE'; // Слишком долго нет новых деталей
+        // 🕒 Вычисляем время простоя для случая "нет движения"
+        idleTimeMinutes = Math.round(timeSinceLastPart / 60000);
         console.log(`🟡 ${machineId}: ПРОСТОЙ - нет движения ${(timeSinceLastPart/60000).toFixed(1)} минут`);
+        console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (нет движения)`);
       }
     }
     
@@ -110,18 +155,18 @@ export class CycleTimeCalculator {
       confidence = 'СРЕДНЯЯ';
     }
     
-    if (isAnomalous) {
-      console.log(`🟡 ${machineId}: ПРОСТОЙ обнаружен! Время цикла ${(avgCycleTimeMs/1000).toFixed(2)} сек/дет слишком большое`);
-    } else {
+    // Логи для нормальной работы (не IDLE)
+    if (machineStatus === 'ACTIVE') {
       console.log(`⏱️ ${machineId}: ${totalParts} дет. за ${(totalTimeMs/1000).toFixed(1)} сек = ${(avgCycleTimeMs/1000).toFixed(2)} сек/дет (${confidence})`);
     }
-    
+
     return {
       cycleTimeMs: avgCycleTimeMs,
       partsInCycle: totalParts,
       confidence: confidence,
       isAnomalous: isAnomalous,
-      machineStatus: machineStatus
+      machineStatus: machineStatus,
+      idleTimeMinutes: idleTimeMinutes  // 🕒 ВРЕМЯ ПРОСТОЯ В МИНУТАХ
     };
   }
 

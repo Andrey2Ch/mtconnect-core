@@ -13,6 +13,7 @@ export interface AdamCounterData {
   confidence?: string;       // Уровень уверенности в расчете
   isAnomalous?: boolean;     // Флаг аномального времени цикла (простой)
   machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE';  // Умный статус станка
+  idleTimeMinutes?: number;  // 🕒 Время простоя в минутах (для IDLE статуса)
 }
 
 // Удален - теперь используем CycleTimeCalculator
@@ -122,6 +123,7 @@ export class AdamReader {
               let confidence: string | undefined;
               let isAnomalous: boolean | undefined;
               let machineStatus: 'ACTIVE' | 'IDLE' | 'OFFLINE' | undefined;
+              let idleTimeMinutes: number | undefined; // 🕒 ВРЕМЯ ПРОСТОЯ
               
               if (digitalInputChannels.has(machineId)) {
                 // Для Digital Input режима не вычисляем cycle time
@@ -138,12 +140,9 @@ export class AdamReader {
                 confidence = cycleData.confidence;
                 isAnomalous = cycleData.isAnomalous;
                 machineStatus = cycleData.machineStatus;
+                idleTimeMinutes = cycleData.idleTimeMinutes; // 🕒 ВРЕМЯ ПРОСТОЯ
                 
-                // ✅ ДОПОЛНИТЕЛЬНАЯ ЛОГИКА: если нет времени цикла вообще = ПРОСТОЙ
-                if (!cycleTimeMs || cycleData.confidence === 'Недостаточно данных') {
-                  machineStatus = 'IDLE'; // Нет движения = простой
-                  console.log(`🟡 ${machineId}: ПРОСТОЙ - недостаточно данных для расчета времени цикла`);
-                }
+                // ✅ Вся логика простоя теперь в CycleTimeCalculator - не дублируем!
               }
               
               results.push({
@@ -155,7 +154,8 @@ export class AdamReader {
                 partsInCycle: partsInCycle,
                 confidence: confidence,
                 isAnomalous: isAnomalous,
-                machineStatus: machineStatus
+                machineStatus: machineStatus,
+                idleTimeMinutes: idleTimeMinutes // 🕒 ВРЕМЯ ПРОСТОЯ В МИНУТАХ
               });
             }
           }
@@ -187,5 +187,10 @@ export class AdamReader {
     } catch (err) {
       return false;
     }
+  }
+
+  // 🕒 ПУБЛИЧНЫЙ МЕТОД ДЛЯ ДОСТУПА К ВРЕМЕНИ ПРОСТОЯ
+  public getCycleTimeData(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } {
+    return this.cycleTimeCalculator.getCycleTime(machineId);
   }
 } 
