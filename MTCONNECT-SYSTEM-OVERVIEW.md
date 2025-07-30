@@ -317,6 +317,40 @@ Get-NetTCPConnection -LocalPort 3555,7701,7702,7703,7704,7705,7706,7707,7708 -St
 
 # Тест API
 Invoke-WebRequest -Uri "http://localhost:3555/api/machines"
+
+# MongoDB (если не запущен):
+docker run -d --name mtconnect-mongodb-new -p 27017:27017 mongo:7.0
+
+# Cloud API:
+cd apps/cloud-api
+pnpm run start:dev
+
+# Проверка 
+API: http://localhost:3001/health
+Дашборд: http://localhost:3001/dashboard-new.html
+
+# Настройки (уже готовы):
+Файл: apps/cloud-api/.env
+
+NODE_ENV=development
+PORT=3001
+MONGODB_URI=mongodb://localhost:27017/mtconnect-local
+
+# Полная связка (если нужно всё):
+
+## 1. MongoDB
+docker run -d --name mtconnect-mongodb-new -p 27017:27017 mongo:7.0
+
+## 2. Edge Gateway (в корне проекта)
+npx ts-node src/main.ts
+
+## 3. Cloud API (в новом окне PowerShell)
+cd apps/cloud-api
+pnpm run start:dev
+
+Результат:
+Edge Gateway: http://localhost:3555/dashboard-new.html
+Cloud API: http://localhost:3001/dashboard-new.html
 ```
 
 ### Логи и отладка
