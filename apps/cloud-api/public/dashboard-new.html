@@ -547,9 +547,16 @@
                     machinesArray = data.machines;
                     console.log('📋 DEBUG: Обнаружен массив, машин:', machinesArray.length);
                 } else if (typeof data.machines === 'object') {
-                    // Облачный формат: объект, преобразуем в массив
-                    machinesArray = Object.values(data.machines);
-                    console.log('📦 DEBUG: Объект преобразован в массив, машин:', machinesArray.length);
+                    // Облачный формат: объект с группами {mtconnect: [...], adam: [...]}
+                    // Собираем все машины из всех групп в один плоский массив
+                    machinesArray = [];
+                    Object.keys(data.machines).forEach(groupKey => {
+                        if (Array.isArray(data.machines[groupKey])) {
+                            console.log(`📦 DEBUG: Добавляем группу ${groupKey}, машин:`, data.machines[groupKey].length);
+                            machinesArray = machinesArray.concat(data.machines[groupKey]);
+                        }
+                    });
+                    console.log('📦 DEBUG: Итого машин после объединения групп:', machinesArray.length);
                     console.log('📦 DEBUG: Первая машина:', machinesArray[0]);
                 }
             }
