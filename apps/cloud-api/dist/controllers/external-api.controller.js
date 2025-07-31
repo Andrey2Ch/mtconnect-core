@@ -27,7 +27,8 @@ let ExternalApiController = class ExternalApiController {
             const dataArray = Array.isArray(payload) ? payload : [payload];
             this.logger.log(`📡 Получены данные от Edge Gateway: ${dataArray.length} записей`);
             dataArray.forEach((item) => {
-                this.logger.log(`🔧 ${item.metadata.machineId}: partCount=${item.data.partCount}, program=${item.data.program}, status=${item.data.executionStatus}`);
+                this.logger.log(`🔧 ${item.metadata.machineId}: partCount=${item.data.partCount}, program=${item.data.program}, status=${item.data.executionStatus}, idleTimeMinutes=${item.data.idleTimeMinutes}`);
+                this.logger.log(`📊 ${item.metadata.machineId} FULL DATA:`, JSON.stringify(item.data));
             });
             const savedRecords = await this.machineDataModel.insertMany(dataArray);
             this.logger.log(`💾 Сохранено в MongoDB: ${savedRecords.length} записей`);

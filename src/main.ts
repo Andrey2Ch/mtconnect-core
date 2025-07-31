@@ -156,18 +156,31 @@ app.get('/api/machines', async (req, res) => {
     }));
   }
 
+  const allMachines = [...mtconnectMachines, ...adamMachines];
+
+  // Сортируем все машины по имени в алфавитном порядке
+  allMachines.sort((a, b) => a.name.localeCompare(b.name));
+
+  const mtconnectOnlineCount = mtconnectMachines.filter(m => m.status === 'online').length;
+  const adamOnlineCount = adamMachines.filter(m => m.status === 'online').length;
+
   const summary = {
-    total: machines.length + adamDevices.length,
-    online: mtconnectMachines.filter(m => m.status === 'online').length + adamMachines.filter(m => m.status === 'online').length,
+    total: allMachines.length,
+    online: mtconnectOnlineCount + adamOnlineCount,
+    mtconnect: {
+        total: mtconnectMachines.length,
+        online: mtconnectOnlineCount
+    },
+    adam: {
+        total: adamMachines.length,
+        online: adamOnlineCount
+    }
   };
 
   res.json({
     timestamp: new Date().toISOString(),
     summary,
-    machines: {
-      mtconnect: mtconnectMachines,
-      adam: adamMachines
-    },
+    machines: allMachines, // 👈 Возвращаем единый, отсортированный массив
   });
 });
 

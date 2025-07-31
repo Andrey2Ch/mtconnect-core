@@ -14,6 +14,7 @@ export declare class MachineData {
         cycleTime?: number;
         cycleTimeConfidence?: string;
         executionStatus?: string;
+        idleTimeMinutes?: number;
         [key: string]: any;
     };
 }

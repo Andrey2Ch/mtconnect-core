@@ -37,7 +37,8 @@ __decorate([
             program: { type: String },
             cycleTime: { type: Number },
             cycleTimeConfidence: { type: String },
-            executionStatus: { type: String }
+            executionStatus: { type: String },
+            idleTimeMinutes: { type: Number }
         },
         required: true
     }),

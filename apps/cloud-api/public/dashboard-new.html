@@ -321,26 +321,9 @@
             </div>
         </div>
 
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('all')">Все машины</button>
-            <button class="tab" onclick="showTab('mtconnect')">MTConnect</button>
-            <button class="tab" onclick="showTab('adam')">ADAM-6050</button>
-        </div>
-
-        <div id="loading" class="loading">
-            ⏳ Загрузка данных машин...
-        </div>
-
-        <div id="error" class="error" style="display: none;"></div>
-
-        <div id="mtconnect-section" class="machines-section">
-            <h2>🔧 MTConnect Станки</h2>
-            <div id="mtconnect-machines" class="machines-grid"></div>
-        </div>
-
-        <div id="adam-section" class="machines-section">
-            <h2>📊 ADAM-6050 Счетчики деталей</h2>
-            <div id="adam-machines" class="machines-grid"></div>
+        <div id="all-machines-section" class="machines-section">
+            <h2 id="grid-title">Все машины</h2>
+            <div id="machines-grid" class="machines-grid"></div>
         </div>
 
         <div class="last-update">
@@ -349,35 +332,7 @@
     </div>
 
     <script>
-        let allData = null;
-        let currentTab = 'all';
 
-        function showTab(tab) {
-            currentTab = tab;
-            
-            // Обновляем активную вкладку
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            // Показываем/скрываем секции
-            const mtconnectSection = document.getElementById('mtconnect-section');
-            const adamSection = document.getElementById('adam-section');
-            
-            switch(tab) {
-                case 'all':
-                    mtconnectSection.style.display = 'block';
-                    adamSection.style.display = 'block';
-                    break;
-                case 'mtconnect':
-                    mtconnectSection.style.display = 'block';
-                    adamSection.style.display = 'none';
-                    break;
-                case 'adam':
-                    mtconnectSection.style.display = 'none';
-                    adamSection.style.display = 'block';
-                    break;
-            }
-        }
 
         function createMTConnectMachineCard(machine) {
             // Парсим программу: из O1212(2-753-04) берем только 753-04
@@ -460,9 +415,9 @@
                         <div class="machine-detail">
                             <strong>⏱️ Цикл:</strong> ${machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A' ? machine.data.cycleTime + ' сек/дет' : 'N/A'}
                         </div>
-                        ${machine.data && machine.data.idleTimeMinutes > 0 ? `<div class="machine-detail idle-time">
-                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${formatIdleTime(machine.data.idleTimeMinutes)}</span>
-                        </div>` : ''}
+                        ${`<div class="machine-detail idle-time">
+                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${(machine.data && machine.data.idleTimeMinutes > 0) ? formatIdleTime(machine.data.idleTimeMinutes) : '0 min'}</span>
+                        </div>`}
                     </div>
                 </div>
             `;
@@ -470,7 +425,7 @@
 
         // 🕒 ФУНКЦИЯ ФОРМАТИРОВАНИЯ ВРЕМЕНИ ПРОСТОЯ (English format)
         function formatIdleTime(totalMinutes) {
-            if (totalMinutes === 0) return '';
+            if (!totalMinutes || totalMinutes === 0) return '';
             
             totalMinutes = Math.round(totalMinutes);
 
@@ -504,10 +459,6 @@
             // 🧠 УМНАЯ ЛОГИКА СТАТУСА ДЛЯ ADAM на основе executionStatus
             const executionStatus = machine.data && machine.data.executionStatus || 'UNAVAILABLE';
             const isConnected = machine.connectionStatus === 'active' || machine.status === 'online';
-            
-            // 🕒 ВРЕМЯ ПРОСТОЯ (если есть)
-            const idleTimeMinutes = machine.data && machine.data.idleTimeMinutes || 0;
-            const idleTimeDisplay = idleTimeMinutes > 0 ? formatIdleTime(idleTimeMinutes) : '';
             
             let statusIcon, statusText, statusClass;
             
@@ -566,9 +517,9 @@
                         <div class="machine-detail">
                             <strong>⏱️ Цикл:</strong> ${cycleTimeDisplay}
                         </div>
-                        ${idleTimeDisplay ? `<div class="machine-detail idle-time">
-                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${idleTimeDisplay}</span>
-                        </div>` : ''}
+                        ${`<div class="machine-detail idle-time">
+                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${(machine.data && machine.data.idleTimeMinutes > 0) ? formatIdleTime(machine.data.idleTimeMinutes) : '0 min'}</span>
+                        </div>`}
                     </div>
                 </div>
             `;
@@ -576,49 +527,45 @@
 
         function updateDashboard(data) {
             console.log('🔄 Обновляем дашборд с данными:', data);
-            allData = data;
             
-            // Обновляем сводку  
-            const mtconnectTotal = data.machines.mtconnect.length;
-            const mtconnectOnline = data.machines.mtconnect.filter(m => 
-                (m.data && m.data.executionStatus && m.data.executionStatus !== 'UNAVAILABLE') ||
-                (m.connectionStatus === 'active' || m.status === 'online')
-            ).length;
-            const adamTotal = data.machines.adam.length;
-            const adamOnline = data.machines.adam.filter(m => 
-                // АКТИВЕН или ПРОСТОЙ считаются "онлайн" (только ОФЛАЙН - действительно офлайн)
-                (m.data && m.data.executionStatus && m.data.executionStatus !== 'UNAVAILABLE') ||
-                (m.connectionStatus === 'active' || m.status === 'online')
-            ).length;
-            
+            // Обновляем сводку
             document.getElementById('totalMachines').textContent = data.summary.total;
-            document.getElementById('mtconnectOnline').textContent = `${mtconnectOnline}/${mtconnectTotal}`;
-            document.getElementById('adamOnline').textContent = `${adamOnline}/${adamTotal}`;
-            
-            // Обновляем MTConnect машины
-            const mtconnectContainer = document.getElementById('mtconnect-machines');
-            mtconnectContainer.innerHTML = data.machines.mtconnect
-                .map(machine => createMTConnectMachineCard(machine))
-                .join('');
-            
-            // Обновляем ADAM машины
-            const adamContainer = document.getElementById('adam-machines');
-            adamContainer.innerHTML = data.machines.adam
-                .map(machine => createADAMMachineCard(machine))
-                .join('');
+            document.getElementById('mtconnectOnline').textContent = `${data.summary.mtconnect.online}/${data.summary.mtconnect.total}`;
+            document.getElementById('adamOnline').textContent = `${data.summary.adam.online}/${data.summary.adam.total}`;
+
+            // Обновляем машины в единой сетке
+            const machinesContainer = document.getElementById('machines-grid');
+            machinesContainer.innerHTML = ''; // Очищаем старые карточки
+
+            if (data.machines && data.machines.length > 0) {
+                data.machines.forEach(machine => {
+                    let cardHtml = '';
+                    if (machine.type === 'FANUC') {
+                        cardHtml = createMTConnectMachineCard(machine);
+                    } else if (machine.type === 'ADAM-6050') { // ✅ ИСПРАВЛЕНО
+                        cardHtml = createADAMMachineCard(machine);
+                    }
+                    if (cardHtml) {
+                        machinesContainer.innerHTML += cardHtml;
+                    }
+                });
+                document.getElementById('grid-title').textContent = `Все машины (${data.machines.length})`;
+            } else {
+                machinesContainer.innerHTML = '<p class="loading">Нет данных о машинах.</p>';
+                 document.getElementById('grid-title').textContent = 'Все машины';
+            }
             
             // Обновляем время последнего обновления
             document.getElementById('lastUpdate').textContent = new Date(data.timestamp).toLocaleString();
             
             // Скрываем индикатор загрузки
-            document.getElementById('loading').style.display = 'none';
+            const loadingEl = document.getElementById('loading');
+            if(loadingEl) loadingEl.style.display = 'none';
         }
 
         function showError(message) {
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = `❌ Ошибка: ${message}`;
-            errorDiv.style.display = 'block';
-            document.getElementById('loading').style.display = 'none';
+            console.error(`❌ Dashboard Error: ${message}`);
+            // Больше не пытаемся обновить DOM, так как элемента 'error' нет
         }
 
         async function fetchMachines() {
@@ -654,9 +601,6 @@
                 
                 updateDashboard(data);
                 
-                // Скрываем ошибку если она была
-                document.getElementById('error').style.display = 'none';
-                
             } catch (error) {
                 console.error('❌ Ошибка загрузки данных:', error);
                 showError(error.message);
@@ -666,6 +610,16 @@
         // Загружаем данные при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 Дашборд загружен, запрашиваем данные...');
+            
+            // --- ТЕСТИРОВАНИЕ ФОРМАТА ВРЕМЕНИ ---
+            console.log('--- Idle Time Formatting Test ---');
+            console.log('Input: 75 min, Output:', formatIdleTime(75));   // Ожидаем: 1 hour 15 min
+            console.log('Input: 90 min, Output:', formatIdleTime(90));   // Ожидаем: 1 hour 30 min
+            console.log('Input: 1440 min, Output:', formatIdleTime(1440)); // Ожидаем: 1 day
+            console.log('Input: 1500 min, Output:', formatIdleTime(1500)); // Ожидаем: 1 day 1 hour
+            console.log('-----------------------------');
+            // --- КОНЕЦ ТЕСТИРОВАНИЯ ---
+
             fetchMachines();
         });
         

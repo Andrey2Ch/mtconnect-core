@@ -321,7 +321,6 @@ export class SHDRManager extends EventEmitter {
         }
         return statuses;
     }
-
     public disconnectAll(): void {
         for (const client of this.clients.values()) {
             client.disconnect();

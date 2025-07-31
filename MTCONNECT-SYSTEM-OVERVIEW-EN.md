@@ -13,6 +13,28 @@ The MTConnect system is a comprehensive solution for collecting, processing, and
 - **Dashboard Display**: Shows downtime in English format ("2 min", "1 hour 30 min", "2 days 5 hours")
 - **Data Flow**: Both local (3555) and cloud (Railway) dashboards display real-time downtime data
 
+### 🚨 CRITICAL MongoDB Schema Requirements
+
+**IMPORTANT:** All data fields displayed on dashboards must be explicitly defined in MongoDB schema (`apps/cloud-api/src/schemas/machine-data.schema.ts`). Mongoose automatically filters out fields not defined in the schema.
+
+**Current Schema includes:**
+- `partCount: { type: Number }`
+- `program: { type: String }`
+- `cycleTime: { type: Number }`
+- `executionStatus: { type: String }`
+- `idleTimeMinutes: { type: Number }` - ⚠️ **CRITICAL for downtime display**
+
+**If a field is missing from schema:**
+- ✅ Edge Gateway sends the data correctly
+- ✅ Data appears in Railway logs 
+- ❌ Field gets removed when saving to MongoDB
+- ❌ Dashboard shows empty/zero values
+
+**Troubleshooting Pattern:**
+1. Check Edge Gateway logs - data should be sent
+2. Check Railway logs - data should be received 
+3. Check API response - if field is undefined/0, check MongoDB schema
+
 ## 🏗️ System Architecture
 
 ```
@@ -448,6 +470,6 @@ The system is designed and configured for stable 24/7 operation.
 
 ---
 
-*Documentation created: January 29, 2025*  
-*System version: 1.3*  
-*Status: Production, fully functional* 
+*Documentation updated: January 31, 2025*  
+*System version: 1.4*  
+*Status: Production, fully functional with complete downtime tracking* 
