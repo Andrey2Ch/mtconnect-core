@@ -95,7 +95,8 @@ let DashboardController = class DashboardController {
                         lastAdamData: { $last: '$data.adamData' },
                         lastAdamCount: { $last: '$data.adamData.analogData.count' },
                         lastAdamCycleTime: { $last: '$data.adamData.analogData.cycleTimeMs' },
-                        lastAdamConfidence: { $last: '$data.adamData.analogData.confidence' }
+                        lastAdamConfidence: { $last: '$data.adamData.analogData.confidence' },
+                        lastIdleTimeMinutes: { $last: '$data.idleTimeMinutes' }
                     }
                 },
                 {
@@ -112,6 +113,7 @@ let DashboardController = class DashboardController {
                         lastAdamCount: 1,
                         lastAdamCycleTime: 1,
                         lastAdamConfidence: 1,
+                        lastIdleTimeMinutes: 1,
                         isAdamMachine: {
                             $cond: {
                                 if: { $ne: ['$lastAdamData', null] },
