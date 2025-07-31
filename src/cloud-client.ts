@@ -44,6 +44,13 @@ export class CloudApiClient {
         };
 
         const jsonData = JSON.stringify(payload);
+        
+        // 🔍 ВРЕМЕННОЕ ЛОГИРОВАНИЕ ДЛЯ ОТЛАДКИ idleTimeMinutes
+        if (payload.data.idleTimeMinutes !== undefined) {
+          console.log(`🕒 ОТПРАВЛЯЕМ idleTimeMinutes=${payload.data.idleTimeMinutes} для ${machineId}`);
+        }
+        console.log(`📤 PAYLOAD для ${machineId}:`, JSON.stringify(payload.data, null, 2));
+        
         const url = new URL(`${this.cloudApiUrl}/api/ext/data`);
         
         const options = {

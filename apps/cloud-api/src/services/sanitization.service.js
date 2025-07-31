@@ -106,7 +106,8 @@ let SanitizationService = class SanitizationService {
             program: this.sanitizeCncCode(data.program),
             block: this.sanitizeCncCode(data.block, 1000),
             line: this.sanitizeCncCode(data.line, 500),
-            adamData: this.sanitizeAdamData(data.adamData)
+            adamData: this.sanitizeAdamData(data.adamData),
+            idleTimeMinutes: this.sanitizeNumber(data.idleTimeMinutes) // 🕒 ВРЕМЯ ПРОСТОЯ!
         };
     }
 };
