@@ -13,6 +13,8 @@ const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const external_api_controller_1 = require("./controllers/external-api.controller");
 const machine_data_schema_1 = require("./schemas/machine-data.schema");
+const machine_state_schema_1 = require("./schemas/machine-state.schema");
+const machine_states_cache_service_1 = require("./services/machine-states-cache.service");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -21,7 +23,8 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             mongoose_1.MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/mtconnect-local'),
             mongoose_1.MongooseModule.forFeature([
-                { name: machine_data_schema_1.MachineData.name, schema: machine_data_schema_1.MachineDataSchema }
+                { name: machine_data_schema_1.MachineData.name, schema: machine_data_schema_1.MachineDataSchema },
+                { name: machine_state_schema_1.MachineState.name, schema: machine_state_schema_1.MachineStateSchema }
             ])
         ],
         controllers: [
@@ -29,7 +32,8 @@ exports.AppModule = AppModule = __decorate([
             external_api_controller_1.ExternalApiController
         ],
         providers: [
-            app_service_1.AppService
+            app_service_1.AppService,
+            machine_states_cache_service_1.MachineStatesCacheService
         ],
     })
 ], AppModule);
