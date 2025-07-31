@@ -574,7 +574,7 @@
                 
                 // Определяем правильный API URL в зависимости от окружения
                 const isRailway = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
-                const apiUrl = isRailway ? '/api/dashboard/machines' : 'http://localhost:3555/api/machines';
+                const apiUrl = isRailway ? '/api/v2/dashboard/machines' : 'http://localhost:3555/api/machines';
                 
                 // Показываем текущий API URL в интерфейсе
                 document.getElementById('current-api-url').textContent = isRailway ? 
@@ -599,7 +599,13 @@
                 const data = await response.json();
                 console.log('✅ Данные получены:', data);
                 
-                updateDashboard(data);
+                // Унифицированная обработка данных
+                // И локальный, и облачный API теперь возвращают данные в одинаковой структуре
+                if (data && data.machines) {
+                    updateDashboard(data);
+                } else {
+                    throw new Error("Ответ от API не содержит поля 'machines'");
+                }
                 
             } catch (error) {
                 console.error('❌ Ошибка загрузки данных:', error);

@@ -263,9 +263,25 @@ app.get('/api/v2/dashboard/machines', async (req, res) => {
     }));
   }
 
+  const allMachines = [...mtconnectMachines, ...adamMachines];
+  allMachines.sort((a, b) => a.name.localeCompare(b.name));
+
   res.json({
     success: true,
-    data: [...mtconnectMachines, ...adamMachines]
+    timestamp: new Date().toISOString(),
+    summary: { // Добавим summary для консистентности, даже если dashboard-v2 его не использует
+        total: allMachines.length,
+        online: allMachines.filter(m => m.isOnline).length,
+        mtconnect: {
+            total: mtconnectMachines.length,
+            online: mtconnectMachines.filter(m => m.isOnline).length
+        },
+        adam: {
+            total: adamMachines.length,
+            online: adamMachines.filter(m => m.isOnline).length
+        }
+    },
+    machines: allMachines // 👈 Отправляем единый, отсортированный массив
   });
 });
 
