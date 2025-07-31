@@ -30,7 +30,8 @@ export class MachineData {
       program: { type: String },
       cycleTime: { type: Number },
       cycleTimeConfidence: { type: String },
-      executionStatus: { type: String }
+      executionStatus: { type: String },
+      idleTimeMinutes: { type: Number }  // 🕒 ВРЕМЯ ПРОСТОЯ!
     },
     required: true
   })
@@ -40,6 +41,7 @@ export class MachineData {
     cycleTime?: number;
     cycleTimeConfidence?: string;
     executionStatus?: string;
+    idleTimeMinutes?: number;  // 🕒 ВРЕМЯ ПРОСТОЯ!
     [key: string]: any;
   };
 }
