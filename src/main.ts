@@ -35,9 +35,9 @@ machines.forEach(machine => {
 const adamReader = new AdamReader(); // IP: 192.168.1.120:502
 
 // Инициализация Cloud API Client для отправки данных в облако
-// Cloud API Client из переменных окружения
-const CLOUD_API_URL = process.env.CLOUD_API_URL || 'http://localhost:3001';
-const EDGE_GATEWAY_ID = process.env.EDGE_GATEWAY_ID || 'edge-gateway-main';
+// УМНОЕ определение: проверяем переменную, если нет - используем Railway по умолчанию
+const CLOUD_API_URL = process.env.CLOUD_API_URL || 'https://mtconnect-core-production.up.railway.app';
+const EDGE_GATEWAY_ID = process.env.EDGE_GATEWAY_ID || 'ANDREY-PC-edge-gateway';
 
 console.log(`🌐 Cloud API URL: ${CLOUD_API_URL}`);
 console.log(`🏭 Edge Gateway ID: ${EDGE_GATEWAY_ID}`);
@@ -49,12 +49,9 @@ app.get('/api/machines', async (req, res) => {
     const machineData = shdrManager.getMachineData(machine.id);
     const getVal = (key: string) => machineData?.get(key)?.value || 'UNAVAILABLE';
     
-    // Получаем время цикла от SHDR менеджера
+    // Получаем время цикла И время простоя от SHDR менеджера
     const cycleTimeData = shdrManager.getMachineCycleTime(machine.id);
     const cycleTimeSeconds = cycleTimeData?.cycleTimeMs ? (cycleTimeData.cycleTimeMs / 1000).toFixed(2) : 'N/A';
-    
-    // 🕒 ПОЛУЧАЕМ ВРЕМЯ ПРОСТОЯ ДЛЯ FANUC (из централизованной логики)
-    const cycleTimeCalcData = adamReader.getCycleTimeData(machine.id);
     
     return {
       id: machine.id,
@@ -69,7 +66,7 @@ app.get('/api/machines', async (req, res) => {
         partCount: getVal('part_count'),
         program: getVal('program'),
         cycleTime: cycleTimeSeconds,
-        idleTimeMinutes: cycleTimeCalcData.idleTimeMinutes || 0 // 🕒 ВРЕМЯ ПРОСТОЯ ДЛЯ FANUC!
+        idleTimeMinutes: cycleTimeData?.idleTimeMinutes || 0 // 🕒 ВРЕМЯ ПРОСТОЯ ДЛЯ FANUC ИЗ SHDR!
       }
     };
   });
@@ -304,7 +301,8 @@ async function sendDataToCloud() {
           program: getVal('program') !== 'UNAVAILABLE' ? getVal('program') : undefined,
           executionStatus: getVal('execution') !== 'UNAVAILABLE' ? getVal('execution') : undefined,
           cycleTime: cycleTimeSeconds,
-          cycleTimeConfidence: cycleTimeData?.confidence
+          cycleTimeConfidence: cycleTimeData?.confidence,
+          idleTimeMinutes: cycleTimeData?.idleTimeMinutes || undefined // 🕒 ВРЕМЯ ПРОСТОЯ ДЛЯ RAILWAY!
         };
 
         // Отправляем только если есть реальные данные (БЕЗ await!)

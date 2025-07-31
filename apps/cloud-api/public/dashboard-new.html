@@ -460,26 +460,38 @@
                         <div class="machine-detail">
                             <strong>⏱️ Цикл:</strong> ${machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A' ? machine.data.cycleTime + ' сек/дет' : 'N/A'}
                         </div>
+                        ${machine.data && machine.data.idleTimeMinutes > 0 ? `<div class="machine-detail idle-time">
+                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${formatIdleTime(machine.data.idleTimeMinutes)}</span>
+                        </div>` : ''}
                     </div>
                 </div>
             `;
         }
 
-        // 🕒 ФУНКЦИЯ ФОРМАТИРОВАНИЯ ВРЕМЕНИ ПРОСТОЯ
+        // 🕒 ФУНКЦИЯ ФОРМАТИРОВАНИЯ ВРЕМЕНИ ПРОСТОЯ (English format)
         function formatIdleTime(minutes) {
             if (minutes === 0) return '';
-            if (minutes < 60) return `${minutes} мин`;
+            if (minutes < 60) return `${minutes} min`;
             
             const hours = Math.floor(minutes / 60);
             const remainingMinutes = minutes % 60;
             
             if (hours < 24) {
-                return remainingMinutes > 0 ? `${hours}ч ${remainingMinutes}м` : `${hours}ч`;
+                if (remainingMinutes > 0) {
+                    return `${hours} hour${hours !== 1 ? 's' : ''} ${remainingMinutes} min`;
+                } else {
+                    return `${hours} hour${hours !== 1 ? 's' : ''}`;
+                }
             }
             
             const days = Math.floor(hours / 24);
             const remainingHours = hours % 24;
-            return remainingHours > 0 ? `${days}д ${remainingHours}ч` : `${days}д`;
+            
+            if (remainingHours > 0) {
+                return `${days} day${days !== 1 ? 's' : ''} ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
+            } else {
+                return `${days} day${days !== 1 ? 's' : ''}`;
+            }
         }
 
         function createADAMMachineCard(machine) {
@@ -554,7 +566,7 @@
                             <strong>⏱️ Цикл:</strong> ${cycleTimeDisplay}
                         </div>
                         ${idleTimeDisplay ? `<div class="machine-detail idle-time">
-                            <strong>⏰ Простой:</strong> <span class="idle-duration">${idleTimeDisplay}</span>
+                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${idleTimeDisplay}</span>
                         </div>` : ''}
                     </div>
                 </div>

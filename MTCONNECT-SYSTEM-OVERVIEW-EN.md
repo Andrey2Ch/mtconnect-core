@@ -4,6 +4,15 @@
 
 The MTConnect system is a comprehensive solution for collecting, processing, and monitoring industrial equipment data in real-time. The system operates on an Edge-to-Cloud architecture, ensuring reliable local data collection and centralized cloud storage.
 
+### 🔄 Real-time Downtime Tracking
+
+**CRITICAL FEATURE:** The system tracks machine downtime (idle time) separately for FANUC and ADAM machines:
+
+- **FANUC Machines**: Each SHDR client has its own `CycleTimeCalculator` that tracks part count changes and calculates idle time based on production gaps
+- **ADAM Machines**: Single shared `CycleTimeCalculator` in `AdamReader` tracks counter changes and determines idle status
+- **Dashboard Display**: Shows downtime in English format ("2 min", "1 hour 30 min", "2 days 5 hours")
+- **Data Flow**: Both local (3555) and cloud (Railway) dashboards display real-time downtime data
+
 ## 🏗️ System Architecture
 
 ```
@@ -97,6 +106,24 @@ The MTConnect system is a comprehensive solution for collecting, processing, and
 - `GET /api/machines` - List of all machines with data
 - `GET /dashboard-new.html` - Web interface
 
+**🚨 CRITICAL ARCHITECTURE DETAILS:**
+
+**Downtime Calculation Architecture:**
+- **FANUC machines** get downtime from `shdrManager.getMachineCycleTime(machineId)` 
+- **ADAM machines** get downtime from `adamReader.getCycleTimeData(machineId)`
+- **NEVER mix them!** Each machine type has its own CycleTimeCalculator instance
+
+**Data Flow for Downtime:**
+```
+FANUC: SHDR Client → CycleTimeCalculator → SHDR Manager → API Response
+ADAM:  AdamReader → CycleTimeCalculator → Direct API Response
+```
+
+**Environment Variables:**
+- `CLOUD_API_URL`: Where to send data (default: Railway production)
+- `EDGE_GATEWAY_ID`: Unique identifier for this gateway
+- **Hot-reload**: Changes to `src/main.ts` apply immediately without restart
+
 ### 3. ☁️ Cloud API (Railway)
 
 **Technologies:** NestJS, TypeScript, MongoDB
@@ -161,6 +188,56 @@ The MTConnect system is a comprehensive solution for collecting, processing, and
 - Execution status (ACTIVE/STOPPED/READY)
 - Cycle time
 - Last update timestamp
+
+## 🧪 Testing & Deployment
+
+### Local Testing Workflow
+
+**1. Test Dashboard Changes Locally (Port 3001):**
+```powershell
+# Terminal 1: Start local Cloud API
+cd apps/cloud-api
+$env:PORT='3001'
+npm run start:dev
+
+# Terminal 2: Start Edge Gateway with local Cloud API
+$env:CLOUD_API_URL="http://localhost:3001"
+npx ts-node src/main.ts
+
+# Test: http://localhost:3001/dashboard-new.html
+```
+
+**2. Test Production Setup (Port 3555):**
+```powershell
+# Single terminal: Edge Gateway with Railway (default)
+npx ts-node src/main.ts
+# Test: http://localhost:3555/dashboard-new.html
+```
+
+**3. Deploy to Railway:**
+```bash
+git add .
+git commit -m "feat: add FANUC downtime display"
+git push origin main
+# Railway auto-deploys from main branch
+```
+
+### 🚨 DEPLOYMENT NOTES
+
+**What needs deployment:**
+- `apps/cloud-api/public/dashboard-new.html` - Dashboard UI changes
+- `apps/cloud-api/src/` - Cloud API changes (if any)
+
+**What works immediately:**
+- `src/main.ts` - Edge Gateway changes (hot-reload)
+- Local dashboards (3555, 3001)
+
+**Testing Matrix:**
+| Component | Local (3555) | Local (3001) | Railway |
+|-----------|--------------|--------------|---------|
+| Edge Gateway | ✅ Immediate | ✅ Immediate | ✅ Immediate |
+| Dashboard HTML | ✅ Immediate | ✅ Immediate | ❌ Needs deploy |
+| API Backend | N/A | ✅ Immediate | ❌ Needs deploy |
 
 ## 🚀 Launch System
 

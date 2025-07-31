@@ -245,7 +245,7 @@ export class SHDRClient extends EventEmitter {
         return this.reconnectAttempts;
     }
 
-    getCycleTimeData(): { cycleTimeMs?: number; partsInCycle: number; confidence: string } {
+    getCycleTimeData(): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } {
         return this.cycleTimeCalculator.getCycleTime(this.config.machineId);
         }
 
@@ -300,7 +300,7 @@ export class SHDRManager extends EventEmitter {
         return this.dataStore.get(machineId);
     }
 
-    public getMachineCycleTime(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string } | undefined {
+    public getMachineCycleTime(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } | undefined {
         const client = this.clients.get(machineId);
         return client?.getCycleTimeData();
     }
