@@ -577,8 +577,8 @@
                     if (machine.type === 'FANUC') {
                         console.log('🔧 DEBUG: Создаем FANUC карточку для:', machine.name);
                         cardHtml = createMTConnectMachineCard(machine);
-                    } else if (machine.type === 'ADAM-6050') {
-                        console.log('📊 DEBUG: Создаем ADAM карточку для:', machine.name);
+                    } else if (machine.type === 'ADAM-6050' || machine.type === 'ADAM') {
+                        console.log('📊 DEBUG: Создаем ADAM карточку для:', machine.name, 'тип:', machine.type);
                         cardHtml = createADAMMachineCard(machine);
                     } else {
                         console.log('❌ DEBUG: Неизвестный тип машины:', machine.type, 'для:', machine.name);
