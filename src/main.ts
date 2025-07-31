@@ -302,7 +302,7 @@ async function sendDataToCloud() {
           executionStatus: getVal('execution') !== 'UNAVAILABLE' ? getVal('execution') : undefined,
           cycleTime: cycleTimeSeconds,
           cycleTimeConfidence: cycleTimeData?.confidence,
-          idleTimeMinutes: cycleTimeData?.idleTimeMinutes || undefined // 🕒 ВРЕМЯ ПРОСТОЯ ДЛЯ RAILWAY!
+          idleTimeMinutes: cycleTimeData?.idleTimeMinutes ?? undefined // 🕒 ВРЕМЯ ПРОСТОЯ ДЛЯ RAILWAY! (0 тоже отправляем)
         };
 
         // Отправляем только если есть реальные данные (БЕЗ await!)
