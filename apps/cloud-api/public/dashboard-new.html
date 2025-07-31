@@ -538,15 +538,23 @@
 
             // Проверяем данные - могут быть массивом или объектом
             let machinesArray = [];
+            console.log('🔍 DEBUG: data.machines тип:', typeof data.machines);
+            console.log('🔍 DEBUG: data.machines содержимое:', data.machines);
+            
             if (data.machines) {
                 if (Array.isArray(data.machines)) {
                     // Локальный формат: массив
                     machinesArray = data.machines;
+                    console.log('📋 DEBUG: Обнаружен массив, машин:', machinesArray.length);
                 } else if (typeof data.machines === 'object') {
                     // Облачный формат: объект, преобразуем в массив
                     machinesArray = Object.values(data.machines);
+                    console.log('📦 DEBUG: Объект преобразован в массив, машин:', machinesArray.length);
+                    console.log('📦 DEBUG: Первая машина:', machinesArray[0]);
                 }
             }
+            
+            console.log('🎯 DEBUG: Итоговый массив машин:', machinesArray.length);
 
             if (machinesArray.length > 0) {
                 // Сортируем все машины по алфавиту (по имени машины)
@@ -556,19 +564,30 @@
                     return nameA.localeCompare(nameB);
                 });
                 
-                sortedMachines.forEach(machine => {
+                sortedMachines.forEach((machine, index) => {
+                    console.log(`🤖 DEBUG: Машина ${index + 1}:`, machine.name || machine.id, 'тип:', machine.type);
                     let cardHtml = '';
                     if (machine.type === 'FANUC') {
+                        console.log('🔧 DEBUG: Создаем FANUC карточку для:', machine.name);
                         cardHtml = createMTConnectMachineCard(machine);
-                    } else if (machine.type === 'ADAM-6050') { // ✅ ИСПРАВЛЕНО
+                    } else if (machine.type === 'ADAM-6050') {
+                        console.log('📊 DEBUG: Создаем ADAM карточку для:', machine.name);
                         cardHtml = createADAMMachineCard(machine);
+                    } else {
+                        console.log('❌ DEBUG: Неизвестный тип машины:', machine.type, 'для:', machine.name);
                     }
+                    
                     if (cardHtml) {
+                        console.log('✅ DEBUG: Карточка создана, добавляем в DOM');
                         machinesContainer.innerHTML += cardHtml;
+                    } else {
+                        console.log('❌ DEBUG: Карточка НЕ создана!');
                     }
                 });
                 document.getElementById('grid-title').textContent = `All Machines (${sortedMachines.length})`;
             } else {
+                console.log('❌ DEBUG: Машин НЕТ! machinesArray.length =', machinesArray.length);
+                console.log('❌ DEBUG: Исходные data.machines:', data.machines);
                 machinesContainer.innerHTML = '<p class="loading">No machine data available.</p>';
                  document.getElementById('grid-title').textContent = 'All Machines';
             }
