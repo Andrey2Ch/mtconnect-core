@@ -62,6 +62,7 @@ let DashboardApiController = DashboardApiController_1 = class DashboardApiContro
                         execution: doc.data.executionStatus || 'N/A',
                         cycleTime: doc.data.cycleTime ? doc.data.cycleTime.toFixed(2) : 'N/A',
                         cycleConfidence: doc.data.customData?.cycleConfidence || 'N/A',
+                        idleTimeMinutes: doc.data.idleTimeMinutes || 0,
                         source: 'SHDR (Direct)',
                         lastUpdate: doc.timestamp
                     });
@@ -74,6 +75,7 @@ let DashboardApiController = DashboardApiController_1 = class DashboardApiContro
                         count: doc.data.partCount || 'N/A',
                         cycleTime: doc.data.cycleTime ? doc.data.cycleTime.toFixed(2) : 'N/A',
                         confidence: doc.data.customData?.cycleConfidence || 'N/A',
+                        idleTimeMinutes: doc.data.idleTimeMinutes || 0,
                         status: 'active',
                         category: 'adam',
                         lastUpdate: doc.timestamp

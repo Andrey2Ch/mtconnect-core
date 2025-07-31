@@ -66,6 +66,7 @@ let MachineDataIngestController = MachineDataIngestController_1 = class MachineD
                     executionStatus: executionStatus,
                     availability: payload.data.availability,
                     adamData: payload.data.adamData,
+                    idleTimeMinutes: payload.data.idleTimeMinutes || 0,
                     customData: {
                         triggerReason: payload.triggerReason,
                         originalDataType: payload.dataType,
@@ -125,6 +126,7 @@ let MachineDataIngestController = MachineDataIngestController_1 = class MachineD
                         executionStatus: executionStatus,
                         availability: payload.data.availability,
                         adamData: payload.data.adamData,
+                        idleTimeMinutes: payload.data.idleTimeMinutes || 0,
                         customData: {
                             triggerReason: payload.triggerReason,
                             originalDataType: payload.dataType,
