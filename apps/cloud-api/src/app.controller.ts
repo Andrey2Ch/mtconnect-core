@@ -45,6 +45,10 @@ export class AppController {
       const adamMachines = [];
 
       latestData.forEach(item => {
+        // 🔍 ОТЛАДКА: проверяем idleTimeMinutes из MongoDB
+        console.log(`🔍 DEBUG ${item.latest.metadata.machineId}: idleTimeMinutes из MongoDB = ${item.latest.data?.idleTimeMinutes}`);
+        console.log(`🔍 DEBUG ${item.latest.metadata.machineId}: full data =`, JSON.stringify(item.latest.data, null, 2));
+        
         const machine = {
           id: item.latest.metadata.machineId,
           name: item.latest.metadata.machineName,
