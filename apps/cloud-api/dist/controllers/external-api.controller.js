@@ -29,8 +29,7 @@ let ExternalApiController = class ExternalApiController {
             const dataArray = Array.isArray(payload) ? payload : [payload];
             this.logger.log(`📡 Получены данные от Edge Gateway: ${dataArray.length} записей`);
             dataArray.forEach((item) => {
-                this.logger.log(`🔧 ${item.metadata.machineId}: partCount=${item.data.partCount}, program=${item.data.program}, status=${item.data.executionStatus}, idleTimeMinutes=${item.data.idleTimeMinutes}`);
-                this.logger.log(`📊 ${item.metadata.machineId} FULL DATA:`, JSON.stringify(item.data));
+                this.logger.log(`📡 EDGE->CLOUD ${item.metadata.machineId}: parts=${item.data.partCount}, status=${item.data.executionStatus}, idle=${item.data.idleTimeMinutes}мин`);
             });
             await Promise.all(dataArray.map(async (item) => {
                 const machineId = item.metadata.machineId;

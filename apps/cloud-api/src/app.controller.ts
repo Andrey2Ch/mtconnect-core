@@ -47,9 +47,11 @@ export class AppController {
       latestData.forEach(item => {
         const machineId = item.latest.metadata.machineId;
         const rawPartCount = item.latest.data?.partCount || 0;
+        const idleTime = item.latest.data?.idleTimeMinutes || 0;
+        const status = item.latest.data?.executionStatus || 'UNAVAILABLE';
         
-        // 🔍 Простое отображение данных (производственные счетчики будут добавлены позже)
-        console.log(`🔍 DEBUG ${machineId}: счетчик=${rawPartCount}, простой=${item.latest.data?.idleTimeMinutes || 0}мин`);
+        // 🔍 DEBUG: данные для дашборда
+        console.log(`🎯 DASHBOARD ${machineId}: parts=${rawPartCount}, status=${status}, idle=${idleTime}мин`);
         
         const machine = {
           id: machineId,
@@ -59,7 +61,7 @@ export class AppController {
           lastUpdate: item.latest.timestamp,
           data: item.latest.data ? {
             ...item.latest.data,
-            idleTimeMinutes: item.latest.data.idleTimeMinutes || 0  // 🕒 Время простоя из данных
+            idleTimeMinutes: idleTime  // 🕒 Время простоя
           } : {
             partCount: 0,
             program: 'N/A',

@@ -427,6 +427,11 @@
             if (!totalMinutes || totalMinutes === 0) return '';
             
             totalMinutes = Math.round(totalMinutes);
+            
+            // 🔍 DEBUG: форматирование времени
+            if (totalMinutes >= 60) {
+                console.log(`🕐 FORMAT TIME: ${totalMinutes}мин → форматируем`);
+            }
 
             if (totalMinutes < 60) return `${totalMinutes} min`;
             
@@ -441,12 +446,21 @@
             }
             if (hours > 0) {
                 result += `${hours} hour${hours > 1 ? 's' : ''} `;
-            }
-            if (minutes > 0) {
+                // Всегда показываем минуты когда есть часы (включая 0 min)
+                result += `${minutes} min`;
+            } else if (minutes > 0) {
+                // Показываем только минуты если нет часов
                 result += `${minutes} min`;
             }
 
-            return result.trim();
+            const formatted = result.trim();
+            
+            // 🔍 DEBUG: результат форматирования
+            if (totalMinutes >= 60) {
+                console.log(`🕐 FORMAT RESULT: ${totalMinutes}мин → "${formatted}"`);
+            }
+            
+            return formatted;
         }
 
         function createADAMMachineCard(machine) {
@@ -527,6 +541,11 @@
         function updateDashboard(data) {
             console.log('🔄 Обновляем дашборд с данными:', data);
             
+            // 🔍 DEBUG: проверяем время простоя в полученных данных
+            if (data.machines) {
+                console.log(`🔍 IDLE TIME CHECK: получены данные для ${Array.isArray(data.machines) ? data.machines.length : 'object'} машин`);
+            }
+            
             // Обновляем сводку
             document.getElementById('totalMachines').textContent = data.summary.total;
             document.getElementById('mtconnectOnline').textContent = `${data.summary.mtconnect.online}/${data.summary.mtconnect.total}`;
@@ -572,7 +591,8 @@
                 });
                 
                 sortedMachines.forEach((machine, index) => {
-                    console.log(`🤖 DEBUG: Машина ${index + 1}:`, machine.name || machine.id, 'тип:', machine.type);
+                    const idleTime = machine.data?.idleTimeMinutes || 0;
+                    console.log(`🤖 DEBUG: Машина ${index + 1}: ${machine.name || machine.id}, тип=${machine.type}, idle=${idleTime}мин, статус=${machine.data?.executionStatus}`);
                     let cardHtml = '';
                     if (machine.type === 'FANUC') {
                         console.log('🔧 DEBUG: Создаем FANUC карточку для:', machine.name);

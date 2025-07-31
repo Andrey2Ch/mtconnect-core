@@ -99,7 +99,10 @@ export class MachineStatesCacheService implements OnModuleInit {
     try {
       const now = new Date().toISOString();
       
-      await this.machineStateModel.findOneAndUpdate(
+      // 🔍 DEBUG: входящие данные
+      this.logger.log(`🔍 CACHE UPDATE ${machineId}: idleTime=${data.idleTimeMinutes}мин, lastPart=${data.lastPartCount}, active=${data.lastActiveTime ? 'YES' : 'NO'}`);
+      
+      const result = await this.machineStateModel.findOneAndUpdate(
         { machineId },
         {
           machineId,
@@ -116,9 +119,9 @@ export class MachineStatesCacheService implements OnModuleInit {
         }
       ).exec();
       
-      console.log(`💾 ${machineId}: состояние сохранено в MongoDB`);
+      this.logger.log(`✅ CACHE SAVED ${machineId}: idleTime=${result.idleTimeMinutes}мин, parts=${result.lastPartCount}, base=${result.basePartCount}`);
     } catch (error) {
-      console.error(`❌ Ошибка сохранения состояния ${machineId}:`, error);
+      this.logger.error(`❌ Ошибка сохранения состояния ${machineId}:`, error);
     }
   }
 

@@ -38,10 +38,9 @@ export class ExternalApiController {
       
       this.logger.log(`📡 Получены данные от Edge Gateway: ${dataArray.length} записей`);
       
-      // Логируем каждую запись для отладки
+      // 🔍 DEBUG: входящие данные от Edge Gateway
       dataArray.forEach((item) => {
-        this.logger.log(`🔧 ${item.metadata.machineId}: partCount=${item.data.partCount}, program=${item.data.program}, status=${item.data.executionStatus}, idleTimeMinutes=${item.data.idleTimeMinutes}`);
-        this.logger.log(`📊 ${item.metadata.machineId} FULL DATA:`, JSON.stringify(item.data));
+        this.logger.log(`📡 EDGE->CLOUD ${item.metadata.machineId}: parts=${item.data.partCount}, status=${item.data.executionStatus}, idle=${item.data.idleTimeMinutes}мин`);
       });
 
       // 💾 Обновляем кэш состояний машин напрямую
