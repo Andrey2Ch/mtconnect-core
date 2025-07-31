@@ -45,21 +45,32 @@ export class AppController {
       const adamMachines = [];
 
       latestData.forEach(item => {
-        // 🔍 ОТЛАДКА: проверяем idleTimeMinutes из MongoDB
-        console.log(`🔍 DEBUG ${item.latest.metadata.machineId}: idleTimeMinutes из MongoDB = ${item.latest.data?.idleTimeMinutes}`);
-        console.log(`🔍 DEBUG ${item.latest.metadata.machineId}: full data =`, JSON.stringify(item.latest.data, null, 2));
+        const machineId = item.latest.metadata.machineId;
+        const rawPartCount = item.latest.data?.partCount || 0;
+        
+        // 🔢 Получаем производственный счетчик вместо сырого
+        const productionPartCount = this.appService.getProductionPartCount(machineId, rawPartCount);
+        
+        // 💾 Получаем восстановленное время простоя из кэша
+        const machineState = this.appService.getMachineState(machineId);
+        const restoredIdleTime = machineState?.idleTimeMinutes || item.latest.data?.idleTimeMinutes || 0;
+        
+        console.log(`🔍 DEBUG ${machineId}: сырой счетчик=${rawPartCount}, производственный=${productionPartCount}, простой=${restoredIdleTime}мин`);
         
         const machine = {
-          id: item.latest.metadata.machineId,
+          id: machineId,
           name: item.latest.metadata.machineName,
           type: item.latest.metadata.machineType,
           status: 'online',
           lastUpdate: item.latest.timestamp,
           data: item.latest.data ? {
             ...item.latest.data,
-            idleTimeMinutes: item.latest.data.idleTimeMinutes || 0  // 🕒 ВРЕМЯ ПРОСТОЯ!
+            partCount: productionPartCount,  // 🔢 ПРОИЗВОДСТВЕННЫЙ счетчик вместо сырого!
+            rawPartCount: rawPartCount,      // 🔍 Сырой счетчик для отладки
+            idleTimeMinutes: restoredIdleTime // 🕒 ВОССТАНОВЛЕННОЕ время простоя!
           } : {
             partCount: 0,
+            rawPartCount: 0,
             program: 'N/A',
             executionStatus: 'UNAVAILABLE',
             cycleTime: 0,

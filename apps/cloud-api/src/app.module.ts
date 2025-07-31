@@ -4,6 +4,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ExternalApiController } from './controllers/external-api.controller';
 import { MachineData, MachineDataSchema } from './schemas/machine-data.schema';
+import { MachineState, MachineStateSchema } from './schemas/machine-state.schema';
+import { MachineStatesCacheService } from './services/machine-states-cache.service';
 
 // Cloud API НЕ читает SHDR напрямую! 
 // Только принимает REST данные от Edge Gateway
@@ -15,7 +17,8 @@ import { MachineData, MachineDataSchema } from './schemas/machine-data.schema';
     
     // MongoDB схемы
     MongooseModule.forFeature([
-      { name: MachineData.name, schema: MachineDataSchema }
+      { name: MachineData.name, schema: MachineDataSchema },
+      { name: MachineState.name, schema: MachineStateSchema }
     ])
   ],
   controllers: [
@@ -23,7 +26,8 @@ import { MachineData, MachineDataSchema } from './schemas/machine-data.schema';
     ExternalApiController
   ],
   providers: [
-    AppService
+    AppService,
+    MachineStatesCacheService
   ],
 })
 export class AppModule {}

@@ -2,6 +2,7 @@ import { Controller, Post, Body, Logger, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { MachineData, MachineDataDocument } from '../schemas/machine-data.schema';
+import { MachineStatesCacheService } from '../services/machine-states-cache.service';
 
 interface MachineDataPayload {
   timestamp: string;
@@ -26,7 +27,9 @@ export class ExternalApiController {
   private readonly logger = new Logger('ExternalAPI');
   
   constructor(
-    @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>
+    @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>,
+    private machineStatesCacheService: MachineStatesCacheService,
+    private appService: any  // Импорт AppService создает циклическую зависимость, используем any
   ) {}
 
   @Post('/data')
@@ -40,6 +43,22 @@ export class ExternalApiController {
       dataArray.forEach((item) => {
         this.logger.log(`🔧 ${item.metadata.machineId}: partCount=${item.data.partCount}, program=${item.data.program}, status=${item.data.executionStatus}, idleTimeMinutes=${item.data.idleTimeMinutes}`);
         this.logger.log(`📊 ${item.metadata.machineId} FULL DATA:`, JSON.stringify(item.data));
+      });
+
+      // 💾 Обновляем кэш состояний машин через AppService
+      dataArray.forEach((item) => {
+        const machineId = item.metadata.machineId;
+        const currentPartCount = item.data.partCount || 0;
+        const isActive = item.data.executionStatus === 'ACTIVE';
+        
+        // Обновляем производственный счетчик (это также обновит кэш)
+        this.appService.getProductionPartCount(machineId, currentPartCount);
+        
+        // Обновляем время простоя в кэше
+        this.appService.updateMachineState(machineId, {
+          idleTimeMinutes: item.data.idleTimeMinutes || 0,
+          lastActiveTime: isActive ? item.timestamp : undefined
+        });
       });
 
       // Сохраняем в MongoDB
