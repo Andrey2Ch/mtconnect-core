@@ -469,29 +469,30 @@
         }
 
         // 🕒 ФУНКЦИЯ ФОРМАТИРОВАНИЯ ВРЕМЕНИ ПРОСТОЯ (English format)
-        function formatIdleTime(minutes) {
-            if (minutes === 0) return '';
-            if (minutes < 60) return `${minutes} min`;
+        function formatIdleTime(totalMinutes) {
+            if (totalMinutes === 0) return '';
             
-            const hours = Math.floor(minutes / 60);
-            const remainingMinutes = minutes % 60;
+            totalMinutes = Math.round(totalMinutes);
+
+            if (totalMinutes < 60) return `${totalMinutes} min`;
             
-            if (hours < 24) {
-                if (remainingMinutes > 0) {
-                    return `${hours} hour${hours !== 1 ? 's' : ''} ${remainingMinutes} min`;
-                } else {
-                    return `${hours} hour${hours !== 1 ? 's' : ''}`;
-                }
+            const days = Math.floor(totalMinutes / 1440);
+            const remainingMinutesAfterDays = totalMinutes % 1440;
+            const hours = Math.floor(remainingMinutesAfterDays / 60);
+            const minutes = remainingMinutesAfterDays % 60;
+
+            let result = '';
+            if (days > 0) {
+                result += `${days} day${days > 1 ? 's' : ''} `;
             }
-            
-            const days = Math.floor(hours / 24);
-            const remainingHours = hours % 24;
-            
-            if (remainingHours > 0) {
-                return `${days} day${days !== 1 ? 's' : ''} ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
-            } else {
-                return `${days} day${days !== 1 ? 's' : ''}`;
+            if (hours > 0) {
+                result += `${hours} hour${hours > 1 ? 's' : ''} `;
             }
+            if (minutes > 0) {
+                result += `${minutes} min`;
+            }
+
+            return result.trim();
         }
 
         function createADAMMachineCard(machine) {
