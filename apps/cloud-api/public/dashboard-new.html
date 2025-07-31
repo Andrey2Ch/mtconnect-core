@@ -98,38 +98,37 @@
 
         /* FANUC машины - полосы СПРАВА */
         .machine-card.status-active:not(.adam-specific) {
-            border-right: 5px solid #2ecc71;
+            border-right: 15px solid #2ecc71;
         }
 
         .machine-card.status-ready:not(.adam-specific) {
-            border-right: 5px solid #f1c40f;
+            border-right: 15px solid #f1c40f;
         }
 
         .machine-card.status-stopped:not(.adam-specific),
         .machine-card.status-interrupted:not(.adam-specific) {
-            border-right: 5px solid #e67e22;
+            border-right: 15px solid #e67e22;
         }
 
         .machine-card.status-offline:not(.adam-specific) {
-            border-right: 5px solid #e74c3c;
+            border-right: 15px solid #e74c3c;
         }
 
-        /* ADAM машины - полосы СЛЕВА + фон */
+        /* ADAM машины - полосы СЛЕВА + одинаковый белый фон */
         .machine-card.adam-specific {
-            background: #fff8dc;
-            border-left: 5px solid #f39c12;
+            background: white;
         }
 
         .machine-card.adam-specific.status-active {
-            border-left: 5px solid #2ecc71;
+            border-left: 15px solid #2ecc71;
         }
 
         .machine-card.adam-specific.status-ready {
-            border-left: 5px solid #f1c40f;
+            border-left: 15px solid #f1c40f;
         }
 
         .machine-card.adam-specific.status-offline {
-            border-left: 5px solid #e74c3c;
+            border-left: 15px solid #e74c3c;
         }
 
         /* 🕒 СТИЛИ ДЛЯ ВРЕМЕНИ ПРОСТОЯ */
@@ -296,7 +295,7 @@
     <div class="dashboard">
         <div class="header">
             <h1>🏭 MTConnect Cloud Dashboard</h1>
-            <p>Мониторинг промышленных станков в реальном времени</p>
+            <p>Real-time industrial machine monitoring</p>
         </div>
 
         <div class="api-info">
@@ -305,29 +304,29 @@
 
         <div class="summary">
             <div class="summary-card">
-                <h3>Всего машин</h3>
+                <h3>Total Machines</h3>
                 <div class="number" id="totalMachines">-</div>
                 <div class="label">MTConnect + ADAM</div>
             </div>
             <div class="summary-card">
                 <h3>MTConnect</h3>
                 <div class="number" id="mtconnectOnline">-</div>
-                <div class="label">Станков онлайн</div>
+                <div class="label">CNC Online</div>
             </div>
             <div class="summary-card">
                 <h3>ADAM-6050</h3>
                 <div class="number" id="adamOnline">-</div>
-                <div class="label">Счетчиков онлайн</div>
+                <div class="label">Counters Online</div>
             </div>
         </div>
 
         <div id="all-machines-section" class="machines-section">
-            <h2 id="grid-title">Все машины</h2>
+            <h2 id="grid-title">All Machines</h2>
             <div id="machines-grid" class="machines-grid"></div>
         </div>
 
         <div class="last-update">
-            <p>Последнее обновление: <span id="lastUpdate">-</span></p>
+            <p>Last Update: <span id="lastUpdate">-</span></p>
         </div>
     </div>
 
@@ -363,38 +362,38 @@
                 switch(executionStatus) {
                     case 'ACTIVE':
                         statusIcon = '🟢';
-                        statusText = 'РАБОТАЕТ';
+                        statusText = 'WORKING';
                         statusClass = 'status-active';
                         break;
                     case 'READY':
                         statusIcon = '🟡';
-                        statusText = 'ГОТОВ';
+                        statusText = 'READY';
                         statusClass = 'status-ready';
                         break;
                     case 'STOPPED':
                         statusIcon = '🟠';
-                        statusText = 'ОСТАНОВЛЕН';
+                        statusText = 'STOPPED';
                         statusClass = 'status-stopped';
                         break;
                     case 'INTERRUPTED':
                         statusIcon = '🟠';
-                        statusText = 'ПРЕРВАН';
+                        statusText = 'INTERRUPTED';
                         statusClass = 'status-interrupted';
                         break;
                     default:
                         statusIcon = '🔴';
-                        statusText = 'ОФЛАЙН';
+                        statusText = 'OFFLINE';
                         statusClass = 'status-offline';
                 }
             } else {
                 // Fallback на connectionStatus (для порта 3555)
                 if (isConnected) {
                     statusIcon = '🟢';
-                    statusText = 'ОНЛАЙН';
+                                            statusText = 'ONLINE';
                     statusClass = 'status-active';
                 } else {
                     statusIcon = '🔴';
-                    statusText = 'ОФЛАЙН';
+                    statusText = 'OFFLINE';
                     statusClass = 'status-offline';
                 }
             }
@@ -410,13 +409,13 @@
                             🔢 ${partCountDisplay}
                         </div>
                         <div class="machine-detail">
-                            <strong>🔧 Программа:</strong> ${programDisplay}
+                            <strong>🔧 Program:</strong> ${programDisplay}
                         </div>
                         <div class="machine-detail">
-                            <strong>⏱️ Цикл:</strong> ${machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A' ? machine.data.cycleTime + ' сек/дет' : 'N/A'}
+                            <strong>⏱️ Cycle:</strong> ${machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A' ? machine.data.cycleTime + ' sec/part' : 'N/A'}
                         </div>
                         ${`<div class="machine-detail idle-time">
-                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${(machine.data && machine.data.idleTimeMinutes > 0) ? formatIdleTime(machine.data.idleTimeMinutes) : '0 min'}</span>
+                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${(machine.data && machine.data.idleTimeMinutes > 0) ? formatIdleTime(machine.data.idleTimeMinutes) : (executionStatus === 'ACTIVE' ? '--' : '0 min')}</span>
                         </div>`}
                     </div>
                 </div>
@@ -453,7 +452,7 @@
         function createADAMMachineCard(machine) {
             // Время цикла - показываем как есть
             const cycleTimeDisplay = machine.data && machine.data.cycleTime !== undefined && machine.data.cycleTime !== 'N/A'
-                ? `${machine.data.cycleTime} сек/дет` 
+                ? `${machine.data.cycleTime} sec/part` 
                 : 'N/A';
             
             // 🧠 УМНАЯ ЛОГИКА СТАТУСА ДЛЯ ADAM на основе executionStatus
@@ -467,17 +466,17 @@
                 switch(executionStatus) {
                     case 'ACTIVE':
                         statusIcon = '🟢';
-                        statusText = 'АКТИВЕН';
+                        statusText = 'ACTIVE';
                         statusClass = 'status-active';
                         break;
                     case 'READY':
                         statusIcon = '🟡';
-                        statusText = 'ПРОСТОЙ';  // ГОТОВ = ПРОСТОЙ для ADAM
+                        statusText = 'IDLE';  // READY = IDLE for ADAM
                         statusClass = 'status-ready';
                         break;
                     default:
                         statusIcon = '🔴';
-                        statusText = 'ОФЛАЙН';
+                        statusText = 'OFFLINE';
                         statusClass = 'status-offline';
                 }
             } else {
@@ -485,15 +484,15 @@
                 const hasData = machine.data && machine.data.partCount !== undefined && machine.data.partCount > 0;
                 if (hasData) {
                     statusIcon = '🟢';
-                    statusText = 'АКТИВЕН';
+                    statusText = 'ACTIVE';
                     statusClass = 'status-active';
                 } else if (isConnected) {
                     statusIcon = '🟡';
-                    statusText = 'ПОДКЛЮЧЕН';
+                                            statusText = 'CONNECTED';
                     statusClass = 'status-ready';
                 } else {
                     statusIcon = '🔴';
-                    statusText = 'ОФЛАЙН';
+                    statusText = 'OFFLINE';
                     statusClass = 'status-offline';
                 }
             }
@@ -512,13 +511,13 @@
                             🔢 ${machine.data && machine.data.partCount !== undefined ? machine.data.partCount.toLocaleString() : 'N/A'}
                         </div>
                         <div class="machine-detail">
-                            <strong>🔧 Программа:</strong> N/A
+                            <strong>🔧 Program:</strong> N/A
                         </div>
                         <div class="machine-detail">
-                            <strong>⏱️ Цикл:</strong> ${cycleTimeDisplay}
+                            <strong>⏱️ Cycle:</strong> ${cycleTimeDisplay}
                         </div>
                         ${`<div class="machine-detail idle-time">
-                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${(machine.data && machine.data.idleTimeMinutes > 0) ? formatIdleTime(machine.data.idleTimeMinutes) : '0 min'}</span>
+                            <strong>⏰ Downtime:</strong> <span class="idle-duration">${(machine.data && machine.data.idleTimeMinutes > 0) ? formatIdleTime(machine.data.idleTimeMinutes) : (executionStatus === 'ACTIVE' ? '--' : '0 min')}</span>
                         </div>`}
                     </div>
                 </div>
@@ -537,9 +536,21 @@
             const machinesContainer = document.getElementById('machines-grid');
             machinesContainer.innerHTML = ''; // Очищаем старые карточки
 
-            if (data.machines && data.machines.length > 0) {
+            // Проверяем данные - могут быть массивом или объектом
+            let machinesArray = [];
+            if (data.machines) {
+                if (Array.isArray(data.machines)) {
+                    // Локальный формат: массив
+                    machinesArray = data.machines;
+                } else if (typeof data.machines === 'object') {
+                    // Облачный формат: объект, преобразуем в массив
+                    machinesArray = Object.values(data.machines);
+                }
+            }
+
+            if (machinesArray.length > 0) {
                 // Сортируем все машины по алфавиту (по имени машины)
-                const sortedMachines = data.machines.sort((a, b) => {
+                const sortedMachines = machinesArray.sort((a, b) => {
                     const nameA = (a.name || a.id || '').toLowerCase();
                     const nameB = (b.name || b.id || '').toLowerCase();
                     return nameA.localeCompare(nameB);
@@ -556,10 +567,10 @@
                         machinesContainer.innerHTML += cardHtml;
                     }
                 });
-                document.getElementById('grid-title').textContent = `Все машины (${sortedMachines.length})`;
+                document.getElementById('grid-title').textContent = `All Machines (${sortedMachines.length})`;
             } else {
-                machinesContainer.innerHTML = '<p class="loading">Нет данных о машинах.</p>';
-                 document.getElementById('grid-title').textContent = 'Все машины';
+                machinesContainer.innerHTML = '<p class="loading">No machine data available.</p>';
+                 document.getElementById('grid-title').textContent = 'All Machines';
             }
             
             // Обновляем время последнего обновления
