@@ -51,12 +51,16 @@ export class AppController {
           type: item.latest.metadata.machineType,
           status: 'online',
           lastUpdate: item.latest.timestamp,
-          data: item.latest.data || {
+          data: item.latest.data ? {
+            ...item.latest.data,
+            idleTimeMinutes: item.latest.data.idleTimeMinutes || 0  // 🕒 ВРЕМЯ ПРОСТОЯ!
+          } : {
             partCount: 0,
             program: 'N/A',
             executionStatus: 'UNAVAILABLE',
             cycleTime: 0,
-            cycleTimeConfidence: 'LOW'
+            cycleTimeConfidence: 'LOW',
+            idleTimeMinutes: 0
           }
         };
 
