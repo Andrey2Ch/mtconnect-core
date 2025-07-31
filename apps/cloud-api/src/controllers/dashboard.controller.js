@@ -126,6 +126,14 @@ let DashboardController = class DashboardController {
                 },
                 { $sort: { machineId: 1 } }
             ]);
+            
+            // 🔍 ОТЛАДКА: проверим что возвращает aggregation
+            this.logger.log(`🔍 Aggregation result count: ${machines.length}`, 'DashboardController');
+            if (machines.length > 0) {
+                this.logger.log(`🔍 First machine: ${JSON.stringify(machines[0])}`, 'DashboardController');
+                this.logger.log(`🔍 Has lastIdleTimeMinutes: ${machines[0].lastIdleTimeMinutes !== undefined}`, 'DashboardController');
+            }
+            
             return {
                 status: 'success',
                 count: machines.length,
