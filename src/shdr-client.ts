@@ -250,6 +250,14 @@ export class SHDRClient extends EventEmitter {
         }
 
     // Старые методы удалены - теперь используем CycleTimeCalculator
+
+    /**
+     * 💾 Устанавливает восстановленное время простоя из кэша
+     * @param restoredIdleMinutes - восстановленное время простоя в минутах
+     */
+    public setRestoredIdleTime(restoredIdleMinutes: number): void {
+        this.cycleTimeCalculator.setRestoredIdleTime(this.config.machineId, restoredIdleMinutes);
+    }
 }
 
 export class SHDRManager extends EventEmitter {
@@ -400,5 +408,27 @@ export class SHDRManager extends EventEmitter {
 
     private capitalizeFirst(str: string): string {
         return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    /**
+     * 💾 Устанавливает восстановленное время простоя для машины из кэша
+     * @param machineId - ID машины
+     * @param restoredIdleMinutes - восстановленное время простоя в минутах
+     */
+    public setRestoredIdleTime(machineId: string, restoredIdleMinutes: number): void {
+        const client = this.clients.get(machineId);
+        if (client) {
+            client.setRestoredIdleTime(restoredIdleMinutes);
+        }
+    }
+
+    /**
+     * 💾 Устанавливает восстановленное время простоя для всех машин из кэша
+     * @param restoredStates - Map с восстановленными состояниями машин
+     */
+    public setRestoredIdleTimesForAllMachines(restoredStates: Map<string, { idleTimeMinutes: number }>): void {
+        restoredStates.forEach((state, machineId) => {
+            this.setRestoredIdleTime(machineId, state.idleTimeMinutes);
+        });
     }
 } 

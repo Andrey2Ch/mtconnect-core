@@ -193,4 +193,23 @@ export class AdamReader {
   public getCycleTimeData(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } {
     return this.cycleTimeCalculator.getCycleTime(machineId);
   }
+
+  /**
+   * 💾 Устанавливает восстановленное время простоя для машины из кэша
+   * @param machineId - ID машины
+   * @param restoredIdleMinutes - восстановленное время простоя в минутах
+   */
+  public setRestoredIdleTime(machineId: string, restoredIdleMinutes: number): void {
+    this.cycleTimeCalculator.setRestoredIdleTime(machineId, restoredIdleMinutes);
+  }
+
+  /**
+   * 💾 Устанавливает восстановленное время простоя для всех ADAM машин из кэша
+   * @param restoredStates - Map с восстановленными состояниями машин
+   */
+  public setRestoredIdleTimesForAllMachines(restoredStates: Map<string, { idleTimeMinutes: number }>): void {
+    restoredStates.forEach((state, machineId) => {
+      this.setRestoredIdleTime(machineId, state.idleTimeMinutes);
+    });
+  }
 } 

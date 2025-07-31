@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import { SHDRManager } from './shdr-client';
 import { AdamReader } from './adam-reader';
 import { CloudApiClient } from './cloud-client';
+import { MachineStatesCache, MachineState } from './machine-states-cache';
 
 const app = express();
 const port = 3555; // Свободный порт для диагностики
@@ -42,6 +43,27 @@ const EDGE_GATEWAY_ID = process.env.EDGE_GATEWAY_ID || 'ANDREY-PC-edge-gateway';
 console.log(`🌐 Cloud API URL: ${CLOUD_API_URL}`);
 console.log(`🏭 Edge Gateway ID: ${EDGE_GATEWAY_ID}`);
 const cloudClient = new CloudApiClient(CLOUD_API_URL, EDGE_GATEWAY_ID);
+
+// 💾 Инициализация кэша состояний машин для восстановления времени простоя
+const machineStatesCache = new MachineStatesCache();
+const restoredStates = machineStatesCache.loadStates();
+console.log(`💾 Загружено состояний из кэша: ${restoredStates.size}`);
+
+// 💾 Передаем восстановленные данные в калькуляторы времени простоя
+const restoredStatesForCalculators = new Map<string, { idleTimeMinutes: number }>();
+restoredStates.forEach((state, machineId) => {
+  const restoredState = machineStatesCache.getRestoredState(machineId);
+  if (restoredState) {
+    restoredStatesForCalculators.set(machineId, { idleTimeMinutes: restoredState.idleTimeMinutes });
+    console.log(`💾 ${machineId}: будет восстановлено ${restoredState.idleTimeMinutes} мин простоя`);
+  }
+});
+
+// Передаем восстановленные данные в SHDR Manager (для FANUC машин)
+shdrManager.setRestoredIdleTimesForAllMachines(restoredStatesForCalculators);
+
+// Передаем восстановленные данные в ADAM Reader (для ADAM машин)
+adamReader.setRestoredIdleTimesForAllMachines(restoredStatesForCalculators);
 
 app.get('/api/machines', async (req, res) => {
   const mtconnectMachines = machines.map(machine => {
@@ -313,6 +335,7 @@ app.get('/api/v2/dashboard/summary', (req, res) => {
 async function sendDataToCloud() {
   try {
     const sendPromises: Promise<boolean>[] = [];
+    const currentStates = new Map<string, MachineState>();
 
     // FANUC машины через SHDR (ПАРАЛЛЕЛЬНО!)
     for (const machine of machines) {
@@ -333,6 +356,18 @@ async function sendDataToCloud() {
           cycleTimeConfidence: cycleTimeData?.confidence,
           idleTimeMinutes: cycleTimeData?.idleTimeMinutes ?? undefined // 🕒 ВРЕМЯ ПРОСТОЯ ДЛЯ RAILWAY!
         };
+
+        // 💾 Обновляем состояние машины в кэше
+        const isActive = data.executionStatus === 'ACTIVE' && cycleTimeData?.machineStatus === 'ACTIVE';
+        const lastActiveTime = isActive ? new Date().toISOString() : 
+          (restoredStates.get(machine.id)?.lastActiveTime || new Date().toISOString());
+        
+        currentStates.set(machine.id, {
+          machineId: machine.id,
+          idleTimeMinutes: data.idleTimeMinutes || 0,
+          lastActiveTime: lastActiveTime,
+          timestamp: new Date().toISOString()
+        });
 
         // Отправляем только если есть реальные данные (БЕЗ await!)
         if (data.partCount !== undefined || data.program !== undefined || data.executionStatus !== undefined) {
@@ -359,6 +394,18 @@ async function sendDataToCloud() {
           idleTimeMinutes: counter.idleTimeMinutes || 0 // 🕒 ВРЕМЯ ПРОСТОЯ В МИНУТАХ
         };
 
+        // 💾 Обновляем состояние ADAM машины в кэше
+        const isActive = counter.machineStatus === 'ACTIVE';
+        const lastActiveTime = isActive ? new Date().toISOString() : 
+          (restoredStates.get(counter.machineId)?.lastActiveTime || new Date().toISOString());
+        
+        currentStates.set(counter.machineId, {
+          machineId: counter.machineId,
+          idleTimeMinutes: counter.idleTimeMinutes || 0,
+          lastActiveTime: lastActiveTime,
+          timestamp: new Date().toISOString()
+        });
+
         const deviceInfo = adamDevices.find(d => d.id === counter.machineId);
         if (deviceInfo) {
           sendPromises.push(cloudClient.sendMachineData(counter.machineId, deviceInfo.name, 'ADAM', data));
@@ -378,6 +425,17 @@ async function sendDataToCloud() {
         console.log(`✅ Cloud API: все ${success} машин отправлены успешно`);
       }
     }
+
+    // 💾 Обновляем кэш состояний машин (без сохранения на диск - делается отдельно)
+    if (currentStates.size > 0) {
+      currentStates.forEach((state, machineId) => {
+        machineStatesCache.updateMachineState(machineId, {
+          idleTimeMinutes: state.idleTimeMinutes,
+          lastActiveTime: state.lastActiveTime
+        });
+      });
+    }
+
   } catch (error) {
     console.error(`❌ Ошибка отправки данных в Cloud API: ${error.message}`);
   }
@@ -386,6 +444,17 @@ async function sendDataToCloud() {
 // Запуск периодической отправки данных в Cloud API (каждые 10 секунд)
 setInterval(sendDataToCloud, 10000);
 console.log('☁️ Периодическая отправка данных в Cloud API: каждые 10 секунд');
+
+// 💾 Запуск периодического сохранения кэша состояний (каждые 30 секунд)
+setInterval(() => {
+  try {
+    const allStates = machineStatesCache.getAllStates();
+    machineStatesCache.saveStates(allStates);
+  } catch (error) {
+    console.error('❌ Ошибка сохранения кэша состояний:', error.message);
+  }
+}, 30000);
+console.log('💾 Периодическое сохранение кэша состояний: каждые 30 секунд');
 
 app.listen(port, () => {
   console.log(`✅ Edge Gateway запущен на http://localhost:${port}`);

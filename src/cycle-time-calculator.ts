@@ -14,6 +14,17 @@ interface CycleTimeHistory {
 
 export class CycleTimeCalculator {
   private histories: Map<string, CycleTimeHistory> = new Map();
+  private restoredIdleTimes: Map<string, number> = new Map(); // 💾 Восстановленное время простоя из кэша
+
+  /**
+   * Устанавливает восстановленное время простоя из кэша для машины
+   * @param machineId - ID машины
+   * @param restoredIdleMinutes - восстановленное время простоя в минутах
+   */
+  setRestoredIdleTime(machineId: string, restoredIdleMinutes: number): void {
+    this.restoredIdleTimes.set(machineId, restoredIdleMinutes);
+    console.log(`💾 ${machineId}: установлено восстановленное время простоя ${restoredIdleMinutes} мин`);
+  }
 
   updateCount(machineId: string, newCount: number): void {
     let history = this.histories.get(machineId);
@@ -55,19 +66,23 @@ export class CycleTimeCalculator {
   getCycleTime(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } {
     const history = this.histories.get(machineId);
     
+    // 💾 Получаем восстановленное время простоя из кэша в начале
+    const restoredIdleTime = this.restoredIdleTimes.get(machineId) || 0;
+    
     // 🕒 СЛУЧАЙ 1: Нет истории вообще (новая машина)
     if (!history || history.changes.length === 0) {
-      // Для машин без истории считаем что они стоят с момента запуска системы (примерно 10 минут)
+      // Для машин без истории считаем что они стоят с момента запуска системы + восстановленное время
       const systemUptimeMinutes = Math.min(Math.round(process.uptime() / 60), 60); // максимум 60 минут
+      const totalIdleMinutes = systemUptimeMinutes + restoredIdleTime;
       console.log(`🟡 ${machineId}: ПРОСТОЙ - нет данных о машине (новая)`);
-      console.log(`🕒 ${machineId}: idleTimeMinutes = ${systemUptimeMinutes} (система работает ${systemUptimeMinutes} мин)`);
+      console.log(`🕒 ${machineId}: idleTimeMinutes = ${totalIdleMinutes} (система: ${systemUptimeMinutes} + восстановленный: ${restoredIdleTime})`);
       return { 
         cycleTimeMs: undefined, 
         partsInCycle: 0,
         confidence: 'Нет данных',
         isAnomalous: true,
         machineStatus: 'IDLE',
-        idleTimeMinutes: systemUptimeMinutes // 🕒 ВРЕМЯ С ЗАПУСКА СИСТЕМЫ
+        idleTimeMinutes: totalIdleMinutes // 🕒 ВРЕМЯ С ЗАПУСКА СИСТЕМЫ + ВОССТАНОВЛЕННОЕ
       };
     }
     
@@ -75,10 +90,11 @@ export class CycleTimeCalculator {
     if (history.changes.length < 2) {
       const lastChange = history.changes[history.changes.length - 1];
       const timeSinceLastPart = Date.now() - lastChange.timestamp.getTime();
-      const idleTimeMinutes = Math.round(timeSinceLastPart / 60000);
+      const currentIdleMinutes = Math.round(timeSinceLastPart / 60000);
+      const totalIdleMinutes = currentIdleMinutes + restoredIdleTime;
       
       console.log(`🟡 ${machineId}: ПРОСТОЙ - недостаточно данных для расчета времени цикла`);
-      console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (недостаточно данных)`);
+      console.log(`🕒 ${machineId}: idleTimeMinutes = ${totalIdleMinutes} (текущий: ${currentIdleMinutes} + восстановленный: ${restoredIdleTime})`);
       
       return { 
         cycleTimeMs: undefined, 
@@ -86,7 +102,7 @@ export class CycleTimeCalculator {
         confidence: 'Недостаточно данных',
         isAnomalous: true,
         machineStatus: 'IDLE',
-        idleTimeMinutes: idleTimeMinutes
+        idleTimeMinutes: totalIdleMinutes
       };
     }
 
@@ -99,10 +115,11 @@ export class CycleTimeCalculator {
     // 🕒 СЛУЧАЙ 3: Нет изменений счетчика (машина не работает)
     if (totalParts <= 0 || totalTimeMs <= 0) {
       const timeSinceLastPart = Date.now() - last.timestamp.getTime();
-      const idleTimeMinutes = Math.round(timeSinceLastPart / 60000);
+      const currentIdleMinutes = Math.round(timeSinceLastPart / 60000);
+      const totalIdleMinutes = currentIdleMinutes + restoredIdleTime;
       
       console.log(`🟡 ${machineId}: ПРОСТОЙ - нет изменений счетчика`);
-      console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (нет изменений)`);
+      console.log(`🕒 ${machineId}: idleTimeMinutes = ${totalIdleMinutes} (текущий: ${currentIdleMinutes} + восстановленный: ${restoredIdleTime})`);
       
       return { 
         cycleTimeMs: undefined, 
@@ -110,7 +127,7 @@ export class CycleTimeCalculator {
         confidence: 'Нет изменений счетчика',
         isAnomalous: true,
         machineStatus: 'IDLE',
-        idleTimeMinutes: idleTimeMinutes
+        idleTimeMinutes: totalIdleMinutes
       };
     }
     
@@ -126,11 +143,12 @@ export class CycleTimeCalculator {
     
     if (isAnomalous && !isRecovered) {
       machineStatus = 'IDLE'; // Станок стоит (большое время цикла = простой)
-      // 🕒 Вычисляем время простоя для аномального цикла
+      // 🕒 Вычисляем время простоя для аномального цикла + восстановленное из кэша
       const timeSinceLastPart = Date.now() - last.timestamp.getTime();
-      idleTimeMinutes = Math.round(timeSinceLastPart / 60000);
+      const currentIdleMinutes = Math.round(timeSinceLastPart / 60000);
+      idleTimeMinutes = currentIdleMinutes + restoredIdleTime;
       console.log(`🟡 ${machineId}: ПРОСТОЙ обнаружен! Время цикла ${(avgCycleTimeMs/1000).toFixed(2)} сек/дет слишком большое`);
-      console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (аномальный цикл)`);
+      console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (текущий: ${currentIdleMinutes} + восстановленный: ${restoredIdleTime})`);
     } else if (isRecovered) {
       machineStatus = 'ACTIVE'; // Станок восстановился после простоя
       console.log(`🟢 ${machineId}: ВОССТАНОВЛЕНИЕ! Станок вернулся в работу после 3+ нормальных циклов`);
@@ -141,10 +159,11 @@ export class CycleTimeCalculator {
       
       if (timeSinceLastPart > maxIdleTime) {
         machineStatus = 'IDLE'; // Слишком долго нет новых деталей
-        // 🕒 Вычисляем время простоя для случая "нет движения"
-        idleTimeMinutes = Math.round(timeSinceLastPart / 60000);
+        // 🕒 Вычисляем время простоя для случая "нет движения" + восстановленное из кэша
+        const currentIdleMinutes = Math.round(timeSinceLastPart / 60000);
+        idleTimeMinutes = currentIdleMinutes + restoredIdleTime;
         console.log(`🟡 ${machineId}: ПРОСТОЙ - нет движения ${(timeSinceLastPart/60000).toFixed(1)} минут`);
-        console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (нет движения)`);
+        console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (текущий: ${currentIdleMinutes} + восстановленный: ${restoredIdleTime})`);
       }
     }
     
