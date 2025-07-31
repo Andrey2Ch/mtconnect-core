@@ -48,14 +48,8 @@ export class AppController {
         const machineId = item.latest.metadata.machineId;
         const rawPartCount = item.latest.data?.partCount || 0;
         
-        // 🔢 Получаем производственный счетчик вместо сырого
-        const productionPartCount = this.appService.getProductionPartCount(machineId, rawPartCount);
-        
-        // 💾 Получаем восстановленное время простоя из кэша
-        const machineState = this.appService.getMachineState(machineId);
-        const restoredIdleTime = machineState?.idleTimeMinutes || item.latest.data?.idleTimeMinutes || 0;
-        
-        console.log(`🔍 DEBUG ${machineId}: сырой счетчик=${rawPartCount}, производственный=${productionPartCount}, простой=${restoredIdleTime}мин`);
+        // 🔍 Простое отображение данных (производственные счетчики будут добавлены позже)
+        console.log(`🔍 DEBUG ${machineId}: счетчик=${rawPartCount}, простой=${item.latest.data?.idleTimeMinutes || 0}мин`);
         
         const machine = {
           id: machineId,
@@ -65,12 +59,9 @@ export class AppController {
           lastUpdate: item.latest.timestamp,
           data: item.latest.data ? {
             ...item.latest.data,
-            partCount: productionPartCount,  // 🔢 ПРОИЗВОДСТВЕННЫЙ счетчик вместо сырого!
-            rawPartCount: rawPartCount,      // 🔍 Сырой счетчик для отладки
-            idleTimeMinutes: restoredIdleTime // 🕒 ВОССТАНОВЛЕННОЕ время простоя!
+            idleTimeMinutes: item.latest.data.idleTimeMinutes || 0  // 🕒 Время простоя из данных
           } : {
             partCount: 0,
-            rawPartCount: 0,
             program: 'N/A',
             executionStatus: 'UNAVAILABLE',
             cycleTime: 0,

@@ -21,9 +21,8 @@ interface MachineDataPayload {
 export declare class ExternalApiController {
     private machineDataModel;
     private machineStatesCacheService;
-    private appService;
     private readonly logger;
-    constructor(machineDataModel: Model<MachineDataDocument>, machineStatesCacheService: MachineStatesCacheService, appService: any);
+    constructor(machineDataModel: Model<MachineDataDocument>, machineStatesCacheService: MachineStatesCacheService);
     receiveData(payload: MachineDataPayload | MachineDataPayload[]): Promise<{
         success: boolean;
         message: string;

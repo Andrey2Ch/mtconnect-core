@@ -19,10 +19,9 @@ const mongoose_2 = require("mongoose");
 const machine_data_schema_1 = require("../schemas/machine-data.schema");
 const machine_states_cache_service_1 = require("../services/machine-states-cache.service");
 let ExternalApiController = class ExternalApiController {
-    constructor(machineDataModel, machineStatesCacheService, appService) {
+    constructor(machineDataModel, machineStatesCacheService) {
         this.machineDataModel = machineDataModel;
         this.machineStatesCacheService = machineStatesCacheService;
-        this.appService = appService;
         this.logger = new common_1.Logger('ExternalAPI');
     }
     async receiveData(payload) {
@@ -33,16 +32,16 @@ let ExternalApiController = class ExternalApiController {
                 this.logger.log(`🔧 ${item.metadata.machineId}: partCount=${item.data.partCount}, program=${item.data.program}, status=${item.data.executionStatus}, idleTimeMinutes=${item.data.idleTimeMinutes}`);
                 this.logger.log(`📊 ${item.metadata.machineId} FULL DATA:`, JSON.stringify(item.data));
             });
-            dataArray.forEach((item) => {
+            await Promise.all(dataArray.map(async (item) => {
                 const machineId = item.metadata.machineId;
                 const currentPartCount = item.data.partCount || 0;
                 const isActive = item.data.executionStatus === 'ACTIVE';
-                this.appService.getProductionPartCount(machineId, currentPartCount);
-                this.appService.updateMachineState(machineId, {
+                await this.machineStatesCacheService.saveOrUpdateMachineState(machineId, {
                     idleTimeMinutes: item.data.idleTimeMinutes || 0,
-                    lastActiveTime: isActive ? item.timestamp : undefined
+                    lastActiveTime: isActive ? item.timestamp : undefined,
+                    lastPartCount: currentPartCount
                 });
-            });
+            }));
             const savedRecords = await this.machineDataModel.insertMany(dataArray);
             this.logger.log(`💾 Сохранено в MongoDB: ${savedRecords.length} записей`);
             return {
@@ -73,6 +72,6 @@ exports.ExternalApiController = ExternalApiController = __decorate([
     (0, common_1.Controller)('api/ext'),
     __param(0, (0, mongoose_1.InjectModel)(machine_data_schema_1.MachineData.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        machine_states_cache_service_1.MachineStatesCacheService, Object])
+        machine_states_cache_service_1.MachineStatesCacheService])
 ], ExternalApiController);
 //# sourceMappingURL=external-api.controller.js.map

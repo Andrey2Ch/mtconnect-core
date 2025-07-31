@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { MachineState, MachineStateDocument } from '../schemas/machine-state.schema';
@@ -16,10 +16,53 @@ export interface MachineStateData {
 }
 
 @Injectable()
-export class MachineStatesCacheService {
+export class MachineStatesCacheService implements OnModuleInit {
+  private readonly logger = new Logger('MachineStatesCacheService');
+  
   constructor(
     @InjectModel(MachineState.name) private machineStateModel: Model<MachineStateDocument>
   ) {}
+
+  async onModuleInit() {
+    this.logger.log('🚀 Инициализация кэша состояний машин...');
+    
+    // 💾 Восстановление пропущенного времени простоя при старте
+    await this.restoreMissedIdleTime();
+    
+    // 💾 Запуск периодического сохранения кэша (каждые 30 секунд)
+    setInterval(async () => {
+      // Периодическое сохранение не нужно, так как мы сохраняем сразу при получении данных
+    }, 30000);
+    
+    this.logger.log('✅ Кэш состояний машин готов к работе!');
+  }
+
+  /**
+   * 🕒 Восстанавливает пропущенное время простоя для всех машин при старте
+   */
+  private async restoreMissedIdleTime() {
+    try {
+      const allStates = await this.machineStateModel.find().exec();
+      
+      for (const state of allStates) {
+        const missedIdleTime = this.calculateMissedIdleTime(state.lastActiveTime);
+        if (missedIdleTime > 0) {
+          const newIdleTime = (state.idleTimeMinutes || 0) + missedIdleTime;
+          
+          await this.machineStateModel.findByIdAndUpdate(state._id, {
+            idleTimeMinutes: newIdleTime,
+            timestamp: new Date().toISOString()
+          }).exec();
+          
+          this.logger.log(`💾 ${state.machineId}: восстановлено ${missedIdleTime} мин пропущенного времени простоя (итого: ${newIdleTime} мин)`);
+        }
+      }
+      
+      this.logger.log(`💾 Обработано машин для восстановления времени простоя: ${allStates.length}`);
+    } catch (error) {
+      this.logger.error('❌ Ошибка восстановления времени простоя:', error);
+    }
+  }
 
   /**
    * 💾 Загружает все состояния машин из MongoDB при старте

@@ -1,110 +1,110 @@
 [
   {
     "machineId": "M_1_XD-20",
-    "idleTimeMinutes": 274,
+    "idleTimeMinutes": 280,
     "lastActiveTime": "2025-07-31T09:32:00.121Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "M_2_SR_26",
     "idleTimeMinutes": 0,
-    "lastActiveTime": "2025-07-31T14:06:40.182Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "lastActiveTime": "2025-07-31T14:12:40.447Z",
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "M_3_XD_38",
     "idleTimeMinutes": 0,
-    "lastActiveTime": "2025-07-31T14:06:40.185Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "lastActiveTime": "2025-07-31T14:12:40.448Z",
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "M_4_SR_10",
-    "idleTimeMinutes": 255,
+    "idleTimeMinutes": 243,
     "lastActiveTime": "2025-07-31T09:31:59.440Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "M_5_DT_26",
-    "idleTimeMinutes": 244,
+    "idleTimeMinutes": 250,
     "lastActiveTime": "2025-07-31T09:34:41.702Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "M_6_SR_21",
     "idleTimeMinutes": 0,
-    "lastActiveTime": "2025-07-31T14:06:40.194Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "lastActiveTime": "2025-07-31T14:12:40.450Z",
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "M_7_SR_23",
-    "idleTimeMinutes": 274,
+    "idleTimeMinutes": 280,
     "lastActiveTime": "2025-07-31T09:32:00.299Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "M_8_SR_25",
-    "idleTimeMinutes": 274,
+    "idleTimeMinutes": 280,
     "lastActiveTime": "2025-07-31T09:31:59.784Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "SR-22",
-    "idleTimeMinutes": 241,
+    "idleTimeMinutes": 247,
     "lastActiveTime": "2025-07-31T09:35:19.578Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "SB-16",
-    "idleTimeMinutes": 274,
+    "idleTimeMinutes": 280,
     "lastActiveTime": "2025-07-31T09:32:06.703Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "BT-38",
-    "idleTimeMinutes": 274,
+    "idleTimeMinutes": 280,
     "lastActiveTime": "2025-07-31T09:32:06.703Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "K-162",
-    "idleTimeMinutes": 274,
+    "idleTimeMinutes": 280,
     "lastActiveTime": "2025-07-31T09:32:06.704Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "K-163",
     "idleTimeMinutes": 0,
-    "lastActiveTime": "2025-07-31T14:06:40.238Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "lastActiveTime": "2025-07-31T14:12:40.462Z",
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "L-20",
     "idleTimeMinutes": 0,
-    "lastActiveTime": "2025-07-31T14:06:40.238Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "lastActiveTime": "2025-07-31T14:12:40.463Z",
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "K-16",
     "idleTimeMinutes": 0,
-    "lastActiveTime": "2025-07-31T14:06:40.239Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "lastActiveTime": "2025-07-31T14:12:40.463Z",
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "SR-20",
     "idleTimeMinutes": 0,
-    "lastActiveTime": "2025-07-31T14:06:40.239Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "lastActiveTime": "2025-07-31T14:12:40.464Z",
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "SR-32",
     "idleTimeMinutes": 0,
-    "lastActiveTime": "2025-07-31T14:06:40.240Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "lastActiveTime": "2025-07-31T14:12:40.464Z",
+    "timestamp": "2025-07-31T14:12:49.337Z"
   },
   {
     "machineId": "SR-24",
     "idleTimeMinutes": 0,
-    "lastActiveTime": "2025-07-31T14:06:40.241Z",
-    "timestamp": "2025-07-31T14:06:49.256Z"
+    "lastActiveTime": "2025-07-31T14:12:40.464Z",
+    "timestamp": "2025-07-31T14:12:49.337Z"
   }
 ]

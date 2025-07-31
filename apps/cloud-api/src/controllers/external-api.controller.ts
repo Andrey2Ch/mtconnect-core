@@ -28,8 +28,7 @@ export class ExternalApiController {
   
   constructor(
     @InjectModel(MachineData.name) private machineDataModel: Model<MachineDataDocument>,
-    private machineStatesCacheService: MachineStatesCacheService,
-    private appService: any  // Импорт AppService создает циклическую зависимость, используем any
+    private machineStatesCacheService: MachineStatesCacheService
   ) {}
 
   @Post('/data')
@@ -45,21 +44,19 @@ export class ExternalApiController {
         this.logger.log(`📊 ${item.metadata.machineId} FULL DATA:`, JSON.stringify(item.data));
       });
 
-      // 💾 Обновляем кэш состояний машин через AppService
-      dataArray.forEach((item) => {
+      // 💾 Обновляем кэш состояний машин напрямую
+      await Promise.all(dataArray.map(async (item) => {
         const machineId = item.metadata.machineId;
         const currentPartCount = item.data.partCount || 0;
         const isActive = item.data.executionStatus === 'ACTIVE';
         
-        // Обновляем производственный счетчик (это также обновит кэш)
-        this.appService.getProductionPartCount(machineId, currentPartCount);
-        
-        // Обновляем время простоя в кэше
-        this.appService.updateMachineState(machineId, {
+        // Обновляем состояние машины в MongoDB
+        await this.machineStatesCacheService.saveOrUpdateMachineState(machineId, {
           idleTimeMinutes: item.data.idleTimeMinutes || 0,
-          lastActiveTime: isActive ? item.timestamp : undefined
+          lastActiveTime: isActive ? item.timestamp : undefined,
+          lastPartCount: currentPartCount
         });
-      });
+      }));
 
       // Сохраняем в MongoDB
       const savedRecords = await this.machineDataModel.insertMany(dataArray);
