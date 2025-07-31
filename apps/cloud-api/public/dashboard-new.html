@@ -538,7 +538,14 @@
             machinesContainer.innerHTML = ''; // Очищаем старые карточки
 
             if (data.machines && data.machines.length > 0) {
-                data.machines.forEach(machine => {
+                // Сортируем все машины по алфавиту (по имени машины)
+                const sortedMachines = data.machines.sort((a, b) => {
+                    const nameA = (a.name || a.id || '').toLowerCase();
+                    const nameB = (b.name || b.id || '').toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+                
+                sortedMachines.forEach(machine => {
                     let cardHtml = '';
                     if (machine.type === 'FANUC') {
                         cardHtml = createMTConnectMachineCard(machine);
@@ -549,7 +556,7 @@
                         machinesContainer.innerHTML += cardHtml;
                     }
                 });
-                document.getElementById('grid-title').textContent = `Все машины (${data.machines.length})`;
+                document.getElementById('grid-title').textContent = `Все машины (${sortedMachines.length})`;
             } else {
                 machinesContainer.innerHTML = '<p class="loading">Нет данных о машинах.</p>';
                  document.getElementById('grid-title').textContent = 'Все машины';
@@ -574,7 +581,7 @@
                 
                 // Определяем правильный API URL в зависимости от окружения
                 const isRailway = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
-                const apiUrl = isRailway ? '/api/v2/dashboard/machines' : 'http://localhost:3555/api/machines';
+                const apiUrl = isRailway ? '/api/dashboard/machines' : 'http://localhost:3555/api/machines';
                 
                 // Показываем текущий API URL в интерфейсе
                 document.getElementById('current-api-url').textContent = isRailway ? 
