@@ -35,6 +35,7 @@ export interface MachineState {
 export class CycleTimeCalculator {
   private histories: Map<string, CycleTimeHistory> = new Map();
   private restoredIdleTimes: Map<string, number> = new Map();
+  private lastLoggedStatus: Map<string, string> = new Map(); // Track last logged status to avoid spam
   
   private readonly IDLE_TIMEOUT_MINUTES = 5;
   /** The number of change intervals to average over. 6 changes = 5 intervals. */
@@ -78,13 +79,13 @@ export class CycleTimeCalculator {
     this.histories.set(machineId, history);
 
     const restoredIdleTime = this.restoredIdleTimes.get(machineId) || 0;
-    console.log(`[DEV] ${machineId}: New machine detected. Initial count: ${currentCount}. Setting status to IDLE.`);
+    console.log(`[CycleTime] ${machineId}: New machine detected. Initial count: ${currentCount}. Status: IDLE`);
     // A new machine is always considered IDLE until it starts producing.
     return this.createMachineState(history, 'No Data', 'IDLE', restoredIdleTime);
   }
 
   private handleCountReset(machineId: string, currentCount: number, currentTimestamp: Date): MachineState {
-    console.log(`[DEV] ${machineId}: Part count reset detected. Starting new history.`);
+    console.log(`[CycleTime] ${machineId}: Part count reset detected. Restarting history.`);
     return this.handleNewMachine(machineId, currentCount, currentTimestamp);
   }
 
@@ -114,15 +115,16 @@ export class CycleTimeCalculator {
     // Check if we have enough data for a STABLE calculation.
     if (history.changes.length < this.MIN_CHANGES_FOR_STABLE_AVG) {
       const confidence = 'Unstable';
-      console.log(`[DEV] ${history.machineId}: ${confidence} production. Not enough data for stable cycle time (${history.changes.length}/${this.MIN_CHANGES_FOR_STABLE_AVG} changes).`);
-      // Return ACTIVE status but with undefined cycle time.
+      // Only log once when transitioning to production
+      this.logStatusChange(history.machineId, `${confidence} production started. Collecting data (${history.changes.length}/${this.MIN_CHANGES_FOR_STABLE_AVG})`);
       return this.createMachineState(history, confidence, 'ACTIVE', 0, undefined, partsInLastCycle);
     }
 
     const averageCycleTimeMs = totalTimeMs / totalParts;
     const confidence = 'Stable';
     
-    console.log(`[DEV] ${history.machineId}: ${confidence} production. Avg cycle time over last ${totalParts} parts: ${(averageCycleTimeMs / 1000).toFixed(1)}s`);
+    // Log stable cycle time calculation
+    this.logStatusChange(history.machineId, `${confidence} production. Cycle time: ${(averageCycleTimeMs / 1000).toFixed(1)}s (${totalParts} parts)`);
     
     return this.createMachineState(history, confidence, 'ACTIVE', 0, averageCycleTimeMs, partsInLastCycle);
   }
@@ -139,18 +141,28 @@ export class CycleTimeCalculator {
     const lastKnownState = this.getLastKnownState(history);
 
     if (executionStatus && executionStatus !== 'ACTIVE') {
-      console.log(`[DEV] ${history.machineId}: IDLE detected via executionStatus: ${executionStatus}. Total idle: ${totalIdleTime} min.`);
+      this.logStatusChange(history.machineId, `IDLE detected (${executionStatus}). Total idle: ${totalIdleTime} min`);
       return this.createMachineState(history, 'Stopped', 'IDLE', totalIdleTime, lastKnownState.cycleTimeMs);
     }
 
     if (minutesSinceLastChange > this.IDLE_TIMEOUT_MINUTES) {
-      console.log(`[DEV] ${history.machineId}: IDLE detected via timeout. Total idle: ${totalIdleTime} min.`);
+      this.logStatusChange(history.machineId, `IDLE detected (timeout). Total idle: ${totalIdleTime} min`);
       return this.createMachineState(history, 'Stopped', 'IDLE', totalIdleTime, lastKnownState.cycleTimeMs);
     }
     
-    console.log(`[DEV] ${history.machineId}: Waiting. Time since last change: ${minutesSinceLastChange.toFixed(1)} min.`);
-    // While waiting, the machine is still considered ACTIVE and reports the last known cycle time.
+    // While waiting, the machine is still considered ACTIVE - no need to log every time
     return this.createMachineState(history, lastKnownState.confidence, 'ACTIVE', 0, lastKnownState.cycleTimeMs);
+  }
+
+  /**
+   * Logs status changes only when they actually change to reduce log spam
+   */
+  private logStatusChange(machineId: string, message: string): void {
+    const lastMessage = this.lastLoggedStatus.get(machineId);
+    if (lastMessage !== message) {
+      console.log(`[CycleTime] ${machineId}: ${message}`);
+      this.lastLoggedStatus.set(machineId, message);
+    }
   }
 
   private createMachineState(
