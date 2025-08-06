@@ -8,19 +8,25 @@ import { AdamReader } from './adam-reader';
 import { CloudApiClient } from './cloud-client';
 import { MachineStatesCache, MachineState } from './machine-states-cache';
 
+const args = process.argv.slice(2);
+const isDevMode = args.includes('-dev') || args.includes('--dev');
+
+if (isDevMode) {
+  console.log('DEV MODE: Verbose logging enabled');
+}
+
+global.DEV_MODE = isDevMode;
+
 const app = express();
-const port = 3555; // Свободный порт для диагностики
+const port = 3555;
 
 app.use(cors());
 app.use(express.json());
-
-// Статические файлы из cloud-api/public (для dashboard-v2.html)
 app.use(express.static(path.join(__dirname, '../apps/cloud-api/public')));
 
-// --- Логика Edge Gateway ---
 const configPath = path.join(__dirname, 'config.json');
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-const { machines, adamDevices } = config; // ✅ ИСПРАВЛЕНО: было FANUC_MACHINES
+const { machines, adamDevices } = config;
 
 const shdrManager = new SHDRManager();
 machines.forEach(machine => {
@@ -32,47 +38,40 @@ machines.forEach(machine => {
   });
 });
 
-// Инициализация ADAM Reader (используем настройки по умолчанию)
-const adamReader = new AdamReader(); // IP: 192.168.1.120:502
+const adamReader = new AdamReader();
 
-// Инициализация Cloud API Client для отправки данных в облако
-// УМНОЕ определение: проверяем переменную, если нет - используем Railway по умолчанию
 const CLOUD_API_URL = process.env.CLOUD_API_URL || 'https://mtconnect-core-production.up.railway.app';
 const EDGE_GATEWAY_ID = process.env.EDGE_GATEWAY_ID || 'ANDREY-PC-edge-gateway';
 
-console.log(`🌐 Cloud API URL: ${CLOUD_API_URL}`);
-console.log(`🏭 Edge Gateway ID: ${EDGE_GATEWAY_ID}`);
+console.log(`Cloud API URL: ${CLOUD_API_URL}`);
+console.log(`Edge Gateway ID: ${EDGE_GATEWAY_ID}`);
 const cloudClient = new CloudApiClient(CLOUD_API_URL, EDGE_GATEWAY_ID);
 
-// 💾 Инициализация кэша состояний машин для восстановления времени простоя
 const machineStatesCache = new MachineStatesCache();
 const restoredStates = machineStatesCache.loadStates();
-console.log(`💾 Загружено состояний из кэша: ${restoredStates.size}`);
+console.log(`Loaded ${restoredStates.size} states from cache.`);
 
-// 💾 Передаем восстановленные данные в калькуляторы времени простоя
 const restoredStatesForCalculators = new Map<string, { idleTimeMinutes: number }>();
 restoredStates.forEach((state, machineId) => {
   const restoredState = machineStatesCache.getRestoredState(machineId);
   if (restoredState) {
     restoredStatesForCalculators.set(machineId, { idleTimeMinutes: restoredState.idleTimeMinutes });
-    console.log(`💾 ${machineId}: будет восстановлено ${restoredState.idleTimeMinutes} мин простоя`);
+    console.log(`${machineId}: ${restoredState.idleTimeMinutes} min of idle time will be restored.`);
   }
 });
 
-// Передаем восстановленные данные в SHDR Manager (для FANUC машин)
 shdrManager.setRestoredIdleTimesForAllMachines(restoredStatesForCalculators);
-
-// Передаем восстановленные данные в ADAM Reader (для ADAM машин)
 adamReader.setRestoredIdleTimesForAllMachines(restoredStatesForCalculators);
 
+// --- API Endpoints ---
 app.get('/api/machines', async (req, res) => {
   const mtconnectMachines = machines.map(machine => {
     const isConnected = shdrManager.getMachineConnectionStatus(machine.id);
     const machineData = shdrManager.getMachineData(machine.id);
     const getVal = (key: string) => machineData?.get(key)?.value || 'UNAVAILABLE';
     
-    // Получаем время цикла И время простоя от SHDR менеджера
-    const cycleTimeData = shdrManager.getMachineCycleTime(machine.id);
+    const executionStatus = getVal('execution') !== 'UNAVAILABLE' ? getVal('execution') : undefined;
+    const cycleTimeData = shdrManager.getMachineCycleTime(machine.id, executionStatus);
     const cycleTimeSeconds = cycleTimeData?.cycleTimeMs ? (cycleTimeData.cycleTimeMs / 1000).toFixed(2) : 'N/A';
     
     return {
@@ -88,38 +87,31 @@ app.get('/api/machines', async (req, res) => {
         partCount: getVal('part_count'),
         program: getVal('program'),
         cycleTime: cycleTimeSeconds,
-        idleTimeMinutes: cycleTimeData?.idleTimeMinutes || 0 // 🕒 ВРЕМЯ ПРОСТОЯ ДЛЯ FANUC ИЗ SHDR!
+        idleTimeMinutes: cycleTimeData?.idleTimeMinutes || 0
       }
     };
   });
 
-  // ADAM машины - РЕАЛЬНЫЕ ДАННЫЕ
   let adamMachines;
   try {
     const adamCounters = await adamReader.readCounters();
     adamMachines = (adamDevices || []).map(device => {
       const counterData = adamCounters.find(c => c.machineId === device.id);
       
-      // 🧠 УМНАЯ ЛОГИКА ДЛЯ ADAM МАШИН
       let status = 'offline';
       let connectionStatus = 'offline';
       let executionStatus = 'UNAVAILABLE';
       let cycleTimeDisplay = 'N/A';
       
+      const adamCycleData = counterData ? adamReader.getCycleTimeData(device.id) : null;
+      
       if (counterData) {
-        // Есть соединение с ADAM
         connectionStatus = 'active';
         
-        // ✅ ЦЕНТРАЛИЗОВАННАЯ ЛОГИКА: Все решения принимает CycleTimeCalculator
-        if (!counterData.cycleTimeMs || counterData.cycleTimeMs === undefined) {
-          // Нет времени цикла = отображаем N/A
-          cycleTimeDisplay = 'N/A';
-        } else {
-          // Есть время цикла = показываем в секундах
-          cycleTimeDisplay = (counterData.cycleTimeMs / 1000).toFixed(2);
+        if (adamCycleData?.cycleTimeMs) {
+          cycleTimeDisplay = (adamCycleData.cycleTimeMs / 1000).toFixed(2);
         }
         
-        // Статус определяется ТОЛЬКО на основе machineStatus из CycleTimeCalculator
         switch (counterData.machineStatus) {
           case 'ACTIVE':
             status = 'online';
@@ -127,9 +119,9 @@ app.get('/api/machines', async (req, res) => {
             break;
           case 'IDLE':
             status = 'online';
-            executionStatus = 'READY'; // ПРОСТОЙ = ГОТОВ к работе
+            executionStatus = 'READY';
             break;
-          default: // OFFLINE
+          default:
             status = 'offline';
             executionStatus = 'UNAVAILABLE';
         }
@@ -140,24 +132,23 @@ app.get('/api/machines', async (req, res) => {
         name: device.name,
         type: device.type,
         channel: device.channel,
-        ip: '192.168.1.120', // ADAM-6050 контроллер IP
-        port: 502, // Modbus TCP порт
+        ip: '192.168.1.120',
+        port: 502,
         status: status,
         connectionStatus: connectionStatus,
         data: {
-          partCount: counterData ? counterData.count : 0, // РЕАЛЬНЫЕ ДАННЫЕ
+          partCount: counterData ? counterData.count : 0,
           cycleTime: cycleTimeDisplay,
-          confidence: counterData?.confidence || 'N/A',
-          executionStatus: executionStatus, // Добавляем executionStatus для ADAM
-          isAnomalous: counterData?.isAnomalous || false,
-          machineStatus: counterData?.machineStatus || 'OFFLINE',
-          idleTimeMinutes: counterData?.idleTimeMinutes || 0 // 🕒 ВРЕМЯ ПРОСТОЯ В МИНУТАХ
+          confidence: adamCycleData?.confidence || counterData?.confidence || 'N/A',
+          executionStatus: executionStatus,
+          isAnomalous: adamCycleData?.isAnomalous || counterData?.isAnomalous || false,
+          machineStatus: adamCycleData?.machineStatus || counterData?.machineStatus || 'OFFLINE',
+          idleTimeMinutes: adamCycleData?.idleTimeMinutes || counterData?.idleTimeMinutes || 0
         }
       };
     });
   } catch (error) {
-    console.error('❌ Ошибка чтения ADAM данных:', error);
-    // Fallback к симулированным данным при ошибке
+    console.error('Error reading ADAM data:', error);
     adamMachines = (adamDevices || []).map(device => ({
       id: device.id,
       name: device.name,
@@ -167,185 +158,41 @@ app.get('/api/machines', async (req, res) => {
       port: 502,
       status: 'offline',
       connectionStatus: 'offline',
-      data: {
-        partCount: 0,
-        cycleTime: 'N/A',
-        confidence: 'N/A',
-        executionStatus: 'UNAVAILABLE',
-        isAnomalous: false,
-        machineStatus: 'OFFLINE'
-      }
+      data: { partCount: 0, cycleTime: 'N/A', confidence: 'N/A', executionStatus: 'UNAVAILABLE', isAnomalous: false, machineStatus: 'OFFLINE' }
     }));
   }
 
   const allMachines = [...mtconnectMachines, ...adamMachines];
-
-  // Сортируем все машины по имени в алфавитном порядке
   allMachines.sort((a, b) => a.name.localeCompare(b.name));
 
   const mtconnectOnlineCount = mtconnectMachines.filter(m => m.status === 'online').length;
   const adamOnlineCount = adamMachines.filter(m => m.status === 'online').length;
 
-  const summary = {
-    total: allMachines.length,
-    online: mtconnectOnlineCount + adamOnlineCount,
-    mtconnect: {
-        total: mtconnectMachines.length,
-        online: mtconnectOnlineCount
-    },
-    adam: {
-        total: adamMachines.length,
-        online: adamOnlineCount
-    }
-  };
-
   res.json({
     timestamp: new Date().toISOString(),
-    summary,
-    machines: allMachines, // 👈 Возвращаем единый, отсортированный массив
-  });
-});
-
-// API v2 endpoints для dashboard-v2.html
-app.get('/api/v2/dashboard/machines', async (req, res) => {
-  const mtconnectMachines = machines.map(machine => {
-    const isConnected = shdrManager.getMachineConnectionStatus(machine.id);
-    const machineData = shdrManager.getMachineData(machine.id);
-    const getVal = (key: string) => machineData?.get(key)?.value || 'UNAVAILABLE';
-    
-    // Преобразуем данные в формат dashboard-v2
-    const partCount = getVal('part_count');
-    const program = getVal('program');
-    const cycleTime = getVal('cycleTime');
-    
-    return {
-      id: machine.id,
-      name: machine.name, 
-      ip: machine.ip,
-      port: machine.port,
-      type: 'cnc', // Dashboard ожидает 'cnc' для MTConnect машин
-      status: isConnected ? 'active' : 'offline',
-      isOnline: isConnected,
-      execution: getVal('execution'),
-      // Поля для dashboard-v2
-      primaryValue: partCount !== 'UNAVAILABLE' ? parseInt(partCount) || 0 : Math.floor(Math.random() * 1000),
-      secondaryValue: program !== 'UNAVAILABLE' ? program : 'O1234',
-      cycleTime: cycleTime !== 'UNAVAILABLE' ? parseInt(cycleTime) || 0 : Math.floor(Math.random() * 30000),
-      lastUpdate: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      totalRecords: Math.floor(Math.random() * 1000),
-      hourlyActivity: [], // Пустой массив для графика
-    };
-  });
-
-  // ADAM данные - РЕАЛЬНЫЕ для dashboard-v2
-  let adamMachines = [];
-  try {
-    const adamCounters = await adamReader.readCounters();
-    adamMachines = (adamDevices || []).map(device => {
-      const counterData = adamCounters.find(c => c.machineId === device.id);
-      return {
-        id: device.id,
-        name: device.name,
-        type: 'counter', // Dashboard ожидает 'counter' для ADAM машин
-        channel: device.channel,
-        ip: '192.168.1.120',
-        port: 502,
-        status: counterData ? 'active' : 'offline',
-        isOnline: counterData ? true : false,
-        // Поля для dashboard-v2 - РЕАЛЬНЫЕ ДАННЫЕ
-        primaryValue: counterData ? counterData.count : 0,
-        secondaryValue: 'Счетчик',
-        cycleTime: counterData?.cycleTimeMs || 0,
-        lastUpdate: counterData?.timestamp || new Date().toISOString(),
-        lastSeen: counterData?.timestamp || new Date().toISOString(),
-        totalRecords: counterData ? counterData.count : 0,
-        hourlyActivity: [], // Пустой массив для графика
-      };
-    });
-  } catch (error) {
-    console.error('❌ Ошибка чтения ADAM данных для dashboard-v2:', error);
-    // Fallback к пустому массиву при ошибке
-    adamMachines = (adamDevices || []).map(device => ({
-      id: device.id,
-      name: device.name,
-      type: 'counter',
-      channel: device.channel,
-      ip: '192.168.1.120',
-      port: 502,
-      status: 'offline',
-      isOnline: false,
-      primaryValue: 0,
-      secondaryValue: 'Счетчик',
-      cycleTime: 0,
-      lastUpdate: new Date().toISOString(),
-      lastSeen: new Date().toISOString(),
-      totalRecords: 0,
-      hourlyActivity: [],
-    }));
-  }
-
-  const allMachines = [...mtconnectMachines, ...adamMachines];
-  allMachines.sort((a, b) => a.name.localeCompare(b.name));
-
-  res.json({
-    success: true,
-    timestamp: new Date().toISOString(),
-    summary: { // Добавим summary для консистентности, даже если dashboard-v2 его не использует
-        total: allMachines.length,
-        online: allMachines.filter(m => m.isOnline).length,
-        mtconnect: {
-            total: mtconnectMachines.length,
-            online: mtconnectMachines.filter(m => m.isOnline).length
-        },
-        adam: {
-            total: adamMachines.length,
-            online: adamMachines.filter(m => m.isOnline).length
-        }
+    summary: {
+      total: allMachines.length,
+      online: mtconnectOnlineCount + adamOnlineCount,
+      mtconnect: { total: mtconnectMachines.length, online: mtconnectOnlineCount },
+      adam: { total: adamMachines.length, online: adamOnlineCount }
     },
-    machines: allMachines // 👈 Отправляем единый, отсортированный массив
+    machines: allMachines,
   });
 });
 
-app.get('/api/v2/dashboard/summary', (req, res) => {
-  const mtconnectTotal = machines.length;
-  const mtconnectOnline = machines.filter(m => shdrManager.getMachineConnectionStatus(m.id)).length;
-  const adamTotal = adamDevices.length;
-  const adamOnline = adamTotal; // Все ADAM считаем онлайн
-
-  res.json({
-    success: true,
-    data: {
-      totalMachines: mtconnectTotal + adamTotal,
-      onlineMachines: mtconnectOnline + adamOnline,
-      mtconnect: {
-        total: mtconnectTotal,
-        online: mtconnectOnline
-      },
-      adam: {
-        total: adamTotal,
-        online: adamOnline
-      },
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Функция отправки данных в Cloud API
 async function sendDataToCloud() {
   try {
     const sendPromises: Promise<boolean>[] = [];
     const currentStates = new Map<string, MachineState>();
 
-    // FANUC машины через SHDR (ПАРАЛЛЕЛЬНО!)
     for (const machine of machines) {
       const isConnected = shdrManager.getMachineConnectionStatus(machine.id);
       if (isConnected) {
         const machineData = shdrManager.getMachineData(machine.id);
         const getVal = (key: string) => machineData?.get(key)?.value || 'UNAVAILABLE';
         
-        // Получаем время цикла
-        const cycleTimeData = shdrManager.getMachineCycleTime(machine.id);
+        const executionStatus = getVal('execution') !== 'UNAVAILABLE' ? getVal('execution') : undefined;
+        const cycleTimeData = shdrManager.getMachineCycleTime(machine.id, executionStatus);
         const cycleTimeSeconds = cycleTimeData?.cycleTimeMs ? Number((cycleTimeData.cycleTimeMs / 1000).toFixed(2)) : undefined;
         
         const data = {
@@ -354,10 +201,9 @@ async function sendDataToCloud() {
           executionStatus: getVal('execution') !== 'UNAVAILABLE' ? getVal('execution') : undefined,
           cycleTime: cycleTimeSeconds,
           cycleTimeConfidence: cycleTimeData?.confidence,
-          idleTimeMinutes: cycleTimeData?.idleTimeMinutes ?? undefined // 🕒 ВРЕМЯ ПРОСТОЯ ДЛЯ RAILWAY!
+          idleTimeMinutes: cycleTimeData?.idleTimeMinutes ?? undefined
         };
 
-        // 💾 Обновляем состояние машины в кэше
         const isActive = data.executionStatus === 'ACTIVE' && cycleTimeData?.machineStatus === 'ACTIVE';
         const lastActiveTime = isActive ? new Date().toISOString() : 
           (restoredStates.get(machine.id)?.lastActiveTime || new Date().toISOString());
@@ -369,14 +215,12 @@ async function sendDataToCloud() {
           timestamp: new Date().toISOString()
         });
 
-        // Отправляем только если есть реальные данные (БЕЗ await!)
         if (data.partCount !== undefined || data.program !== undefined || data.executionStatus !== undefined) {
           sendPromises.push(cloudClient.sendMachineData(machine.id, machine.name, 'FANUC', data));
         }
       }
     }
 
-    // ADAM машины (ПАРАЛЛЕЛЬНО!)
     const adamCounters = await adamReader.readCounters();
     if (adamCounters.length > 0) {
       for (const counter of adamCounters) {
@@ -388,13 +232,12 @@ async function sendDataToCloud() {
           channel: counter.channel,
           executionStatus: counter.machineStatus === 'ACTIVE' ? 'ACTIVE' : 
                           counter.machineStatus === 'IDLE' ? 'READY' : 
-                          'UNAVAILABLE', // 🎯 ДОБАВЛЯЕМ executionStatus!
+                          'UNAVAILABLE',
           isAnomalous: counter.isAnomalous || false,
           machineStatus: counter.machineStatus || 'OFFLINE',
-          idleTimeMinutes: counter.idleTimeMinutes || 0 // 🕒 ВРЕМЯ ПРОСТОЯ В МИНУТАХ
+          idleTimeMinutes: counter.idleTimeMinutes || 0
         };
 
-        // 💾 Обновляем состояние ADAM машины в кэше
         const isActive = counter.machineStatus === 'ACTIVE';
         const lastActiveTime = isActive ? new Date().toISOString() : 
           (restoredStates.get(counter.machineId)?.lastActiveTime || new Date().toISOString());
@@ -413,20 +256,18 @@ async function sendDataToCloud() {
       }
     }
 
-    // Ждем завершения ВСЕХ отправок параллельно
     if (sendPromises.length > 0) {
       const results = await Promise.allSettled(sendPromises);
       const success = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
       const failed = results.length - success;
       
       if (failed > 0) {
-        console.log(`⚠️  Cloud API: ${success} успешно, ${failed} ошибок из ${results.length} машин`);
+        console.log(`Cloud API: ${success} successful, ${failed} failed of ${results.length} machines`);
       } else {
-        console.log(`✅ Cloud API: все ${success} машин отправлены успешно`);
+        console.log(`Cloud API: All ${success} machines sent successfully`);
       }
     }
 
-    // 💾 Обновляем кэш состояний машин (без сохранения на диск - делается отдельно)
     if (currentStates.size > 0) {
       currentStates.forEach((state, machineId) => {
         machineStatesCache.updateMachineState(machineId, {
@@ -437,29 +278,49 @@ async function sendDataToCloud() {
     }
 
   } catch (error) {
-    console.error(`❌ Ошибка отправки данных в Cloud API: ${error.message}`);
+    console.error(`Error sending data to Cloud API: ${error.message}`);
   }
 }
 
-// Запуск периодической отправки данных в Cloud API (каждые 10 секунд)
-setInterval(sendDataToCloud, 10000);
-console.log('☁️ Периодическая отправка данных в Cloud API: каждые 10 секунд');
-
-// 💾 Запуск периодического сохранения кэша состояний (каждые 30 секунд)
-setInterval(() => {
+async function checkApiAvailability() {
   try {
-    const allStates = machineStatesCache.getAllStates();
-    machineStatesCache.saveStates(allStates);
+    const response = await fetch(CLOUD_API_URL);
+    if (response.ok) {
+      console.log('Cloud API is available.');
+      return true;
+    } else {
+      console.error(`Cloud API is not available. Status: ${response.status}`);
+      return false;
+    }
   } catch (error) {
-    console.error('❌ Ошибка сохранения кэша состояний:', error.message);
+    console.error('Failed to connect to Cloud API:', error.message);
+    return false;
   }
-}, 30000);
-console.log('💾 Периодическое сохранение кэша состояний: каждые 30 секунд');
+}
 
-app.listen(port, () => {
-  console.log(`✅ Edge Gateway запущен на http://localhost:${port}`);
-  console.log(`📊 Дашборд: http://localhost:${port}/dashboard-new.html`);
-  console.log(`🔧 FANUC машины настроены: ${config.machines.filter(m => m.type === 'FANUC').length}`);
-  console.log(`📈 ADAM устройства настроены: ${(config.adamDevices || []).length}`);
-  console.log(`🔄 Переподключение адаптеров: каждые 30 сек (макс. 3 попытки)`);
-}); 
+async function startServer() {
+  await checkApiAvailability();
+  
+  setInterval(sendDataToCloud, 10000);
+  console.log('Periodic data sending to Cloud API started: every 10 seconds');
+
+  setInterval(() => {
+    try {
+      const allStates = machineStatesCache.getAllStates();
+      machineStatesCache.saveStates(allStates);
+    } catch (error) {
+      console.error('Error saving states cache:', error.message);
+    }
+  }, 30000);
+  console.log('Periodic states cache saving started: every 30 seconds');
+
+  app.listen(port, () => {
+    console.log(`Edge Gateway running at http://localhost:${port}`);
+    console.log(`Dashboard: http://localhost:${port}/dashboard-new.html`);
+    console.log(`FANUC machines configured: ${config.machines.filter(m => m.type === 'FANUC').length}`);
+    console.log(`ADAM devices configured: ${(config.adamDevices || []).length}`);
+    console.log(`Adapter reconnect interval: 30 sec (max 3 attempts)`);
+  });
+}
+
+startServer();

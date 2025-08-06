@@ -1,6 +1,6 @@
 import * as net from 'net';
 import { EventEmitter } from 'events';
-import { CycleTimeCalculator } from './cycle-time-calculator';
+import { CycleTimeCalculator, MachineState } from './cycle-time-calculator';
 
 export interface SHDRDataItem {
     timestamp: string;
@@ -29,6 +29,7 @@ export class SHDRClient extends EventEmitter {
     private maxReconnectAttempts: number = 3; // Уменьшаем попытки
     private buffer: string = '';
     private cycleTimeCalculator: CycleTimeCalculator;
+    private dataStore: Map<string, SHDRDataItem> = new Map();
 
     constructor(config: SHDRConnectionConfig) {
         super();
@@ -181,11 +182,15 @@ export class SHDRClient extends EventEmitter {
                     value: processedValue
                 };
                 
+                // Сохраняем данные в локальное хранилище
+                this.dataStore.set(processedDataItem, dataItem);
+                
                 // Отслеживаем изменения part_count для расчета времени цикла
                 if (processedDataItem === 'part_count') {
                     const partCount = parseInt(processedValue);
                     if (!isNaN(partCount)) {
-                        this.cycleTimeCalculator.updateCount(this.config.machineId, partCount);
+                        // Обновляем данные в CycleTimeCalculator
+                        this.cycleTimeCalculator.getCycleTime(this.config.machineId, partCount, new Date());
                     }
                 }
                 
@@ -245,18 +250,22 @@ export class SHDRClient extends EventEmitter {
         return this.reconnectAttempts;
     }
 
-    getCycleTimeData(): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } {
-        return this.cycleTimeCalculator.getCycleTime(this.config.machineId);
-        }
-
-    // Старые методы удалены - теперь используем CycleTimeCalculator
+    getCycleTimeData(executionStatus?: string): MachineState {
+        // Получаем последние данные из хранилища
+        const partCountData = this.dataStore.get('part_count');
+        const currentCount = partCountData && partCountData.value !== 'UNAVAILABLE' ? parseInt(partCountData.value) : 0;
+        
+        const validCount = isNaN(currentCount) ? 0 : currentCount;
+        
+        return this.cycleTimeCalculator.getCycleTime(this.config.machineId, validCount, new Date(), executionStatus);
+    }
 
     /**
      * 💾 Устанавливает восстановленное время простоя из кэша
      * @param restoredIdleMinutes - восстановленное время простоя в минутах
      */
-    public setRestoredIdleTime(restoredIdleMinutes: number): void {
-        this.cycleTimeCalculator.setRestoredIdleTime(this.config.machineId, restoredIdleMinutes);
+    public restoreIdleTime(restoredIdleMinutes: number): void {
+        this.cycleTimeCalculator.restoreIdleTime(this.config.machineId, restoredIdleMinutes);
     }
 }
 
@@ -308,9 +317,9 @@ export class SHDRManager extends EventEmitter {
         return this.dataStore.get(machineId);
     }
 
-    public getMachineCycleTime(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } | undefined {
+    public getMachineCycleTime(machineId: string, executionStatus?: string): MachineState | undefined {
         const client = this.clients.get(machineId);
-        return client?.getCycleTimeData();
+        return client?.getCycleTimeData(executionStatus);
     }
 
     public getAllMachinesData(): Map<string, Map<string, SHDRDataItem>> {
@@ -415,10 +424,10 @@ export class SHDRManager extends EventEmitter {
      * @param machineId - ID машины
      * @param restoredIdleMinutes - восстановленное время простоя в минутах
      */
-    public setRestoredIdleTime(machineId: string, restoredIdleMinutes: number): void {
+    public restoreIdleTime(machineId: string, restoredIdleMinutes: number): void {
         const client = this.clients.get(machineId);
         if (client) {
-            client.setRestoredIdleTime(restoredIdleMinutes);
+            client.restoreIdleTime(restoredIdleMinutes);
         }
     }
 
@@ -428,7 +437,7 @@ export class SHDRManager extends EventEmitter {
      */
     public setRestoredIdleTimesForAllMachines(restoredStates: Map<string, { idleTimeMinutes: number }>): void {
         restoredStates.forEach((state, machineId) => {
-            this.setRestoredIdleTime(machineId, state.idleTimeMinutes);
+            this.restoreIdleTime(machineId, state.idleTimeMinutes);
         });
     }
 } 

@@ -104,6 +104,89 @@ Transform the existing local MTConnect monitoring system into a modern Edge-Clou
 3. **Cloud**: API → Database → Dashboard
 4. **Users**: Browser → Cloud Dashboard
 
+## Machine Idle Time Logic
+
+### Overview
+The system implements sophisticated logic to determine when machines are idle vs. actively working, with configurable thresholds and multiple detection criteria.
+
+### Idle Detection Criteria
+
+#### Criterion 1: No Counter Changes
+- **Trigger**: Machine part counter hasn't changed for N minutes
+- **Configurable**: Threshold set via dashboard settings (default: 5 minutes)
+- **Action**: Machine marked as `IDLE`, idle time starts accumulating
+- **Use Case**: Detects complete machine stops
+
+#### Criterion 2: Anomalously Long Cycles
+- **Trigger**: Current cycle time ≥20% longer than average cycle time
+- **Fixed Threshold**: 20% deviation from average (non-configurable)
+- **Action**: Machine marked as `IDLE`, idle time starts accumulating
+- **Use Case**: Detects partial stops, jams, or abnormal operations
+
+### Working State Detection
+
+#### Normal Operation Requirements
+- **Minimum Cycles**: At least 5 consecutive cycles
+- **Uniformity**: All cycles within ±10% of average cycle time
+- **Status**: Machine marked as `ACTIVE` with confidence "Нормальная работа"
+
+#### Setup/Adjustment Periods
+- **Condition**: Cycles exist but are not uniform (±10% threshold)
+- **Status**: Machine marked as `ACTIVE` with confidence "Наладка/неравномерная работа"
+- **Idle Time**: Reset to 0 (not considered idle)
+
+### Idle Time Restoration Logic
+
+#### Emergency Situations Only
+- **Trigger**: System restart detected via `process.uptime()` comparison
+- **Action**: Restore accumulated idle time from `machine-states.cache.json`
+- **Purpose**: Maintain idle time continuity during system crashes
+
+#### Normal Stops
+- **Behavior**: Idle time resets to 0 when machine resumes
+- **Rationale**: Technical stops should not accumulate idle time
+
+### Configuration
+
+#### Dashboard Settings
+- **Idle Time Threshold**: Configurable via dashboard (⚙️ icon)
+- **Storage**: Settings saved in browser `localStorage`
+- **API**: Settings sent to `/api/settings` endpoint
+- **Default**: 5 minutes
+
+#### Fixed Parameters
+- **Anomaly Threshold**: 20% (hardcoded)
+- **Uniformity Threshold**: 10% (hardcoded)
+- **Minimum Uniform Cycles**: 5 (hardcoded)
+
+### Implementation Details
+
+#### Core Component: `CycleTimeCalculator`
+- **Location**: `src/cycle-time-calculator.ts`
+- **Usage**: Centralized logic for both FANUC and ADAM machines
+- **Methods**:
+  - `getCycleTime()`: Main calculation method
+  - `isAnomalouslyLongCycle()`: Anomaly detection
+  - `isUniformCycles()`: Uniformity checking
+  - `setSettings()`: Configuration updates
+
+#### Data Flow
+1. **Edge Processing**: `CycleTimeCalculator` processes machine data
+2. **Status Determination**: Applies both idle criteria
+3. **Cloud Storage**: Results stored in MongoDB
+4. **Dashboard Display**: Real-time status updates
+
+#### Logging
+- **Debug Logs**: Detailed console output for troubleshooting
+- **Status Tracking**: Machine state changes logged
+- **Performance Metrics**: Cycle time calculations logged
+
+### Benefits
+- **Accurate Detection**: Distinguishes between normal stops and actual idle time
+- **Configurable**: Adjustable thresholds for different production environments
+- **Robust**: Handles system restarts and data loss scenarios
+- **Real-time**: Immediate response to machine state changes
+
 ## Success Criteria
 - ✅ All 8 FANUC machines monitored in real-time
 - ✅ ADAM-6050 digital I/O integrated without .NET

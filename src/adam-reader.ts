@@ -115,7 +115,7 @@ export class AdamReader {
               console.log(`📊 ${machineId}: ${dataType} = ${formattedCount}`);
               
               // Обновляем счетчик в калькуляторе
-              this.cycleTimeCalculator.updateCount(machineId, currentCount);
+              this.cycleTimeCalculator.getCycleTime(machineId, currentCount, new Date());
               
               // Вычисляем время цикла и определяем статус
               let cycleTimeMs: number | undefined;
@@ -134,7 +134,7 @@ export class AdamReader {
                 machineStatus = currentCount === 1 ? 'ACTIVE' : 'IDLE';
               } else {
                 // Для Counter режима вычисляем cycle time и анализируем
-                const cycleData = this.cycleTimeCalculator.getCycleTime(machineId);
+                const cycleData = this.cycleTimeCalculator.getCycleTime(machineId, currentCount, new Date());
                 cycleTimeMs = cycleData.cycleTimeMs;
                 partsInCycle = cycleData.partsInCycle;
                 confidence = cycleData.confidence;
@@ -190,8 +190,16 @@ export class AdamReader {
   }
 
   // 🕒 ПУБЛИЧНЫЙ МЕТОД ДЛЯ ДОСТУПА К ВРЕМЕНИ ПРОСТОЯ
-  public getCycleTimeData(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } {
-    return this.cycleTimeCalculator.getCycleTime(machineId);
+  public getCycleTimeData(machineId: string, executionStatus?: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } {
+    // ❌ ИСПРАВЛЕНО: Используем getCycleTimeData вместо неправильного вызова с count=0
+    return this.cycleTimeCalculator.getCycleTimeData(machineId) || {
+      cycleTimeMs: undefined,
+      partsInCycle: 0,
+      confidence: 'Нет данных',
+      isAnomalous: true,
+      machineStatus: 'OFFLINE',
+      idleTimeMinutes: 0
+    };
   }
 
   /**
@@ -199,8 +207,8 @@ export class AdamReader {
    * @param machineId - ID машины
    * @param restoredIdleMinutes - восстановленное время простоя в минутах
    */
-  public setRestoredIdleTime(machineId: string, restoredIdleMinutes: number): void {
-    this.cycleTimeCalculator.setRestoredIdleTime(machineId, restoredIdleMinutes);
+  public restoreIdleTime(machineId: string, restoredIdleMinutes: number): void {
+    this.cycleTimeCalculator.restoreIdleTime(machineId, restoredIdleMinutes);
   }
 
   /**
@@ -209,7 +217,7 @@ export class AdamReader {
    */
   public setRestoredIdleTimesForAllMachines(restoredStates: Map<string, { idleTimeMinutes: number }>): void {
     restoredStates.forEach((state, machineId) => {
-      this.setRestoredIdleTime(machineId, state.idleTimeMinutes);
+      this.restoreIdleTime(machineId, state.idleTimeMinutes);
     });
   }
 } 

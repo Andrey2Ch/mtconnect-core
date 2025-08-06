@@ -1,283 +1,205 @@
+/**
+ * Represents a single change in the part count for a machine.
+ */
 interface CycleTimeChange {
   timestamp: Date;
   count: number;
-  delta: number;
 }
 
+/**
+ * Stores the history of part count changes for a single machine
+ * to calculate cycle times and statuses.
+ */
 interface CycleTimeHistory {
   machineId: string;
+  /** A deque of recent part count changes to calculate a rolling average cycle time. */
   changes: CycleTimeChange[];
-  lastCount?: number;
-  consecutiveNormalCycles?: number; // Счетчик подряд идущих нормальных циклов
-  recoveryThreshold?: number; // Порог для восстановления (среднее время цикла)
 }
 
+/**
+ * Represents the calculated state of a machine.
+ */
+export interface MachineState {
+  cycleTimeMs?: number;
+  partsInCycle: number;
+  confidence: 'Stable' | 'Unstable' | 'No Data' | 'Stopped' | 'Waiting';
+  isAnomalous: boolean;
+  machineStatus: 'ACTIVE' | 'IDLE';
+  idleTimeMinutes: number;
+}
+
+/**
+ * Calculates machine cycle time, status (ACTIVE/IDLE), and idle duration
+ * based on part count changes over time using a rolling window approach.
+ */
 export class CycleTimeCalculator {
   private histories: Map<string, CycleTimeHistory> = new Map();
-  private restoredIdleTimes: Map<string, number> = new Map(); // 💾 Восстановленное время простоя из кэша
+  private restoredIdleTimes: Map<string, number> = new Map();
+  
+  private readonly IDLE_TIMEOUT_MINUTES = 5;
+  /** The number of change intervals to average over. 6 changes = 5 intervals. */
+  private readonly MIN_CHANGES_FOR_STABLE_AVG = 6; 
 
-  /**
-   * Устанавливает восстановленное время простоя из кэша для машины
-   * @param machineId - ID машины
-   * @param restoredIdleMinutes - восстановленное время простоя в минутах
-   */
-  setRestoredIdleTime(machineId: string, restoredIdleMinutes: number): void {
-    this.restoredIdleTimes.set(machineId, restoredIdleMinutes);
-    console.log(`💾 ${machineId}: установлено восстановленное время простоя ${restoredIdleMinutes} мин`);
-  }
-
-  updateCount(machineId: string, newCount: number): void {
-    let history = this.histories.get(machineId);
-    
-    if (!history) {
-      // Первый раз - просто запоминаем
-      history = { machineId, changes: [], lastCount: newCount };
-      this.histories.set(machineId, history);
-      console.log(`📋 Инициализирована история для ${machineId}, начальное значение: ${newCount.toLocaleString()}`);
-      return;
+  public getCycleTime(machineId: string, currentCount: number, currentTimestamp: Date, executionStatus?: string): MachineState {
+    if (!this.histories.has(machineId)) {
+      return this.handleNewMachine(machineId, currentCount, currentTimestamp);
     }
 
-    // Если счетчик увеличился - записываем изменение
-    if (newCount > history.lastCount!) {
-      const delta = newCount - history.lastCount!;
-      history.changes.push({ 
-        timestamp: new Date(), 
-        count: newCount,
-        delta 
-      });
-      
-      console.log(`🔄 ${machineId}: счетчик изменился с ${history.lastCount!.toLocaleString()} на ${newCount.toLocaleString()} (+${delta}) в ${new Date().toLocaleTimeString()}`);
-      
-      // Ограничиваем историю (последние 50 изменений)
-      if (history.changes.length > 50) {
+    const history = this.histories.get(machineId)!;
+    const lastChange = history.changes[history.changes.length - 1];
+    const delta = currentCount - lastChange.count;
+
+    if (delta > 0) {
+      history.changes.push({ timestamp: currentTimestamp, count: currentCount });
+      if (history.changes.length > this.MIN_CHANGES_FOR_STABLE_AVG) {
         history.changes.shift();
       }
+      return this.recalculateState(history, delta);
+    } else if (delta < 0) {
+      return this.handleCountReset(machineId, currentCount, currentTimestamp);
+    } else {
+      return this.handleNoChange(history, currentTimestamp, executionStatus);
     }
-    
-    // Проверка на сброс счетчика
-    if (newCount < history.lastCount!) {
-      console.log(`🔄 ${machineId}: счетчик СБРОШЕН с ${history.lastCount!.toLocaleString()} на ${newCount.toLocaleString()}`);
-      history.changes = []; // Сбрасываем историю
-    }
-
-    history.lastCount = newCount;
   }
 
-  getCycleTime(machineId: string): { cycleTimeMs?: number; partsInCycle: number; confidence: string; isAnomalous?: boolean; machineStatus?: 'ACTIVE' | 'IDLE' | 'OFFLINE'; idleTimeMinutes?: number } {
-    const history = this.histories.get(machineId);
-    
-    // 💾 Получаем восстановленное время простоя из кэша в начале
+  public restoreIdleTime(machineId: string, idleTimeMinutes: number) {
+    this.restoredIdleTimes.set(machineId, idleTimeMinutes);
+    console.log(`[CycleTimeCalculator] ${machineId}: Restored idle time set to ${idleTimeMinutes} min from cache.`);
+  }
+
+  /**
+   * Initializes a machine's history. Sets initial status to IDLE.
+   */
+  private handleNewMachine(machineId: string, currentCount: number, currentTimestamp: Date): MachineState {
+    const history: CycleTimeHistory = {
+      machineId,
+      changes: [{ timestamp: currentTimestamp, count: currentCount }],
+    };
+    this.histories.set(machineId, history);
+
     const restoredIdleTime = this.restoredIdleTimes.get(machineId) || 0;
-    
-    // 🕒 СЛУЧАЙ 1: Нет истории вообще (новая машина)
-    if (!history || history.changes.length === 0) {
-      // Для машин без истории считаем что они стоят с момента запуска системы + восстановленное время
-      const systemUptimeMinutes = Math.min(Math.round(process.uptime() / 60), 60); // максимум 60 минут
-      const totalIdleMinutes = systemUptimeMinutes + restoredIdleTime;
-      console.log(`🟡 ${machineId}: ПРОСТОЙ - нет данных о машине (новая)`);
-      console.log(`🕒 ${machineId}: idleTimeMinutes = ${totalIdleMinutes} (система: ${systemUptimeMinutes} + восстановленный: ${restoredIdleTime})`);
-      return { 
-        cycleTimeMs: undefined, 
-        partsInCycle: 0,
-        confidence: 'Нет данных',
-        isAnomalous: true,
-        machineStatus: 'IDLE',
-        idleTimeMinutes: totalIdleMinutes // 🕒 ВРЕМЯ С ЗАПУСКА СИСТЕМЫ + ВОССТАНОВЛЕННОЕ
-      };
-    }
-    
-    // 🕒 СЛУЧАЙ 2: Недостаточно данных для расчета (< 2 изменения)
+    console.log(`[DEV] ${machineId}: New machine detected. Initial count: ${currentCount}. Setting status to IDLE.`);
+    // A new machine is always considered IDLE until it starts producing.
+    return this.createMachineState(history, 'No Data', 'IDLE', restoredIdleTime);
+  }
+
+  private handleCountReset(machineId: string, currentCount: number, currentTimestamp: Date): MachineState {
+    console.log(`[DEV] ${machineId}: Part count reset detected. Starting new history.`);
+    return this.handleNewMachine(machineId, currentCount, currentTimestamp);
+  }
+
+  /**
+   * Recalculates the machine's state based on its history of changes.
+   * Cycle time is only calculated when enough data is available.
+   */
+  private recalculateState(history: CycleTimeHistory, partsInLastCycle: number): MachineState {
+    this.restoredIdleTimes.delete(history.machineId);
+
+    // We need at least 2 changes to calculate one interval.
     if (history.changes.length < 2) {
-      const lastChange = history.changes[history.changes.length - 1];
-      const timeSinceLastPart = Date.now() - lastChange.timestamp.getTime();
-      const currentIdleMinutes = Math.round(timeSinceLastPart / 60000);
-      const totalIdleMinutes = currentIdleMinutes + restoredIdleTime;
-      
-      console.log(`🟡 ${machineId}: ПРОСТОЙ - недостаточно данных для расчета времени цикла`);
-      console.log(`🕒 ${machineId}: idleTimeMinutes = ${totalIdleMinutes} (текущий: ${currentIdleMinutes} + восстановленный: ${restoredIdleTime})`);
-      
-      return { 
-        cycleTimeMs: undefined, 
-        partsInCycle: 1,
-        confidence: 'Недостаточно данных',
-        isAnomalous: true,
-        machineStatus: 'IDLE',
-        idleTimeMinutes: totalIdleMinutes
-      };
+      return this.createMachineState(history, 'Unstable', 'ACTIVE', 0);
     }
 
-    const first = history.changes[0];
-    const last = history.changes[history.changes.length - 1];
-    
-    const totalTimeMs = last.timestamp.getTime() - first.timestamp.getTime();
-    const totalParts = last.count - first.count;
-    
-    // 🕒 СЛУЧАЙ 3: Нет изменений счетчика (машина не работает)
-    if (totalParts <= 0 || totalTimeMs <= 0) {
-      const timeSinceLastPart = Date.now() - last.timestamp.getTime();
-      const currentIdleMinutes = Math.round(timeSinceLastPart / 60000);
-      const totalIdleMinutes = currentIdleMinutes + restoredIdleTime;
-      
-      console.log(`🟡 ${machineId}: ПРОСТОЙ - нет изменений счетчика`);
-      console.log(`🕒 ${machineId}: idleTimeMinutes = ${totalIdleMinutes} (текущий: ${currentIdleMinutes} + восстановленный: ${restoredIdleTime})`);
-      
-      return { 
-        cycleTimeMs: undefined, 
-        partsInCycle: totalParts,
-        confidence: 'Нет изменений счетчика',
-        isAnomalous: true,
-        machineStatus: 'IDLE',
-        idleTimeMinutes: totalIdleMinutes
-      };
-    }
-    
-    const avgCycleTimeMs = totalTimeMs / totalParts;
-    
-    // 🧠 УМНАЯ ЛОГИКА ОПРЕДЕЛЕНИЯ АНОМАЛИЙ И ВОССТАНОВЛЕНИЯ
-    const isAnomalous = this.isAnomalousCycleTime(machineId, avgCycleTimeMs, history);
-    const isRecovered = this.checkRecoveryStatus(machineId, avgCycleTimeMs, history, isAnomalous);
-    
-    // Определяем статус станка и время простоя
-    let machineStatus: 'ACTIVE' | 'IDLE' | 'OFFLINE' = 'ACTIVE';
-    let idleTimeMinutes = 0; // 🕒 ВРЕМЯ ПРОСТОЯ
-    
-    if (isAnomalous && !isRecovered) {
-      machineStatus = 'IDLE'; // Станок стоит (большое время цикла = простой)
-      // 🕒 Вычисляем время простоя для аномального цикла + восстановленное из кэша
-      const timeSinceLastPart = Date.now() - last.timestamp.getTime();
-      const currentIdleMinutes = Math.round(timeSinceLastPart / 60000);
-      idleTimeMinutes = currentIdleMinutes + restoredIdleTime;
-      console.log(`🟡 ${machineId}: ПРОСТОЙ обнаружен! Время цикла ${(avgCycleTimeMs/1000).toFixed(2)} сек/дет слишком большое`);
-      console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (текущий: ${currentIdleMinutes} + восстановленный: ${restoredIdleTime})`);
-    } else if (isRecovered) {
-      machineStatus = 'ACTIVE'; // Станок восстановился после простоя
-      console.log(`🟢 ${machineId}: ВОССТАНОВЛЕНИЕ! Станок вернулся в работу после 3+ нормальных циклов`);
-    } else {
-      // Проверяем когда была последняя деталь
-      const timeSinceLastPart = Date.now() - last.timestamp.getTime();
-      const maxIdleTime = Math.max(avgCycleTimeMs * 3, 300000); // 3 цикла или 5 минут
-      
-      if (timeSinceLastPart > maxIdleTime) {
-        machineStatus = 'IDLE'; // Слишком долго нет новых деталей
-        // 🕒 Вычисляем время простоя для случая "нет движения" + восстановленное из кэша
-        const currentIdleMinutes = Math.round(timeSinceLastPart / 60000);
-        idleTimeMinutes = currentIdleMinutes + restoredIdleTime;
-        console.log(`🟡 ${machineId}: ПРОСТОЙ - нет движения ${(timeSinceLastPart/60000).toFixed(1)} минут`);
-        console.log(`🕒 ${machineId}: idleTimeMinutes = ${idleTimeMinutes} (текущий: ${currentIdleMinutes} + восстановленный: ${restoredIdleTime})`);
-      }
-    }
-    
-    let confidence = 'НИЗКАЯ';
-    if (history.changes.length >= 5) {
-      confidence = 'ВЫСОКАЯ';
-    } else if (history.changes.length >= 3) {
-      confidence = 'СРЕДНЯЯ';
-    }
-    
-    // Логи для нормальной работы (не IDLE)
-    if (machineStatus === 'ACTIVE') {
-      console.log(`⏱️ ${machineId}: ${totalParts} дет. за ${(totalTimeMs/1000).toFixed(1)} сек = ${(avgCycleTimeMs/1000).toFixed(2)} сек/дет (${confidence})`);
+    const firstChange = history.changes[0];
+    const lastChange = history.changes[history.changes.length - 1];
+
+    const totalTimeMs = lastChange.timestamp.getTime() - firstChange.timestamp.getTime();
+    const totalParts = lastChange.count - firstChange.count;
+
+    // Do not calculate if time or parts are zero/negative.
+    if (totalTimeMs <= 0 || totalParts <= 0) {
+      return this.createMachineState(history, 'Unstable', 'ACTIVE', 0);
     }
 
-    return {
-      cycleTimeMs: avgCycleTimeMs,
-      partsInCycle: totalParts,
-      confidence: confidence,
-      isAnomalous: isAnomalous,
-      machineStatus: machineStatus,
-      idleTimeMinutes: idleTimeMinutes  // 🕒 ВРЕМЯ ПРОСТОЯ В МИНУТАХ
+    // Check if we have enough data for a STABLE calculation.
+    if (history.changes.length < this.MIN_CHANGES_FOR_STABLE_AVG) {
+      const confidence = 'Unstable';
+      console.log(`[DEV] ${history.machineId}: ${confidence} production. Not enough data for stable cycle time (${history.changes.length}/${this.MIN_CHANGES_FOR_STABLE_AVG} changes).`);
+      // Return ACTIVE status but with undefined cycle time.
+      return this.createMachineState(history, confidence, 'ACTIVE', 0, undefined, partsInLastCycle);
+    }
+
+    const averageCycleTimeMs = totalTimeMs / totalParts;
+    const confidence = 'Stable';
+    
+    console.log(`[DEV] ${history.machineId}: ${confidence} production. Avg cycle time over last ${totalParts} parts: ${(averageCycleTimeMs / 1000).toFixed(1)}s`);
+    
+    return this.createMachineState(history, confidence, 'ACTIVE', 0, averageCycleTimeMs, partsInLastCycle);
+  }
+
+  private handleNoChange(history: CycleTimeHistory, currentTimestamp: Date, executionStatus?: string): MachineState {
+    const lastChange = history.changes[history.changes.length - 1];
+    const timeSinceLastChangeMs = currentTimestamp.getTime() - lastChange.timestamp.getTime();
+    const minutesSinceLastChange = timeSinceLastChangeMs / (1000 * 60);
+
+    const restoredIdleTime = this.restoredIdleTimes.get(history.machineId) || 0;
+    const totalIdleTime = Math.round(minutesSinceLastChange + restoredIdleTime);
+    
+    // Determine the last known state before deciding on the current one.
+    const lastKnownState = this.getLastKnownState(history);
+
+    if (executionStatus && executionStatus !== 'ACTIVE') {
+      console.log(`[DEV] ${history.machineId}: IDLE detected via executionStatus: ${executionStatus}. Total idle: ${totalIdleTime} min.`);
+      return this.createMachineState(history, 'Stopped', 'IDLE', totalIdleTime, lastKnownState.cycleTimeMs);
+    }
+
+    if (minutesSinceLastChange > this.IDLE_TIMEOUT_MINUTES) {
+      console.log(`[DEV] ${history.machineId}: IDLE detected via timeout. Total idle: ${totalIdleTime} min.`);
+      return this.createMachineState(history, 'Stopped', 'IDLE', totalIdleTime, lastKnownState.cycleTimeMs);
+    }
+    
+    console.log(`[DEV] ${history.machineId}: Waiting. Time since last change: ${minutesSinceLastChange.toFixed(1)} min.`);
+    // While waiting, the machine is still considered ACTIVE and reports the last known cycle time.
+    return this.createMachineState(history, lastKnownState.confidence, 'ACTIVE', 0, lastKnownState.cycleTimeMs);
+  }
+
+  private createMachineState(
+    history: CycleTimeHistory,
+    confidence: MachineState['confidence'],
+    machineStatus: MachineState['machineStatus'],
+    idleTimeMinutes: number,
+    cycleTimeMs?: number,
+    partsInCycle: number = 0
+  ): MachineState {
+        return {
+      cycleTimeMs,
+      partsInCycle,
+      confidence,
+        isAnomalous: false,
+      machineStatus,
+      idleTimeMinutes,
     };
   }
 
-  private isAnomalousCycleTime(machineId: string, currentCycleTimeMs: number, history: CycleTimeHistory): boolean {
-    // Нужна достаточная история для определения аномалий
-    if (history.changes.length < 5) {
-      return false; // Недостаточно данных для определения аномалии
+  /**
+   * Calculates the last known cycle time from the available history.
+   * Returns a minimal state object with the last known cycle time and confidence.
+   */
+  private getLastKnownState(history: CycleTimeHistory): { cycleTimeMs?: number; confidence: MachineState['confidence'] } {
+    if (history.changes.length < this.MIN_CHANGES_FOR_STABLE_AVG) {
+        return { cycleTimeMs: undefined, confidence: 'Unstable' };
+    }
+
+    const firstChange = history.changes[0];
+    const lastChange = history.changes[history.changes.length - 1];
+    const totalTimeMs = lastChange.timestamp.getTime() - firstChange.timestamp.getTime();
+    const totalParts = lastChange.count - firstChange.count;
+
+    if (totalParts > 0) {
+      return { cycleTimeMs: totalTimeMs / totalParts, confidence: 'Stable' };
     }
     
-    const recentCycles = this.getRecentNormalCycles(history, 10);
-    if (recentCycles.length < 3) {
-      return false; // Недостаточно нормальных циклов для сравнения
-    }
-    
-    const avgNormalCycle = recentCycles.reduce((sum, cycle) => sum + cycle, 0) / recentCycles.length;
-    
-    // 🎯 ДИНАМИЧЕСКИЙ ПОРОГ: если время цикла больше среднего на 20% - аномалия
-    const anomalyThreshold = avgNormalCycle * 1.2; // +20% от среднего
-    
-    if (currentCycleTimeMs > anomalyThreshold) {
-      console.log(`🔍 ${machineId}: Аномалия! Текущий цикл ${(currentCycleTimeMs/1000).toFixed(2)}с > порога ${(anomalyThreshold/1000).toFixed(2)}с (+20% от ${(avgNormalCycle/1000).toFixed(2)}с)`);
-      return true;
-    }
-    
-    return false;
+    return { cycleTimeMs: undefined, confidence: 'Unstable' };
   }
 
-  private checkRecoveryStatus(machineId: string, currentCycleTimeMs: number, history: CycleTimeHistory, isCurrentAnomalous: boolean): boolean {
-    // Инициализируем счетчик если его нет
-    if (history.consecutiveNormalCycles === undefined) {
-      history.consecutiveNormalCycles = 0;
-    }
-    
-    // Устанавливаем порог восстановления (среднее нормальное время)
-    if (!history.recoveryThreshold) {
-      const recentCycles = this.getRecentNormalCycles(history, 10);
-      if (recentCycles.length >= 3) {
-        history.recoveryThreshold = recentCycles.reduce((sum, cycle) => sum + cycle, 0) / recentCycles.length;
-      }
-    }
-    
-    if (!history.recoveryThreshold) {
-      return false; // Нет эталонного времени для сравнения
-    }
-    
-    // 🎯 ЛОГИКА ВОССТАНОВЛЕНИЯ: в пределах 10% от нормального времени
-    const recoveryTolerance = history.recoveryThreshold * 0.1; // ±10%
-    const isWithinRecoveryRange = Math.abs(currentCycleTimeMs - history.recoveryThreshold) <= recoveryTolerance;
-    
-    if (isWithinRecoveryRange && !isCurrentAnomalous) {
-      // Увеличиваем счетчик нормальных циклов
-      history.consecutiveNormalCycles = (history.consecutiveNormalCycles || 0) + 1;
-      console.log(`📈 ${machineId}: Нормальный цикл ${history.consecutiveNormalCycles}/3 для восстановления`);
-      
-      // Если прошло 3+ нормальных цикла - считаем восстановившимся
-      if (history.consecutiveNormalCycles >= 3) {
-        history.consecutiveNormalCycles = 0; // Сбрасываем счетчик
-        return true;
-      }
-    } else {
-      // Сбрасываем счетчик если цикл снова аномальный
-      if (history.consecutiveNormalCycles > 0) {
-        console.log(`🔄 ${machineId}: Сброс счетчика восстановления (аномальный цикл)`);
-        history.consecutiveNormalCycles = 0;
-      }
-    }
-    
-    return false;
-  }
 
-  private getRecentNormalCycles(history: CycleTimeHistory, maxCount: number): number[] {
-    const normalCycles: number[] = [];
-    const changes = history.changes;
-    
-    // Проходим по последним изменениям и ищем нормальные циклы
-    for (let i = 1; i < changes.length && normalCycles.length < maxCount; i++) {
-      const prev = changes[i - 1];
-      const curr = changes[i];
-      
-      const timeDiffMs = curr.timestamp.getTime() - prev.timestamp.getTime();
-      const partsDiff = curr.count - prev.count;
-      
-      if (partsDiff > 0 && timeDiffMs > 0) {
-        const cycleTime = timeDiffMs / partsDiff;
-        
-        // Считаем "нормальным" цикл до 5 минут (временный критерий)
-        if (cycleTime < 5 * 60 * 1000) {
-          normalCycles.push(cycleTime);
-        }
-      }
+  public getCycleTimeData(machineId: string): MachineState | undefined {
+    const history = this.histories.get(machineId);
+    if (!history) {
+      return undefined;
     }
-    
-    return normalCycles;
+    // Return the last known state, defaulting to IDLE if no production has occurred.
+    const lastState = this.getLastKnownState(history);
+    return this.createMachineState(history, lastState.confidence, 'IDLE', 0, lastState.cycleTimeMs);
   }
-} 
+}
