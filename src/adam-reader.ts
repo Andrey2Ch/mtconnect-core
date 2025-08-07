@@ -212,12 +212,26 @@ export class AdamReader {
   }
 
   /**
+   * 💾 Устанавливает восстановленное время цикла для машины из кэша
+   * @param machineId - ID машины
+   * @param restoredCycleMinutes - восстановленное время цикла в минутах
+   */
+  public restoreCycleTime(machineId: string, restoredCycleMinutes: number): void {
+    this.cycleTimeCalculator.restoreCycleTime(machineId, restoredCycleMinutes);
+  }
+
+
+  /**
    * 💾 Устанавливает восстановленное время простоя для всех ADAM машин из кэша
    * @param restoredStates - Map с восстановленными состояниями машин
    */
-  public setRestoredIdleTimesForAllMachines(restoredStates: Map<string, { idleTimeMinutes: number }>): void {
+  public setRestoredIdleTimesForAllMachines(restoredStates: Map<string, { idleTimeMinutes: number; cycleTimeMinutes?: number }>): void {
     restoredStates.forEach((state, machineId) => {
       this.restoreIdleTime(machineId, state.idleTimeMinutes);
+      // ✅ ДОБАВЛЕНО: Восстанавливаем время цикла
+      if (state.cycleTimeMinutes) {
+        this.restoreCycleTime(machineId, state.cycleTimeMinutes);
+      }
     });
   }
 } 

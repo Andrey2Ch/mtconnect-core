@@ -4,6 +4,7 @@ import * as path from 'path';
 export interface MachineState {
   machineId: string;
   idleTimeMinutes: number;
+  cycleTimeMinutes?: number; // ✅ ДОБАВЛЕНО: Время цикла детали
   lastActiveTime: string;
   timestamp: string;
 }
@@ -128,17 +129,20 @@ export class MachineStatesCache {
    * Создает новое состояние машины
    * @param machineId - ID машины
    * @param idleTimeMinutes - текущее время простоя
+   * @param cycleTimeMinutes - время цикла детали (опционально)
    * @param lastActiveTime - время последней активности
    * @returns новое состояние машины
    */
   public createMachineState(
     machineId: string, 
     idleTimeMinutes: number = 0, 
+    cycleTimeMinutes?: number, // ✅ ДОБАВЛЕНО: Время цикла детали
     lastActiveTime: string = new Date().toISOString()
   ): MachineState {
     return {
       machineId,
       idleTimeMinutes,
+      cycleTimeMinutes, // ✅ ДОБАВЛЕНО: Сохраняем время цикла
       lastActiveTime,
       timestamp: new Date().toISOString()
     };
@@ -161,8 +165,9 @@ export class MachineStatesCache {
       // Создаем новое состояние
       this.states.set(machineId, this.createMachineState(
         machineId,
-        updates.idleTimeMinutes,
-        updates.lastActiveTime
+        updates.idleTimeMinutes || 0,
+        updates.cycleTimeMinutes, // ✅ ДОБАВЛЕНО: Передаем обновленное время цикла
+        updates.lastActiveTime || new Date().toISOString()
       ));
     }
   }

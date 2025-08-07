@@ -267,6 +267,13 @@ export class SHDRClient extends EventEmitter {
     public restoreIdleTime(restoredIdleMinutes: number): void {
         this.cycleTimeCalculator.restoreIdleTime(this.config.machineId, restoredIdleMinutes);
     }
+
+    // ✅ ДОБАВЛЕНО: Метод для восстановления времени цикла
+    public restoreCycleTime(restoredCycleMinutes: number): void {
+        this.cycleTimeCalculator.restoreCycleTime(this.config.machineId, restoredCycleMinutes);
+    }
+
+
 }
 
 export class SHDRManager extends EventEmitter {
@@ -435,9 +442,21 @@ export class SHDRManager extends EventEmitter {
      * 💾 Устанавливает восстановленное время простоя для всех машин из кэша
      * @param restoredStates - Map с восстановленными состояниями машин
      */
-    public setRestoredIdleTimesForAllMachines(restoredStates: Map<string, { idleTimeMinutes: number }>): void {
+    public setRestoredIdleTimesForAllMachines(restoredStates: Map<string, { idleTimeMinutes: number; cycleTimeMinutes?: number }>): void {
         restoredStates.forEach((state, machineId) => {
             this.restoreIdleTime(machineId, state.idleTimeMinutes);
+            // ✅ ДОБАВЛЕНО: Восстанавливаем время цикла
+            if (state.cycleTimeMinutes) {
+                const client = this.clients.get(machineId);
+                if (client) {
+                    console.log(`🔄 [SHDRManager] ${machineId}: Восстанавливаем время цикла ${state.cycleTimeMinutes} мин`);
+                    client.restoreCycleTime(state.cycleTimeMinutes);
+                } else {
+                    console.log(`❌ [SHDRManager] ${machineId}: Клиент не найден для восстановления времени цикла`);
+                }
+            } else {
+                console.log(`ℹ️ [SHDRManager] ${machineId}: Нет времени цикла для восстановления`);
+            }
         });
     }
 } 

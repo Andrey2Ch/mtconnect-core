@@ -1,0 +1,288 @@
+[
+  {
+    "machineId": "M_1_XD-20",
+    "idleTimeMinutes": 13032,
+    "lastActiveTime": "2025-08-06T13:46:30.076Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [],
+    "confidence": "medium",
+    "dataVersion": 2,
+    "checksum": "TV8xX1hE"
+  },
+  {
+    "machineId": "M_2_SR_26",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.326Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [
+      1.76,
+      1.76,
+      1.76,
+      1.76,
+      1.76,
+      1.76,
+      1.76,
+      1.76,
+      1.76,
+      1.76
+    ],
+    "confidence": "high",
+    "dataVersion": 2,
+    "checksum": "TV8yX1NS",
+    "cycleTimeMinutes": 1.76
+  },
+  {
+    "machineId": "M_3_XD_38",
+    "idleTimeMinutes": 611,
+    "lastActiveTime": "2025-08-07T06:59:57.666Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [
+      3.99,
+      3.99,
+      3.99,
+      3.99,
+      3.99,
+      3.99,
+      3.99,
+      3.99,
+      3.99,
+      3.99
+    ],
+    "confidence": "high",
+    "dataVersion": 2,
+    "checksum": "TV8zX1hE"
+  },
+  {
+    "machineId": "M_4_SR_10",
+    "idleTimeMinutes": 16283,
+    "lastActiveTime": "2025-08-06T13:36:26.809Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [],
+    "confidence": "medium",
+    "dataVersion": 2,
+    "checksum": "TV80X1NS"
+  },
+  {
+    "machineId": "M_5_DT_26",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:02:52.315Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [
+      1.81,
+      1.81,
+      1.81,
+      1.81,
+      1.81,
+      1.81,
+      1.81,
+      1.81,
+      1.81,
+      1.81
+    ],
+    "confidence": "high",
+    "dataVersion": 2,
+    "checksum": "TV81X0RU",
+    "cycleTimeMinutes": 1.81
+  },
+  {
+    "machineId": "M_6_SR_21",
+    "idleTimeMinutes": 16287,
+    "lastActiveTime": "2025-08-06T13:36:16.807Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [
+      1.35,
+      1.35,
+      1.35,
+      1.35,
+      1.35,
+      1.35,
+      1.35,
+      1.35,
+      1.35,
+      1.35
+    ],
+    "confidence": "high",
+    "dataVersion": 2,
+    "checksum": "TV82X1NS"
+  },
+  {
+    "machineId": "M_8_SR_25",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.332Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [],
+    "confidence": "medium",
+    "dataVersion": 2,
+    "checksum": "TV84X1NS"
+  },
+  {
+    "machineId": "SR-22",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.341Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [
+      1.06,
+      1.06,
+      1.06,
+      1.06,
+      1.06,
+      1.06,
+      1.06,
+      1.06,
+      1.06,
+      1.06
+    ],
+    "confidence": "high",
+    "dataVersion": 2,
+    "checksum": "U1ItMjIt",
+    "cycleTimeMinutes": 1.06
+  },
+  {
+    "machineId": "SB-16",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.343Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [],
+    "confidence": "medium",
+    "dataVersion": 2,
+    "checksum": "U0ItMTYt"
+  },
+  {
+    "machineId": "BT-38",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.344Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [],
+    "confidence": "medium",
+    "dataVersion": 2,
+    "checksum": "QlQtMzgt"
+  },
+  {
+    "machineId": "K-162",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.345Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [],
+    "confidence": "medium",
+    "dataVersion": 2,
+    "checksum": "Sy0xNjIt"
+  },
+  {
+    "machineId": "K-163",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.347Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [],
+    "confidence": "medium",
+    "dataVersion": 2,
+    "checksum": "Sy0xNjMt"
+  },
+  {
+    "machineId": "L-20",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.348Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [
+      0.67,
+      0.67,
+      0.67,
+      0.67,
+      0.67,
+      0.67,
+      0.67,
+      0.67,
+      0.67,
+      0.67
+    ],
+    "confidence": "high",
+    "dataVersion": 2,
+    "checksum": "TC0yMC0w",
+    "cycleTimeMinutes": 0.67
+  },
+  {
+    "machineId": "K-16",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.349Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [],
+    "confidence": "medium",
+    "dataVersion": 2,
+    "checksum": "Sy0xNi0w"
+  },
+  {
+    "machineId": "SR-20",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.351Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [
+      1.5,
+      1.5,
+      1.5,
+      1.5,
+      1.5,
+      1.5,
+      1.5,
+      1.5,
+      1.5,
+      1.5
+    ],
+    "confidence": "high",
+    "dataVersion": 2,
+    "checksum": "U1ItMjAt",
+    "cycleTimeMinutes": 1.5
+  },
+  {
+    "machineId": "SR-32",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.353Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [
+      0.93,
+      0.93,
+      0.93,
+      0.93,
+      0.93,
+      0.93,
+      0.93,
+      0.93,
+      0.93,
+      0.93
+    ],
+    "confidence": "high",
+    "dataVersion": 2,
+    "checksum": "U1ItMzIt",
+    "cycleTimeMinutes": 0.93
+  },
+  {
+    "machineId": "SR-24",
+    "idleTimeMinutes": 0,
+    "lastActiveTime": "2025-08-07T08:03:32.354Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [
+      0.73,
+      0.73,
+      0.73,
+      0.73,
+      0.73,
+      0.73,
+      0.73,
+      0.73,
+      0.73,
+      0.73
+    ],
+    "confidence": "high",
+    "dataVersion": 2,
+    "checksum": "U1ItMjQt",
+    "cycleTimeMinutes": 0.73
+  },
+  {
+    "machineId": "M_7_SR_23",
+    "idleTimeMinutes": 4380,
+    "lastActiveTime": "2025-08-06T13:46:30.083Z",
+    "timestamp": "2025-08-07T08:03:42.273Z",
+    "cycleTimeHistory": [],
+    "confidence": "medium",
+    "dataVersion": 2,
+    "checksum": "TV83X1NS"
+  }
+]

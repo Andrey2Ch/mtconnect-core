@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import { SHDRManager } from './shdr-client';
 import { AdamReader } from './adam-reader';
 import { CloudApiClient } from './cloud-client';
-import { MachineStatesCache, MachineState } from './machine-states-cache';
+import { EnhancedMachineCache, EnhancedMachineState } from './enhanced-machine-cache';
 
 const args = process.argv.slice(2);
 const isDevMode = args.includes('-dev') || args.includes('--dev');
@@ -47,21 +47,41 @@ console.log(`Cloud API URL: ${CLOUD_API_URL}`);
 console.log(`Edge Gateway ID: ${EDGE_GATEWAY_ID}`);
 const cloudClient = new CloudApiClient(CLOUD_API_URL, EDGE_GATEWAY_ID);
 
-const machineStatesCache = new MachineStatesCache();
+const machineStatesCache = new EnhancedMachineCache('enhanced-machine-states.cache.json');
+
+// Проверяем наличие старого кэша для информации
+const oldCacheExists = fs.existsSync('machine-states.cache.json');
+if (oldCacheExists) {
+  console.log('ℹ️ Обнаружен старый кэш, но миграция уже выполнена');
+}
+
 const restoredStates = machineStatesCache.loadStates();
 console.log(`Loaded ${restoredStates.size} states from cache.`);
 
-const restoredStatesForCalculators = new Map<string, { idleTimeMinutes: number }>();
+const restoredStatesForCalculators = new Map<string, { idleTimeMinutes: number; cycleTimeMinutes?: number }>();
 restoredStates.forEach((state, machineId) => {
   const restoredState = machineStatesCache.getRestoredState(machineId);
   if (restoredState) {
-    restoredStatesForCalculators.set(machineId, { idleTimeMinutes: restoredState.idleTimeMinutes });
-    console.log(`${machineId}: ${restoredState.idleTimeMinutes} min of idle time will be restored.`);
+    console.log(`🔍 ДЕБАГ: ${machineId}: state.cycleTimeMinutes = ${state.cycleTimeMinutes}`);
+    restoredStatesForCalculators.set(machineId, { 
+      idleTimeMinutes: restoredState.idleTimeMinutes,
+      cycleTimeMinutes: state.cycleTimeMinutes // ✅ ДОБАВЛЕНО: Передаем время цикла из кэша
+    });
+    console.log(`🕒 ВОССТАНОВЛЕНИЕ: ${machineId}: ${restoredState.idleTimeMinutes} min of idle time will be restored.`);
+    if (state.cycleTimeMinutes) {
+      console.log(`   ⏱️ ВОССТАНОВЛЕНИЕ: ${machineId}: ${state.cycleTimeMinutes} min cycle time will be restored.`);
+    } else {
+      console.log(`   ❌ ВОССТАНОВЛЕНИЕ: ${machineId}: НЕТ времени цикла в кэше!`);
+    }
+    console.log(`   📊 Кэш: ${state.idleTimeMinutes} min, lastActive: ${state.lastActiveTime}`);
+    console.log(`   📊 Восстановлено: ${restoredState.idleTimeMinutes} min (${state.idleTimeMinutes} + ${restoredState.idleTimeMinutes - state.idleTimeMinutes})`);
   }
 });
 
 shdrManager.setRestoredIdleTimesForAllMachines(restoredStatesForCalculators);
 adamReader.setRestoredIdleTimesForAllMachines(restoredStatesForCalculators);
+
+
 
 // --- API Endpoints ---
 app.get('/api/machines', async (req, res) => {
@@ -72,7 +92,27 @@ app.get('/api/machines', async (req, res) => {
     
     const executionStatus = getVal('execution') !== 'UNAVAILABLE' ? getVal('execution') : undefined;
     const cycleTimeData = shdrManager.getMachineCycleTime(machine.id, executionStatus);
-    const cycleTimeSeconds = cycleTimeData?.cycleTimeMs ? (cycleTimeData.cycleTimeMs / 1000).toFixed(2) : 'N/A';
+    
+    // ✅ ДОБАВЛЕНО: Учитываем восстановленное время цикла и простоя из кэша
+    const restoredState = restoredStates.get(machine.id);
+    let cycleTimeSeconds = cycleTimeData?.cycleTimeMs ? (cycleTimeData.cycleTimeMs / 1000).toFixed(2) : 'N/A';
+    
+    if (restoredState && restoredState.cycleTimeMinutes && cycleTimeSeconds === 'N/A') {
+      // Если нет текущего времени цикла, используем восстановленное
+      cycleTimeSeconds = (restoredState.cycleTimeMinutes * 60).toFixed(2);
+      console.log(`[API] ${machine.id}: Используем восстановленное время цикла: ${restoredState.cycleTimeMinutes} мин (${cycleTimeSeconds} сек)`);
+    }
+    
+    let idleTimeMinutes = cycleTimeData?.idleTimeMinutes || 0;
+    
+    if (restoredState && restoredState.idleTimeMinutes > 0) {
+      // Если машина не активна, используем восстановленное время
+      const isActive = executionStatus === 'ACTIVE';
+      if (!isActive) {
+        idleTimeMinutes = restoredState.idleTimeMinutes;
+        console.log(`[API] ${machine.id}: Используем восстановленное время простоя: ${idleTimeMinutes} мин`);
+      }
+    }
     
     return {
       id: machine.id,
@@ -87,7 +127,7 @@ app.get('/api/machines', async (req, res) => {
         partCount: getVal('part_count'),
         program: getVal('program'),
         cycleTime: cycleTimeSeconds,
-        idleTimeMinutes: cycleTimeData?.idleTimeMinutes || 0
+        idleTimeMinutes: idleTimeMinutes
       }
     };
   });
@@ -110,6 +150,13 @@ app.get('/api/machines', async (req, res) => {
         
         if (adamCycleData?.cycleTimeMs) {
           cycleTimeDisplay = (adamCycleData.cycleTimeMs / 1000).toFixed(2);
+        } else {
+          // ✅ ДОБАВЛЕНО: Учитываем восстановленное время цикла для ADAM устройств
+          const restoredState = restoredStates.get(device.id);
+          if (restoredState && restoredState.cycleTimeMinutes) {
+            cycleTimeDisplay = (restoredState.cycleTimeMinutes * 60).toFixed(2);
+            console.log(`[API] ${device.id}: Используем восстановленное время цикла: ${restoredState.cycleTimeMinutes} мин (${cycleTimeDisplay} сек)`);
+          }
         }
         
         switch (counterData.machineStatus) {
@@ -143,7 +190,22 @@ app.get('/api/machines', async (req, res) => {
           executionStatus: executionStatus,
           isAnomalous: adamCycleData?.isAnomalous || counterData?.isAnomalous || false,
           machineStatus: adamCycleData?.machineStatus || counterData?.machineStatus || 'OFFLINE',
-          idleTimeMinutes: adamCycleData?.idleTimeMinutes || counterData?.idleTimeMinutes || 0
+          idleTimeMinutes: (() => {
+            // ✅ ДОБАВЛЕНО: Учитываем восстановленное время простоя для ADAM устройств
+            const restoredState = restoredStates.get(device.id);
+            let idleTimeMinutes = adamCycleData?.idleTimeMinutes || counterData?.idleTimeMinutes || 0;
+            
+            if (restoredState && restoredState.idleTimeMinutes > 0) {
+              // Если машина не активна, используем восстановленное время
+              const isActive = counterData?.machineStatus === 'ACTIVE';
+              if (!isActive) {
+                idleTimeMinutes = restoredState.idleTimeMinutes;
+                console.log(`[API] ${device.id}: Используем восстановленное время простоя: ${idleTimeMinutes} мин`);
+              }
+            }
+            
+            return idleTimeMinutes;
+          })()
         }
       };
     });
@@ -183,7 +245,7 @@ app.get('/api/machines', async (req, res) => {
 async function sendDataToCloud() {
   try {
     const sendPromises: Promise<boolean>[] = [];
-    const currentStates = new Map<string, MachineState>();
+    const currentStates = new Map<string, EnhancedMachineState>();
 
     for (const machine of machines) {
       const isConnected = shdrManager.getMachineConnectionStatus(machine.id);
@@ -208,11 +270,27 @@ async function sendDataToCloud() {
         const lastActiveTime = isActive ? new Date().toISOString() : 
           (restoredStates.get(machine.id)?.lastActiveTime || new Date().toISOString());
         
+        // ✅ ИСПРАВЛЕНО: Сохраняем восстановленное время простоя до активации машины
+        const restoredState = restoredStates.get(machine.id);
+        let idleTimeToSave = data.idleTimeMinutes || 0;
+        
+        // Если машина не активна и есть восстановленное время, используем его
+        if (!isActive && restoredState && restoredState.idleTimeMinutes > 0) {
+          // Вычисляем общее время простоя: восстановленное + новое с момента перезагрузки
+          const missedTime = machineStatesCache.calculateMissedIdleTime(restoredState.lastActiveTime);
+          idleTimeToSave = restoredState.idleTimeMinutes + missedTime;
+        }
+        
         currentStates.set(machine.id, {
           machineId: machine.id,
-          idleTimeMinutes: data.idleTimeMinutes || 0,
+          idleTimeMinutes: idleTimeToSave,
+          cycleTimeMinutes: cycleTimeSeconds ? Number((cycleTimeSeconds / 60).toFixed(2)) : undefined,
           lastActiveTime: lastActiveTime,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          cycleTimeHistory: [],
+          confidence: 'high',
+          dataVersion: 2,
+          checksum: ''
         });
 
         if (data.partCount !== undefined || data.program !== undefined || data.executionStatus !== undefined) {
@@ -242,11 +320,27 @@ async function sendDataToCloud() {
         const lastActiveTime = isActive ? new Date().toISOString() : 
           (restoredStates.get(counter.machineId)?.lastActiveTime || new Date().toISOString());
         
+        // ✅ ИСПРАВЛЕНО: Сохраняем восстановленное время простоя для ADAM устройств
+        const restoredState = restoredStates.get(counter.machineId);
+        let idleTimeToSave = counter.idleTimeMinutes || 0;
+        
+        // Если машина не активна и есть восстановленное время, используем его
+        if (!isActive && restoredState && restoredState.idleTimeMinutes > 0) {
+          // Вычисляем общее время простоя: восстановленное + новое с момента перезагрузки
+          const missedTime = machineStatesCache.calculateMissedIdleTime(restoredState.lastActiveTime);
+          idleTimeToSave = restoredState.idleTimeMinutes + missedTime;
+        }
+        
         currentStates.set(counter.machineId, {
           machineId: counter.machineId,
-          idleTimeMinutes: counter.idleTimeMinutes || 0,
+          idleTimeMinutes: idleTimeToSave,
+          cycleTimeMinutes: cycleTimeSeconds ? Number((cycleTimeSeconds / 60).toFixed(2)) : undefined,
           lastActiveTime: lastActiveTime,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          cycleTimeHistory: [],
+          confidence: 'high',
+          dataVersion: 2,
+          checksum: ''
         });
 
         const deviceInfo = adamDevices.find(d => d.id === counter.machineId);
@@ -272,6 +366,7 @@ async function sendDataToCloud() {
       currentStates.forEach((state, machineId) => {
         machineStatesCache.updateMachineState(machineId, {
           idleTimeMinutes: state.idleTimeMinutes,
+          cycleTimeMinutes: state.cycleTimeMinutes, // ✅ ДОБАВЛЕНО: Передаем время цикла
           lastActiveTime: state.lastActiveTime
         });
       });

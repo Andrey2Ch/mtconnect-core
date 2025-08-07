@@ -35,6 +35,7 @@ export interface MachineState {
 export class CycleTimeCalculator {
   private histories: Map<string, CycleTimeHistory> = new Map();
   private restoredIdleTimes: Map<string, number> = new Map();
+  private restoredCycleTimes: Map<string, number> = new Map(); // ✅ ДОБАВЛЕНО: Восстановленное время цикла
   private lastLoggedStatus: Map<string, string> = new Map(); // Track last logged status to avoid spam
   
   private readonly IDLE_TIMEOUT_MINUTES = 5;
@@ -68,6 +69,29 @@ export class CycleTimeCalculator {
     console.log(`[CycleTimeCalculator] ${machineId}: Restored idle time set to ${idleTimeMinutes} min from cache.`);
   }
 
+  // ✅ ДОБАВЛЕНО: Метод для восстановления времени цикла
+  public restoreCycleTime(machineId: string, cycleTimeMinutes: number) {
+    this.restoredCycleTimes.set(machineId, cycleTimeMinutes);
+    console.log(`[CycleTimeCalculator] ${machineId}: Restored cycle time set to ${cycleTimeMinutes} min from cache.`);
+  }
+
+  /**
+   * Gets the restored cycle time for a machine
+   * @param machineId - ID of the machine
+   * @returns restored cycle time in minutes, or undefined if not available
+   */
+  public getRestoredCycleTime(machineId: string): number | undefined {
+    return this.restoredCycleTimes.get(machineId);
+  }
+
+  /**
+   * Clears the restored cycle time for a machine (when production starts)
+   * @param machineId - ID of the machine
+   */
+  public clearRestoredCycleTime(machineId: string): void {
+    this.restoredCycleTimes.delete(machineId);
+  }
+
   /**
    * Initializes a machine's history. Sets initial status to IDLE.
    */
@@ -78,10 +102,19 @@ export class CycleTimeCalculator {
     };
     this.histories.set(machineId, history);
 
+    // ✅ ИСПРАВЛЕНО: Восстановленное время учитывается только при создании новой машины
+    // Если есть восстановленное время, значит машина была в простое
     const restoredIdleTime = this.restoredIdleTimes.get(machineId) || 0;
-    console.log(`[CycleTime] ${machineId}: New machine detected. Initial count: ${currentCount}. Status: IDLE`);
-    // A new machine is always considered IDLE until it starts producing.
-    return this.createMachineState(history, 'No Data', 'IDLE', restoredIdleTime);
+    if (restoredIdleTime > 0) {
+      console.log(`[CycleTime] ${machineId}: New machine detected with ${restoredIdleTime} min of restored idle time. Status: IDLE`);
+      // Очищаем восстановленное время после использования
+      this.restoredIdleTimes.delete(machineId);
+      return this.createMachineState(history, 'No Data', 'IDLE', restoredIdleTime);
+    } else {
+      console.log(`[CycleTime] ${machineId}: New machine detected. Initial count: ${currentCount}. Status: IDLE`);
+      // A new machine is always considered IDLE until it starts producing.
+      return this.createMachineState(history, 'No Data', 'IDLE', 0);
+    }
   }
 
   private handleCountReset(machineId: string, currentCount: number, currentTimestamp: Date): MachineState {
@@ -94,7 +127,13 @@ export class CycleTimeCalculator {
    * Cycle time is only calculated when enough data is available.
    */
   private recalculateState(history: CycleTimeHistory, partsInLastCycle: number): MachineState {
-    this.restoredIdleTimes.delete(history.machineId);
+    // ✅ ИСПРАВЛЕНО: Удаляем восстановленное время только при начале производства
+    // Это означает, что машина снова активна и время простоя сбрасывается
+    const restoredIdleTime = this.restoredIdleTimes.get(history.machineId);
+    if (restoredIdleTime && restoredIdleTime > 0) {
+      console.log(`[CycleTime] ${history.machineId}: Production started, clearing ${restoredIdleTime} min of restored idle time`);
+      this.restoredIdleTimes.delete(history.machineId);
+    }
 
     // We need at least 2 changes to calculate one interval.
     if (history.changes.length < 2) {
@@ -134,6 +173,7 @@ export class CycleTimeCalculator {
     const timeSinceLastChangeMs = currentTimestamp.getTime() - lastChange.timestamp.getTime();
     const minutesSinceLastChange = timeSinceLastChangeMs / (1000 * 60);
 
+    // ✅ ИСПРАВЛЕНО: Учитываем восстановленное время простоя для неактивных машин
     const restoredIdleTime = this.restoredIdleTimes.get(history.machineId) || 0;
     const totalIdleTime = Math.round(minutesSinceLastChange + restoredIdleTime);
     
@@ -141,12 +181,12 @@ export class CycleTimeCalculator {
     const lastKnownState = this.getLastKnownState(history);
 
     if (executionStatus && executionStatus !== 'ACTIVE') {
-      this.logStatusChange(history.machineId, `IDLE detected (${executionStatus}). Total idle: ${totalIdleTime} min`);
+      this.logStatusChange(history.machineId, `IDLE detected (${executionStatus}). Total idle: ${totalIdleTime} min (restored: ${restoredIdleTime} min)`);
       return this.createMachineState(history, 'Stopped', 'IDLE', totalIdleTime, lastKnownState.cycleTimeMs);
     }
 
     if (minutesSinceLastChange > this.IDLE_TIMEOUT_MINUTES) {
-      this.logStatusChange(history.machineId, `IDLE detected (timeout). Total idle: ${totalIdleTime} min`);
+      this.logStatusChange(history.machineId, `IDLE detected (timeout). Total idle: ${totalIdleTime} min (restored: ${restoredIdleTime} min)`);
       return this.createMachineState(history, 'Stopped', 'IDLE', totalIdleTime, lastKnownState.cycleTimeMs);
     }
     
@@ -188,6 +228,12 @@ export class CycleTimeCalculator {
    * Returns a minimal state object with the last known cycle time and confidence.
    */
   private getLastKnownState(history: CycleTimeHistory): { cycleTimeMs?: number; confidence: MachineState['confidence'] } {
+    // ✅ ДОБАВЛЕНО: Проверяем восстановленное время цикла
+    const restoredCycleTime = this.restoredCycleTimes.get(history.machineId);
+    if (restoredCycleTime) {
+      return { cycleTimeMs: restoredCycleTime * 60 * 1000, confidence: 'Stable' };
+    }
+    
     if (history.changes.length < this.MIN_CHANGES_FOR_STABLE_AVG) {
         return { cycleTimeMs: undefined, confidence: 'Unstable' };
     }
